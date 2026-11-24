@@ -25,23 +25,93 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import zararlilikData from '@/data/zararlilik_ifadeleri.json';
+import {
+  GBF_SECTIONS,
+  GBF_SUGGEST,
+  createEmptyGbfDoc,
+  createEmptySub,
+  extractLegacyFieldsFromGbf,
+  countGbfProgress,
+} from './gbf/gbfSchema';
+
+interface HazardStatement {
+  kod: string;
+  ifade: string;
+  kategori: string;
+}
+
+const HAZARD_STATEMENTS: HazardStatement[] = (zararlilikData as any).ifadeler || [];
+const HAZARD_CODE_MAP = new Map<string, HazardStatement>();
+HAZARD_STATEMENTS.forEach((st) => {
+  HAZARD_CODE_MAP.set(st.kod.replace(/\s+/g, '').toUpperCase(), st);
+});
+
+/**
+ * Kullanıcının Excel'e yazdığı H/EUH kodlarını (örn: "H225, H319, H336, EUH210" veya satır satır)
+ * HazardStatementSelector'ın doğrudan seçili olarak tanıyacağı "KOD: Resmi İfade" satırlarına dönüştürür.
+ */
+function expandHazardCodesToSelectorText(raw: string): { text: string; matchedCodes: string[] } {
+  const input = String(raw || '').trim();
+  if (!input) return { text: '', matchedCodes: [] };
+
+  const tokens = input
+    .split(/[\r\n,;]+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+  const lines: string[] = [];
+  const matchedCodes: string[] = [];
+  const seen = new Set<string>();
+
+  for (const token of tokens) {
+    // "H225: Kolay alevlenir..." veya sadece "H225" / "H302 + H312" / "EUH210"
+    const codeMatch = token.match(
+      /^(H\d{3}[a-zA-Z*]?(?:\s*\+\s*H\d{3}[a-zA-Z*]?)*|EUH\d{3}[a-zA-Z*]?)(?:\s*[:\-\.]\s*(.*))?$/i
+    );
+    if (codeMatch) {
+      const normCode = codeMatch[1].replace(/\s+/g, '').toUpperCase();
+      if (seen.has(normCode)) continue;
+      seen.add(normCode);
+      const dictItem = HAZARD_CODE_MAP.get(normCode);
+      if (dictItem) {
+        lines.push(`${dictItem.kod}: ${dictItem.ifade}`);
+        matchedCodes.push(dictItem.kod);
+      } else {
+        const tail = (codeMatch[2] || '').trim();
+        lines.push(tail ? `${normCode}: ${tail}` : normCode);
+        matchedCodes.push(normCode);
+      }
+    } else {
+      lines.push(token);
+    }
+  }
+
+  return { text: lines.join('\n'), matchedCodes };
+}
 
 interface TemplateColumnDef {
   key: string;
   header: string;
-  group: 'META' | 'GBF';
+  groupTitle: string;
+  groupKind: 'META' | 'GBF';
+  sectionNum?: number;
+  subCode?: string;
+  suggestLabel?: string; // GBF_SUGGEST satır etiketi (rows[] içine gider)
+  isHazardCodeSelector?: boolean; // 2.2 H / EUH kodları -> sub['2.2'].text (HazardStatementSelector)
   width: number;
   required?: boolean;
   example: string;
   guide: string;
 }
 
-const TEMPLATE_COLUMNS: TemplateColumnDef[] = [
-  // 1. AŞAMA: ÜRÜN & BELGE BİLGİLERİ
+// 1. Aşama: Ürün & Belge Bilgileri (10 Sütun)
+const META_COLUMNS: TemplateColumnDef[] = [
   {
     key: 'productName',
     header: 'Ürün / Madde Adı *',
-    group: 'META',
+    groupTitle: '1. ÜRÜN & BELGE BİLGİLERİ',
+    groupKind: 'META',
     width: 30,
     required: true,
     example: '%70 İzopropil Alkol Yüzey Dezenfektanı',
@@ -50,15 +120,17 @@ const TEMPLATE_COLUMNS: TemplateColumnDef[] = [
   {
     key: 'categoryName',
     header: 'Kategori',
-    group: 'META',
-    width: 24,
+    groupTitle: '1. ÜRÜN & BELGE BİLGİLERİ',
+    groupKind: 'META',
+    width: 22,
     example: 'Dezenfektanlar',
     guide: 'Sistemde tanımlı Hazmat kategori adı (Excel açılır listesinden seçilebilir).',
   },
   {
     key: 'brandName',
     header: 'Tedarikçi / Marka',
-    group: 'META',
+    groupTitle: '1. ÜRÜN & BELGE BİLGİLERİ',
+    groupKind: 'META',
     width: 22,
     example: 'Örnek Medikal Kimya A.Ş.',
     guide: 'Üretici veya tedarikçi firma / marka adı.',
@@ -66,197 +138,239 @@ const TEMPLATE_COLUMNS: TemplateColumnDef[] = [
   {
     key: 'sdsNumber',
     header: 'GBF Numarası',
-    group: 'META',
-    width: 18,
+    groupTitle: '1. ÜRÜN & BELGE BİLGİLERİ',
+    groupKind: 'META',
+    width: 16,
     example: 'SDS-7404',
     guide: 'Güvenlik Bilgi Formu numarası (örn. 7404 veya SDS-7404).',
   },
   {
     key: 'sdsRevision',
     header: 'Revizyon No',
-    group: 'META',
-    width: 14,
+    groupTitle: '1. ÜRÜN & BELGE BİLGİLERİ',
+    groupKind: 'META',
+    width: 13,
     example: 'Rev-02',
     guide: 'Belge revizyon numarası (örn. 02 veya Rev-02).',
   },
   {
     key: 'sdsDate',
     header: 'Hazırlanma Tarihi',
-    group: 'META',
-    width: 18,
+    groupTitle: '1. ÜRÜN & BELGE BİLGİLERİ',
+    groupKind: 'META',
+    width: 16,
     example: '2025-03-15',
-    guide: 'YYYY-AA-GG veya GG.AA.YYYY biçiminde (örn. 2025-03-15).',
+    guide: 'YYYY-AA-GG veya GG.AA.YYYY biçiminde.',
   },
   {
     key: 'sdsRevisionDate',
     header: 'Revizyon Tarihi',
-    group: 'META',
-    width: 18,
+    groupTitle: '1. ÜRÜN & BELGE BİLGİLERİ',
+    groupKind: 'META',
+    width: 16,
     example: '2026-01-10',
     guide: 'YYYY-AA-GG veya GG.AA.YYYY biçiminde.',
   },
   {
     key: 'sdsExpiryDate',
     header: 'Geçerlilik Son Tarihi',
-    group: 'META',
-    width: 20,
+    groupTitle: '1. ÜRÜN & BELGE BİLGİLERİ',
+    groupKind: 'META',
+    width: 18,
     example: '2029-01-10',
     guide: 'YYYY-AA-GG veya GG.AA.YYYY biçiminde.',
   },
   {
     key: 'productKind',
     header: 'Ürün Türü',
-    group: 'META',
-    width: 14,
+    groupTitle: '1. ÜRÜN & BELGE BİLGİLERİ',
+    groupKind: 'META',
+    width: 13,
     example: 'karışım',
-    guide: 'Geçerli değerler: karışım veya madde.',
+    guide: 'Geçerli değerler: karışım veya madde (Bölüm 3.2 / 3.1 seçimini belirler).',
   },
   {
     key: 'sdsRegime',
     header: 'Mevzuat / Belge Dönemi',
-    group: 'META',
-    width: 22,
+    groupTitle: '1. ÜRÜN & BELGE BİLGİLERİ',
+    groupKind: 'META',
+    width: 20,
     example: 'KKDİK Ek-2',
     guide: 'Geçerli değerler: KKDİK Ek-2 | 2014 GBF formatı | Diğer / eski format.',
   },
-
-  // 2. AŞAMA: 16 RESMÎ GBF BÖLÜMÜ (Görsel/Piktogram/KKD/ADR hariç tüm metin alanları)
-  {
-    key: 'usageMethod',
-    header: 'Bölüm 1 - Madde/Karışım ve Tedarikçi Kimliği',
-    group: 'GBF',
-    width: 34,
-    example: 'Tıbbi cihaz ve yüzey dezenfeksiyonunda profesyonel kullanım içindir.',
-    guide: 'GBF Bölüm 1: Ürün kimliği, belirlenmiş kullanımlar ve tedarikçi iletişim bilgileri.',
-  },
-  {
-    key: 'hazardDescription',
-    header: 'Bölüm 2 - Zararlılık Tanımlanması',
-    group: 'GBF',
-    width: 34,
-    example: 'Alev. Sıvı 2 (H225), Göz Tah. 2 (H319), BHOT Tek Mrz. 3 (H336). Uyarı kelimesi: TEHLİKE.',
-    guide: 'GBF Bölüm 2: Sınıflandırma, H/P ifadeleri ve uyarı kelimesi (GHS görselleri sistemden seçilir).',
-  },
-  {
-    key: 'composition',
-    header: 'Bölüm 3 - Bileşimi / İçindekiler',
-    group: 'GBF',
-    width: 34,
-    example: 'Propan-2-ol (CAS: 67-63-0) %65-75; Deiyonize Su %25-35.',
-    guide: 'GBF Bölüm 3: Kimyasal bileşenler, CAS/EC numaraları ve yüzdelik oranlar.',
-  },
-  {
-    key: 'firstAid',
-    header: 'Bölüm 4 - İlk Yardım Önlemleri',
-    group: 'GBF',
-    width: 34,
-    example: 'Göz ile temasta en az 15 dk bol su ile yıkayın. Solunması halinde temiz havaya çıkarın.',
-    guide: 'GBF Bölüm 4: Soluma, cilt, göz teması ve yutma durumunda ilk yardım.',
-  },
-  {
-    key: 'fireFightingMeasures',
-    header: 'Bölüm 5 - Yangınla Mücadele Önlemleri',
-    group: 'GBF',
-    width: 34,
-    example: 'Kuru kimyevi toz, CO2 veya alkole dayanıklı köpük kullanın. Basınçlı su jeti kullanmayın.',
-    guide: 'GBF Bölüm 5: Uygun/uygun olmayan söndürücüler ve özel tehlikeler.',
-  },
-  {
-    key: 'accidentalReleaseMeasures',
-    header: 'Bölüm 6 - Kaza Sonucu Yayılmaya Karşı Önlemler',
-    group: 'GBF',
-    width: 34,
-    example: 'Tutuşturucu kaynakları uzaklaştırın. İnert emici (vermikülit/kum) ile toplayıp atık kabına alın.',
-    guide: 'GBF Bölüm 6: Kişisel/çevresel önlemler ve temizleme yöntemleri.',
-  },
-  {
-    key: 'handlingAndStorage',
-    header: 'Bölüm 7 - Elleçleme ve Depolama',
-    group: 'GBF',
-    width: 34,
-    example: 'Serin, iyi havalandırılan, kıvılcımdan uzak yanıcı madde dolabında (<25°C) saklayın.',
-    guide: 'GBF Bölüm 7: Güvenli elleçleme ve depolama koşulları.',
-  },
-  {
-    key: 'exposureControlsPpe',
-    header: 'Bölüm 8 - Maruz Kalma Kontrolleri / KKD',
-    group: 'GBF',
-    width: 34,
-    example: 'Nitril eldiven (EN 374), koruyucu gözlük (EN 166) kullanın. (KKD ikonları sistemden seçilir).',
-    guide: 'GBF Bölüm 8: Sınır değerler, mühendislik kontrolleri ve KKD açıklamaları.',
-  },
-  {
-    key: 'physicalAndChemicalProperties',
-    header: 'Bölüm 9 - Fiziksel ve Kimyasal Özellikler',
-    group: 'GBF',
-    width: 34,
-    example: 'Renksiz berrak sıvı; Alkol kokulu; Parlama noktası: 12°C; pH: 7.0; Yoğunluk: 0.87 g/cm³.',
-    guide: 'GBF Bölüm 9: Görünüm, koku, pH, parlama/kaynama noktası, yoğunluk.',
-  },
-  {
-    key: 'stabilityAndReactivity',
-    header: 'Bölüm 10 - Kararlılık ve Tepkime',
-    group: 'GBF',
-    width: 34,
-    example: 'Normal koşullarda kararlıdır. Kuvvetli oksitleyiciler, ısı ve açık alevden uzak tutun.',
-    guide: 'GBF Bölüm 10: Tepkime, kararlılık, kaçınılması gereken durum ve maddeler.',
-  },
-  {
-    key: 'toxicologicalInformation',
-    header: 'Bölüm 11 - Toksikolojik Bilgiler',
-    group: 'GBF',
-    width: 34,
-    example: 'LD50 (oral, sıçan): >5000 mg/kg. Yüksek buhar konsantrasyonu baş dönmesine yol açabilir.',
-    guide: 'GBF Bölüm 11: Akut toksisite, tahriş ve sağlık etkileri.',
-  },
-  {
-    key: 'ecologicalInformation',
-    header: 'Bölüm 12 - Ekolojik Bilgiler',
-    group: 'GBF',
-    width: 34,
-    example: 'Biyolojik olarak kolayca parçalanır. Kanalizasyona ve yeraltı sularına karıştırmayın.',
-    guide: 'GBF Bölüm 12: Ekotoksisite, kalıcılık ve biyobirikim.',
-  },
-  {
-    key: 'disposalConsiderations',
-    header: 'Bölüm 13 - Bertaraf Etme Bilgileri',
-    group: 'GBF',
-    width: 34,
-    example: 'Tehlikeli Atık Yönetmeliği kapsamında lisanslı bertaraf tesisine gönderin (Atık Kodu: 15 01 10*).',
-    guide: 'GBF Bölüm 13: Ürün ve ambalaj atık bertaraf yöntemleri.',
-  },
-  {
-    key: 'transportInfo',
-    header: 'Bölüm 14 - Taşımacılık Bilgileri',
-    group: 'GBF',
-    width: 34,
-    example: 'UN 1219, İZOPROPANOL, Sınıf 3, Paketleme Grubu II. (ADR etiketleri sistemden seçilir).',
-    guide: 'GBF Bölüm 14: UN numarası, taşımacılık sınıfı ve paketleme grubu.',
-  },
-  {
-    key: 'regulatoryInfo',
-    header: 'Bölüm 15 - Mevzuat Bilgileri',
-    group: 'GBF',
-    width: 34,
-    example: 'KKDİK (30105) ve SEA (28848) Yönetmeliklerine uygun hazırlanmıştır.',
-    guide: 'GBF Bölüm 15: İlgili ulusal ve uluslararası yönetmelikler.',
-  },
-  {
-    key: 'otherInfo',
-    header: 'Bölüm 16 - Diğer Bilgiler',
-    group: 'GBF',
-    width: 34,
-    example: 'GBF hazırlayıcı sertifika bilgileri ve kısaltmalar.',
-    guide: 'GBF Bölüm 16: Revizyon özeti, kısaltmalar ve ek açıklamalar.',
-  },
 ];
 
-const GBF_KEYS = TEMPLATE_COLUMNS.filter((c) => c.group === 'GBF').map((c) => c.key);
+// Örnek satır değerleri (gerçekçi örnek veri)
+const EXAMPLE_VALUES: Record<string, string> = {
+  'sub:1.1:Ürün adı': '%70 İzopropil Alkol Yüzey Dezenfektanı',
+  'sub:1.1:Ürün kodu': 'IPA-70-1000',
+  'sub:1.1:CAS / EC / kayıt no': 'CAS: 67-63-0 / EC: 200-661-7',
+  'sub:1.2:Belirlenmiş kullanım': 'Tıbbi cihaz ve yüzey dezenfeksiyonu (profesyonel kullanım)',
+  'sub:1.3:Tedarikçi / üretici': 'Örnek Medikal Kimya A.Ş.',
+  'sub:1.4:UZEM / ulusal acil iletişim': '114 (UZEM)',
+  'sub:2.1:Fiziksel zararlar': 'Alev. Sıvı 2 (H225)',
+  'sub:2.1:Sağlık zararları': 'Göz Tah. 2 (H319); BHOT Tek Mrz. 3 (H336)',
+  'sub:2.2:__HAZARD_CODES__': 'H225, H319, H336',
+  'sub:2.2:Uyarı kelimesi': 'TEHLİKE',
+  'sub:2.2:P ifadeleri': 'P210: Isıdan/kıvılcımdan uzak tutun. P305+P351+P338: Göz ile temasta suyla yıkayın.',
+  'sub:3.2': 'Propan-2-ol (CAS: 67-63-0, %65-75, H225, H319, H336); Deiyonize Su (%25-35)',
+  'sub:4.1:Soluma': 'Temiz havaya çıkarın, nefes darlığı varsa tıbbi yardım alın.',
+  'sub:4.1:Göz teması': 'En az 15 dakika bol su ile yıkayın, kontakt lens varsa çıkarın.',
+  'sub:4.1:Cilt teması': 'Bol su ve sabunla yıkayın.',
+  'sub:4.1:Yutma': 'Kusturmayın, ağzı su ile çalkalayın, doktora başvurun.',
+  'sub:5.1:Uygun yangın söndürücüler': 'Kuru kimyevi toz, CO2, alkole dayanıklı köpük',
+  'sub:5.1:Uygun yangın söndürme maddeleri': 'Kuru kimyevi toz, CO2, alkole dayanıklı köpük',
+  'sub:5.1:Uygun olmayan söndürme maddeleri': 'Basınçlı su jeti',
+  'sub:6.1:Kişisel önlemler': 'Tutuşturucu kaynakları uzaklaştırın, ortamı havalandırın.',
+  'sub:6.3:Temizleme malzemesi': 'İnert emici (vermikülit, kum) ile toplayıp tehlikeli atık kabına alın.',
+  'sub:7.2:Depolama koşulları': 'Serin (<25°C), iyi havalandırılan, kıvılcımdan uzak yanıcı madde dolabında.',
+  'sub:8.2:Göz / yüz koruması': 'EN 166 uyumlu koruyucu gözlük',
+  'sub:8.2:El koruması': 'EN 374 uyumlu nitril eldiven',
+  'sub:9.1:Görünüm / fiziksel hâl': 'Berrak sıvı',
+  'sub:9.1:Renk': 'Renksiz',
+  'sub:9.1:Koku': 'Karakteristik alkol kokusu',
+  'sub:9.1:pH': '7.0',
+  'sub:9.1:Parlama noktası': '12 °C',
+  'sub:9.1:Yoğunluk': '0.87 g/cm³ (20°C)',
+  'sub:10.2': 'Normal depolama ve kullanım koşullarında kararlıdır.',
+  'sub:10.5': 'Kuvvetli oksitleyiciler, asitler',
+  'sub:13.1:Atık kodu': '15 01 10* / 07 01 04*',
+  'sub:14.1': 'UN 1219',
+  'sub:14.2': 'İZOPROPANOL (İZOPROPİL ALKOL)',
+  'sub:14.3': 'Sınıf 3',
+  'sub:14.4': 'PG II',
+  'sub:15.1': 'KKDİK (30105) ve SEA (28848) Yönetmeliklerine uygundur.',
+  'sub:16:KDU adı': 'Örnek KDU Uzmanı',
+};
+
+// 2. Aşama: 16 Resmî GBF Bölümünün Alt Başlıkları + Önerilen Veri Başlıkları (Tam Yapısal)
+function buildStructuredGbfColumns(): TemplateColumnDef[] {
+  const cols: TemplateColumnDef[] = [];
+
+  for (const sec of GBF_SECTIONS) {
+    const groupTitle = `BÖLÜM ${sec.num}: ${sec.title.toUpperCase()}`;
+    const subs = sec.subs.length > 0 ? sec.subs : [{ code: String(sec.num), title: sec.title }];
+
+    for (const sub of subs) {
+      const suggests = GBF_SUGGEST[sub.code] || [];
+
+      // Bölüm 2.2: Etiket unsurları -> Özel H / EUH Kodları Seçicisi en başta!
+      if (sub.code === '2.2') {
+        cols.push({
+          key: 'sub:2.2:__HAZARD_CODES__',
+          header: '[2.2] H / EUH Kodları (Seçili Gelir)',
+          groupTitle,
+          groupKind: 'GBF',
+          sectionNum: 2,
+          subCode: '2.2',
+          isHazardCodeSelector: true,
+          width: 30,
+          example: EXAMPLE_VALUES['sub:2.2:__HAZARD_CODES__'] || '',
+          guide:
+            'Virgülle ayırarak H / EUH kodlarını yazın (örn: H225, H319, H336, EUH210). Sistemde 2.2 Etiket Unsurları altında otomatik SEÇİLİ gelir (kod listesi 3. sekmede).',
+        });
+
+        for (const label of suggests) {
+          // Görsel piktogramlar sistem içinden seçildiği için Excel'de hariç tutuyoruz
+          if (label === 'Piktogramlar') continue;
+          const colKey = `sub:2.2:${label}`;
+          cols.push({
+            key: colKey,
+            header: `[2.2] ${label}`,
+            groupTitle,
+            groupKind: 'GBF',
+            sectionNum: 2,
+            subCode: '2.2',
+            suggestLabel: label,
+            width: label === 'Uyarı kelimesi' ? 18 : 28,
+            example: EXAMPLE_VALUES[colKey] || '',
+            guide:
+              label === 'Uyarı kelimesi'
+                ? 'Geçerli değerler: TEHLİKE veya DİKKAT (açılır listeden seçilebilir).'
+                : `Bölüm 2.2 Etiket unsurları — ${label}.`,
+          });
+        }
+        continue;
+      }
+
+      if (suggests.length > 0) {
+        // Önerilen veri başlıkları olan alt başlıklar: her önerilen başlık kendi sütununa ayrılır
+        for (const label of suggests) {
+          const colKey = `sub:${sub.code}:${label}`;
+          cols.push({
+            key: colKey,
+            header: `[${sub.code}] ${label}`,
+            groupTitle,
+            groupKind: 'GBF',
+            sectionNum: sec.num,
+            subCode: sub.code,
+            suggestLabel: label,
+            width: 24,
+            example: EXAMPLE_VALUES[colKey] || '',
+            guide: `Bölüm ${sec.num} / ${sub.code} ${sub.title} → ${label}`,
+          });
+        }
+      } else {
+        // Önerilen başlığı olmayan alt başlıklar (3.1, 3.2, 9.2, 10.1-10.6, 12.2-12.6, 14.1-14.7, 15.1-15.2)
+        const colKey = `sub:${sub.code}`;
+        cols.push({
+          key: colKey,
+          header: `[${sub.code}] ${sub.title}`,
+          groupTitle,
+          groupKind: 'GBF',
+          sectionNum: sec.num,
+          subCode: sub.code,
+          width: 28,
+          example: EXAMPLE_VALUES[colKey] || '',
+          guide: `Bölüm ${sec.num} / ${sub.code} ${sub.title} serbest açıklama metni.`,
+        });
+      }
+    }
+  }
+
+  return cols;
+}
+
+const GBF_STRUCTURED_COLUMNS = buildStructuredGbfColumns();
+const ALL_TEMPLATE_COLUMNS: TemplateColumnDef[] = [...META_COLUMNS, ...GBF_STRUCTURED_COLUMNS];
+
+// Eski 26 sütunlu "Hızlı Giriş" şablonuyla geriye dönük uyumluluk anahtarları
+const LEGACY_QUICK_KEYS: Array<{ header: string; key: string; secNum: number }> = [
+  { header: 'Bölüm 1 - Madde/Karışım ve Tedarikçi Kimliği', key: 'usageMethod', secNum: 1 },
+  { header: 'Bölüm 2 - Zararlılık Tanımlanması', key: 'hazardDescription', secNum: 2 },
+  { header: 'Bölüm 3 - Bileşimi / İçindekiler', key: 'composition', secNum: 3 },
+  { header: 'Bölüm 4 - İlk Yardım Önlemleri', key: 'firstAid', secNum: 4 },
+  { header: 'Bölüm 5 - Yangınla Mücadele Önlemleri', key: 'fireFightingMeasures', secNum: 5 },
+  { header: 'Bölüm 6 - Kaza Sonucu Yayılmaya Karşı Önlemler', key: 'accidentalReleaseMeasures', secNum: 6 },
+  { header: 'Bölüm 7 - Elleçleme ve Depolama', key: 'handlingAndStorage', secNum: 7 },
+  { header: 'Bölüm 8 - Maruz Kalma Kontrolleri / KKD', key: 'exposureControlsPpe', secNum: 8 },
+  { header: 'Bölüm 9 - Fiziksel ve Kimyasal Özellikler', key: 'physicalAndChemicalProperties', secNum: 9 },
+  { header: 'Bölüm 10 - Kararlılık ve Tepkime', key: 'stabilityAndReactivity', secNum: 10 },
+  { header: 'Bölüm 11 - Toksikolojik Bilgiler', key: 'toxicologicalInformation', secNum: 11 },
+  { header: 'Bölüm 12 - Ekolojik Bilgiler', key: 'ecologicalInformation', secNum: 12 },
+  { header: 'Bölüm 13 - Bertaraf Etme Bilgileri', key: 'disposalConsiderations', secNum: 13 },
+  { header: 'Bölüm 14 - Taşımacılık Bilgileri', key: 'transportInfo', secNum: 14 },
+  { header: 'Bölüm 15 - Mevzuat Bilgileri', key: 'regulatoryInfo', secNum: 15 },
+  { header: 'Bölüm 16 - Diğer Bilgiler', key: 'otherInfo', secNum: 16 },
+];
+
+function colIndexToLetter(idx1Based: number): string {
+  let n = idx1Based;
+  let s = '';
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
 
 interface ParsedRow {
   rowNo: number;
-  data: Record<string, any>;
-  filledGbfCount: number;
+  payload: Record<string, any>;
+  filledSections: number;
+  structuredSections: number;
+  hazardCodes: string[];
   error?: string;
 }
 
@@ -303,7 +417,10 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // 1. Detaylı Excel (.xlsx) Şablonu Oluştur ve İndir
+  // 1. Tam Yapısal Excel (.xlsx) Şablonu Oluştur ve İndir
+  //    Sayfa 1: Kimyasal_Veri_Girisi (Grup Başlığı + Alt Başlık/Önerilen Veri Sütunları + Örnek Satır + Dropdownlar)
+  //    Sayfa 2: Kullanim_Kilavuzu (Tüm sütun açıklamaları + Kategori Referans Listesi)
+  //    Sayfa 3: H_EUH_Kodlari (Tüm resmi H ve EUH kodları ve Türkçe açıklamaları)
   const handleDownloadExcelTemplate = async () => {
     setDownloading(true);
     try {
@@ -311,46 +428,91 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
       wb.creator = 'SEC Portali';
       wb.created = new Date();
 
-      // Sayfa 1: Veri Giriş Tablosu
       const ws = wb.addWorksheet('Kimyasal_Veri_Girisi', {
-        views: [{ state: 'frozen', ySplit: 1, xSplit: 1 }],
+        views: [{ state: 'frozen', ySplit: 2, xSplit: 1 }],
       });
 
-      ws.columns = TEMPLATE_COLUMNS.map((col) => ({
-        header: col.header,
+      ws.columns = ALL_TEMPLATE_COLUMNS.map((col) => ({
         key: col.key,
         width: col.width,
       }));
 
-      // Başlık stili (META = koyu lacivert, GBF 1-16 = koyu indigo)
-      const headerRow = ws.getRow(1);
-      headerRow.height = 30;
-      TEMPLATE_COLUMNS.forEach((col, idx) => {
-        const cell = headerRow.getCell(idx + 1);
-        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
-        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-        cell.fill = {
+      // SATIR 1: Birleştirilmiş Bölüm Grup Başlıkları
+      const groupRow = ws.getRow(1);
+      groupRow.height = 24;
+
+      // SATIR 2: Gerçek Sütun Başlıkları
+      const headerRow = ws.getRow(2);
+      headerRow.height = 34;
+
+      const GROUP_PALETTE = [
+        'FF0F172A', // META - koyu lacivert
+        'FF1E3A8A', // Bölüm 1,3,5... - indigo
+        'FF1E40AF', // Bölüm 2,4,6... - mavi
+      ];
+
+      let spanStart = 1;
+      for (let i = 0; i < ALL_TEMPLATE_COLUMNS.length; i++) {
+        const col = ALL_TEMPLATE_COLUMNS[i];
+        const colIdx = i + 1;
+        const isLast = i === ALL_TEMPLATE_COLUMNS.length - 1;
+        const nextCol = !isLast ? ALL_TEMPLATE_COLUMNS[i + 1] : null;
+
+        const colorArgb =
+          col.groupKind === 'META'
+            ? GROUP_PALETTE[0]
+            : (col.sectionNum || 0) % 2 === 1
+              ? GROUP_PALETTE[1]
+              : GROUP_PALETTE[2];
+
+        const hCell = headerRow.getCell(colIdx);
+        hCell.value = col.header;
+        hCell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 9.5 };
+        hCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        hCell.fill = {
           type: 'pattern',
           pattern: 'solid',
-          fgColor: { argb: col.group === 'META' ? 'FF0F172A' : 'FF1E3A8A' },
+          fgColor: { argb: col.isHazardCodeSelector ? 'FF9F1239' : colorArgb },
         };
-        cell.border = {
+        hCell.border = {
           top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
           bottom: { style: 'medium', color: { argb: 'FF94A3B8' } },
           left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
           right: { style: 'thin', color: { argb: 'FFCBD5E1' } },
         };
-      });
 
-      // Örnek satır (Satır 2)
+        if (isLast || nextCol?.groupTitle !== col.groupTitle) {
+          const gCell = groupRow.getCell(spanStart);
+          gCell.value = col.groupTitle;
+          if (colIdx > spanStart) {
+            ws.mergeCells(1, spanStart, 1, colIdx);
+          }
+          gCell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+          gCell.alignment = { vertical: 'middle', horizontal: 'center' };
+          gCell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: colorArgb },
+          };
+          gCell.border = {
+            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            left: { style: 'medium', color: { argb: 'FFFFFFFF' } },
+            right: { style: 'medium', color: { argb: 'FFFFFFFF' } },
+          };
+          spanStart = colIdx + 1;
+        }
+      }
+
+      // SATIR 3: Örnek Satır
       const exampleObj: Record<string, string> = {};
-      TEMPLATE_COLUMNS.forEach((col) => {
+      ALL_TEMPLATE_COLUMNS.forEach((col) => {
         exampleObj[col.key] = col.example;
       });
       const exampleRow = ws.addRow(exampleObj);
-      exampleRow.height = 42;
+      exampleRow.height = 40;
       exampleRow.eachCell((cell) => {
-        cell.font = { italic: true, color: { argb: 'FF475569' }, size: 9.5 };
+        cell.font = { italic: true, color: { argb: 'FF475569' }, size: 9 };
         cell.alignment = { vertical: 'top', wrapText: true };
         cell.fill = {
           type: 'pattern',
@@ -359,15 +521,14 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
         };
       });
 
-      // Sayfa 2: Kullanım Kılavuzu & Geçerli Değerler (Dropdown listesi için referans)
+      // SAYFA 2: Kullanım Kılavuzu & Kategoriler
       const guideWs = wb.addWorksheet('Kullanim_Kilavuzu');
       guideWs.columns = [
-        { header: 'Sütun Adı', key: 'col', width: 38 },
-        { header: 'Grup', key: 'grp', width: 18 },
-        { header: 'Zorunlu', key: 'req', width: 12 },
+        { header: 'Bölüm / Grup', key: 'grp', width: 32 },
+        { header: 'Sütun Başlığı', key: 'col', width: 36 },
+        { header: 'Zorunlu', key: 'req', width: 10 },
         { header: 'Açıklama ve Format', key: 'desc', width: 65 },
       ];
-
       const gHeader = guideWs.getRow(1);
       gHeader.height = 24;
       gHeader.eachCell((cell) => {
@@ -376,10 +537,10 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
         cell.alignment = { vertical: 'middle' };
       });
 
-      TEMPLATE_COLUMNS.forEach((col) => {
+      ALL_TEMPLATE_COLUMNS.forEach((col) => {
         guideWs.addRow({
+          grp: col.groupTitle,
           col: col.header,
-          grp: col.group === 'META' ? '1. Ürün & Belge' : '2. GBF Bölümleri',
           req: col.required ? 'EVET' : 'Opsiyonel',
           desc: col.guide,
         });
@@ -387,17 +548,17 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
 
       guideWs.addRow({});
       const noteRow = guideWs.addRow({
-        col: 'ÖNEMLİ NOT',
-        grp: 'Görseller',
+        grp: 'ÖNEMLİ NOT',
+        col: 'Görseller & H/EUH Kodları',
         req: '-',
-        desc: 'Ürün görseli, SDS PDF dosyası, GHS zararlılık piktogramları, KKD ikonları ve ADR etiketleri toplu yükleme sonrasında ilgili maddenin Düzenle ekranından görsel olarak seçilir.',
+        desc: '1) [2.2] H / EUH Kodları sütununa virgülle ayırarak kod yazın (örn: H225, H319, EUH210); sistemde otomatik SEÇİLİ gelir. 2) Ürün görseli, SDS PDF, GHS piktogramları, KKD ikonları ve ADR etiketleri yükleme sonrası Düzenle ekranından seçilir.',
       });
       noteRow.eachCell((c) => {
         c.font = { bold: true, color: { argb: 'FF92400E' } };
         c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
       });
 
-      // Referans Kategori Listesi (Gizli veya Kılavuz sayfasında F sütunu)
+      // Referans Kategori Listesi (Kullanim_Kilavuzu!F sütunu)
       const catNames = categories.map((c) => c.name).filter(Boolean);
       if (catNames.length > 0) {
         guideWs.getCell('F1').value = 'Kategoriler';
@@ -406,25 +567,64 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
         });
       }
 
-      // Excel Açılır Liste (Data Validation) — Satır 2..200 arası
-      for (let r = 2; r <= 200; r++) {
+      // SAYFA 3: Resmi H ve EUH Kodları Referans Listesi
+      const hWs = wb.addWorksheet('H_EUH_Kodlari', {
+        views: [{ state: 'frozen', ySplit: 1 }],
+      });
+      hWs.columns = [
+        { header: 'Kod', key: 'kod', width: 18 },
+        { header: 'Kategori', key: 'kategori', width: 28 },
+        { header: 'Resmi Zararlılık İfadesi', key: 'ifade', width: 78 },
+      ];
+      const hHead = hWs.getRow(1);
+      hHead.height = 24;
+      hHead.eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF9F1239' } };
+        cell.alignment = { vertical: 'middle' };
+      });
+      HAZARD_STATEMENTS.forEach((st) => {
+        hWs.addRow({ kod: st.kod, kategori: st.kategori, ifade: st.ifade });
+      });
+
+      // Excel Açılır Listeleri (Data Validation) — Satır 3..200 arası
+      const catColLetter = colIndexToLetter(
+        ALL_TEMPLATE_COLUMNS.findIndex((c) => c.key === 'categoryName') + 1
+      );
+      const kindColLetter = colIndexToLetter(
+        ALL_TEMPLATE_COLUMNS.findIndex((c) => c.key === 'productKind') + 1
+      );
+      const regimeColLetter = colIndexToLetter(
+        ALL_TEMPLATE_COLUMNS.findIndex((c) => c.key === 'sdsRegime') + 1
+      );
+      const signalColIdx = ALL_TEMPLATE_COLUMNS.findIndex((c) => c.key === 'sub:2.2:Uyarı kelimesi');
+      const signalColLetter = signalColIdx >= 0 ? colIndexToLetter(signalColIdx + 1) : '';
+
+      for (let r = 3; r <= 200; r++) {
         if (catNames.length > 0) {
-          ws.getCell(`B${r}`).dataValidation = {
+          ws.getCell(`${catColLetter}${r}`).dataValidation = {
             type: 'list',
             allowBlank: true,
             formulae: [`Kullanim_Kilavuzu!$F$2:$F$${catNames.length + 1}`],
           };
         }
-        ws.getCell(`I${r}`).dataValidation = {
+        ws.getCell(`${kindColLetter}${r}`).dataValidation = {
           type: 'list',
           allowBlank: true,
           formulae: ['"karışım,madde"'],
         };
-        ws.getCell(`J${r}`).dataValidation = {
+        ws.getCell(`${regimeColLetter}${r}`).dataValidation = {
           type: 'list',
           allowBlank: true,
           formulae: ['"KKDİK Ek-2,2014 GBF formatı,Diğer / eski format"'],
         };
+        if (signalColLetter) {
+          ws.getCell(`${signalColLetter}${r}`).dataValidation = {
+            type: 'list',
+            allowBlank: true,
+            formulae: ['"TEHLİKE,DİKKAT"'],
+          };
+        }
       }
 
       const buffer = await wb.xlsx.writeBuffer();
@@ -434,10 +634,12 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Hazmat_Kimyasal_Sablon_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.download = `Hazmat_Yapisal_GBF_Sablon_${new Date().toISOString().slice(0, 10)}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Detaylı Excel şablonu indirildi (örnek satır ve kılavuz dahil).');
+      toast.success(
+        `Tam yapısal Excel şablonu indirildi (${ALL_TEMPLATE_COLUMNS.length} sütun + H/EUH kod listesi).`
+      );
     } catch (err) {
       console.error(err);
       toast.error('Excel şablonu oluşturulamadı.');
@@ -446,23 +648,23 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
     }
   };
 
-  // 2. CSV Şablonu İndir (UTF-8 BOM, ; ayraçlı)
+  // 2. Tam Yapısal CSV Şablonu İndir (UTF-8 BOM, ; ayraçlı)
   const handleDownloadCsvTemplate = () => {
     const escapeCsv = (val: string) => `"${String(val || '').replace(/"/g, '""')}"`;
-    const headerLine = TEMPLATE_COLUMNS.map((c) => escapeCsv(c.header)).join(';');
-    const exampleLine = TEMPLATE_COLUMNS.map((c) => escapeCsv(c.example)).join(';');
+    const headerLine = ALL_TEMPLATE_COLUMNS.map((c) => escapeCsv(c.header)).join(';');
+    const exampleLine = ALL_TEMPLATE_COLUMNS.map((c) => escapeCsv(c.example)).join(';');
     const csvContent = `\uFEFF${headerLine}\r\n${exampleLine}\r\n`;
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Hazmat_Kimyasal_Sablon_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `Hazmat_Yapisal_GBF_Sablon_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('CSV şablonu indirildi.');
+    toast.success('Tam yapısal CSV şablonu indirildi.');
   };
 
-  // 3. Yüklenen Excel / CSV Dosyasını Oku ve Önizle
+  // 3. Yüklenen Excel / CSV Dosyasını Oku, Yapısal GBF (sdsStructuredData) + H/EUH Kodlarını Oluştur
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -474,9 +676,11 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
       const firstSheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[firstSheetName];
-      const rawRows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
 
-      if (rawRows.length === 0) {
+      // 2 satırlı Excel başlığını (Satır 1 = Grup Başlığı, Satır 2 = Sütun Başlığı) veya
+      // 1 satırlı CSV/eski Excel başlığını otomatik algıla
+      const matrix = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+      if (matrix.length < 2) {
         toast.error('Dosyada veri satırı bulunamadı.');
         setParsedRows([]);
         return;
@@ -489,39 +693,127 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
           .replace(/\s+/g, ' ')
           .trim();
 
-      const headerToKey = new Map<string, string>();
-      TEMPLATE_COLUMNS.forEach((col) => {
-        headerToKey.set(normHeader(col.header), col.key);
-        headerToKey.set(normHeader(col.key), col.key);
+      const headerToDef = new Map<string, TemplateColumnDef>();
+      ALL_TEMPLATE_COLUMNS.forEach((col) => {
+        headerToDef.set(normHeader(col.header), col);
+        headerToDef.set(normHeader(col.key), col);
       });
 
+      const legacyHeaderMap = new Map<string, { key: string; secNum: number }>();
+      LEGACY_QUICK_KEYS.forEach((item) => {
+        legacyHeaderMap.set(normHeader(item.header), item);
+        legacyHeaderMap.set(normHeader(item.key), item);
+      });
+
+      const scoreRowAsHeader = (row: any[]) =>
+        row.reduce((acc, cell) => {
+          const nh = normHeader(cell);
+          if (headerToDef.has(nh) || legacyHeaderMap.has(nh)) return acc + 1;
+          return acc;
+        }, 0);
+
+      const headerRowIdx =
+        matrix.length >= 2 && scoreRowAsHeader(matrix[1]) > scoreRowAsHeader(matrix[0]) ? 1 : 0;
+      const headers = (matrix[headerRowIdx] || []).map((h) => String(h ?? ''));
+      const dataRows = matrix.slice(headerRowIdx + 1);
+
       const mapped: ParsedRow[] = [];
-      rawRows.forEach((raw, idx) => {
-        const record: Record<string, any> = {};
-        Object.entries(raw).forEach(([colHeader, val]) => {
-          const matchedKey = headerToKey.get(normHeader(colHeader));
-          if (matchedKey) {
-            record[matchedKey] = val;
+
+      dataRows.forEach((cells, idx) => {
+        const metaRecord: Record<string, any> = {};
+        const gbfDoc = createEmptyGbfDoc();
+        let hasStructuredInput = false;
+        let hazardCodes: string[] = [];
+        let hasAnyCell = false;
+
+        headers.forEach((rawHeader, colIdx) => {
+          const val = cells[colIdx];
+          const strVal = String(val ?? '').trim();
+          if (!strVal) return;
+
+          const nh = normHeader(rawHeader);
+          const colDef = headerToDef.get(nh);
+          if (colDef) {
+            hasAnyCell = true;
+            if (colDef.groupKind === 'META') {
+              metaRecord[colDef.key] = val;
+            } else if (colDef.sectionNum && colDef.subCode) {
+              hasStructuredInput = true;
+              const sec = gbfDoc.sections[colDef.sectionNum];
+              if (!sec.sub[colDef.subCode]) {
+                sec.sub[colDef.subCode] = createEmptySub();
+              }
+              const subObj = sec.sub[colDef.subCode];
+
+              if (colDef.isHazardCodeSelector) {
+                const expanded = expandHazardCodesToSelectorText(strVal);
+                subObj.text = expanded.text;
+                hazardCodes = expanded.matchedCodes;
+              } else if (colDef.suggestLabel) {
+                subObj.rows.push({ label: colDef.suggestLabel, value: strVal });
+              } else {
+                subObj.text = subObj.text ? `${subObj.text}\n${strVal}` : strVal;
+              }
+            }
+            return;
+          }
+
+          // Eski 26 sütunlu Hızlı Giriş şablonu desteği
+          const legacyDef = legacyHeaderMap.get(nh);
+          if (legacyDef) {
+            hasAnyCell = true;
+            gbfDoc.sections[legacyDef.secNum].raw = strVal;
           }
         });
 
-        // Tamamen boş satırları atla
-        const hasAnyValue = Object.values(record).some((v) => String(v ?? '').trim() !== '');
-        if (!hasAnyValue) return;
+        if (!hasAnyCell) return;
 
-        const productName = String(record.productName ?? '').trim();
-        const filledGbfCount = GBF_KEYS.filter((k) => String(record[k] ?? '').trim() !== '').length;
+        // Ürün türü ve mevzuat dönemini GBF belgesine yansıt
+        const rawKind = String(metaRecord.productKind || '')
+          .toLocaleLowerCase('tr-TR')
+          .trim();
+        gbfDoc.kind = rawKind === 'madde' ? 'madde' : 'karışım';
+        if (String(metaRecord.sdsRegime || '').trim()) {
+          gbfDoc.regime = String(metaRecord.sdsRegime).trim();
+        }
+
+        const legacyFields = extractLegacyFieldsFromGbf(gbfDoc);
+        const progress = countGbfProgress(gbfDoc);
+        const productName = String(metaRecord.productName ?? '').trim();
+
+        const payload: Record<string, any> = {
+          ...metaRecord,
+          usageMethod: legacyFields.usageMethod,
+          hazardDescription: legacyFields.hazardDescription,
+          composition: legacyFields.composition,
+          firstAid: legacyFields.firstAid,
+          fireFightingMeasures: legacyFields.fireFightingMeasures,
+          accidentalReleaseMeasures: legacyFields.accidentalReleaseMeasures,
+          handlingAndStorage: legacyFields.handlingAndStorage,
+          exposureControlsPpe: legacyFields.exposureControls,
+          physicalAndChemicalProperties: legacyFields.physicalProperties,
+          stabilityAndReactivity: legacyFields.stabilityAndReactivity,
+          toxicologicalInformation: legacyFields.toxicologicalInfo,
+          ecologicalInformation: legacyFields.ecologicalInfo,
+          disposalConsiderations: legacyFields.disposalConsiderations,
+          transportInfo: legacyFields.transportInfo,
+          regulatoryInfo: legacyFields.regulatoryInfo,
+          otherInfo: legacyFields.otherInfo,
+          ...(hasStructuredInput || progress.any > 0 ? { sdsStructuredData: gbfDoc } : {}),
+        };
 
         mapped.push({
-          rowNo: idx + 2,
-          data: record,
-          filledGbfCount,
+          rowNo: headerRowIdx + idx + 2,
+          payload,
+          filledSections: progress.any,
+          structuredSections: progress.structured,
+          hazardCodes,
           error: !productName ? 'Ürün / Madde Adı boş olamaz' : undefined,
         });
       });
 
       setParsedRows(mapped);
-      toast.success(`${mapped.length} satır okundu. Önizlemeyi kontrol edip yükleyebilirsiniz.`);
+      toast.success(`${mapped.length} satır yapısal GBF verisi olarak okundu.`);
     } catch (err) {
       console.error(err);
       toast.error('Dosya okunamadı. Lütfen geçerli bir .xlsx veya .csv şablonu seçin.');
@@ -531,7 +823,7 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
 
   // 4. Backend'e Gönder
   const handleImportSubmit = async () => {
-    const validRows = parsedRows.filter((r) => !r.error).map((r) => r.data);
+    const validRows = parsedRows.filter((r) => !r.error).map((r) => r.payload);
     if (validRows.length === 0) {
       toast.error('Yüklenecek geçerli satır bulunamadı.');
       return;
@@ -550,7 +842,7 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
       setImportSummary(json.results);
       queryClient.invalidateQueries({ queryKey: ['global-materials-list'] });
       queryClient.invalidateQueries({ queryKey: ['facility-materials'] });
-      toast.success(json.message || 'Kimyasal maddeler başarıyla yüklendi.');
+      toast.success(json.message || 'Kimyasal maddeler yapısal GBF verileriyle yüklendi.');
       onSuccess?.();
     } catch (err: any) {
       toast.error(err.message || 'Toplu yükleme sırasında hata oluştu.');
@@ -574,10 +866,10 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
         <DialogHeader className="px-5 pt-5 pb-3 border-b border-border">
           <DialogTitle className="text-base font-semibold flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-primary" />
-            Excel / CSV ile Toplu Kimyasal Madde Yükleme
+            Excel / CSV ile Toplu Yapısal GBF Yükleme
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Görseller, SDS PDF ve piktogram/KKD/ADR işaretleri hariç tüm ürün bilgileri ve 16 GBF bölümünü topluca yükleyin; ardından görselleri sistem içinden seçin.
+            Tüm 16 GBF bölümü, alt başlıkları (1.1–16), önerilen veri başlıkları ve Bölüm 2.2 H / EUH kodları dahil tam yapısal şablonla topluca yükleyin.
           </DialogDescription>
         </DialogHeader>
 
@@ -587,10 +879,10 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h4 className="text-xs font-semibold text-foreground">
-                  1. Adım: Hazır Şablonu İndirin (26 Metin &amp; GBF Sütunu)
+                  1. Adım: Tam Yapısal GBF Şablonunu İndirin ({ALL_TEMPLATE_COLUMNS.length} Sütun)
                 </h4>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Excel şablonu; sistemdeki güncel kategorileri açılır liste olarak, örnek bir satırı ve Kullanım Kılavuzu sekmesini içerir.
+                  Alt başlıklara ayrılmış tüm önerilen veri başlıkları, <strong>[2.2] H / EUH Kodları</strong> (otomatik seçili gelir) ve <strong>H_EUH_Kodlari</strong> referans sekmesini içerir.
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -624,7 +916,7 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
             <div className="rounded-md bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 px-3 py-2 flex items-start gap-2 text-[11px] text-amber-800 dark:text-amber-300">
               <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
-                <strong>Görsel alanlar hariçtir:</strong> Ürün fotoğrafı, GBF PDF dosyası, GHS zararlılık piktogramları, KKD ikonları ve ADR etiketleri yükleme sonrası ilgili maddenin <strong>Düzenle</strong> ekranından seçilir.
+                <strong>Görsel alanlar hariçtir:</strong> Ürün fotoğrafı, GBF PDF, GHS piktogramları, KKD ikonları ve ADR etiketleri yükleme sonrası <strong>Düzenle</strong> ekranından seçilir. <strong>H / EUH kodları</strong> ise <code>H225, H319, EUH210</code> şeklinde yazıldığında 2.2 altında otomatik seçili gelir.
               </span>
             </div>
           </div>
@@ -652,7 +944,7 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
                 {fileName ? `Seçili dosya: ${fileName}` : 'Excel (.xlsx, .xls) veya CSV dosyası seçmek için tıklayın'}
               </span>
               <span className="text-[11px] text-muted-foreground">
-                Örnek satırı silip kendi kimyasal listenizi ekledikten sonra yükleyebilirsiniz
+                Örnek satırı (3. satır) silip kendi kimyasal listenizi ekledikten sonra yükleyebilirsiniz
               </span>
               <input
                 ref={fileInputRef}
@@ -689,7 +981,7 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
                     onChange={(e) => setUpdateExisting(e.target.checked)}
                     className="w-3.5 h-3.5 accent-primary rounded"
                   />
-                  Aynı ürün adı varsa mevcut metinleri güncelle
+                  Aynı ürün adı varsa mevcut GBF verilerini güncelle
                 </label>
               </div>
 
@@ -699,9 +991,8 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
                     <tr>
                       <th className="px-3 py-2 w-12">Satır</th>
                       <th className="px-3 py-2">Ürün / Madde Adı</th>
-                      <th className="px-3 py-2">Kategori</th>
-                      <th className="px-3 py-2">Marka / GBF No</th>
-                      <th className="px-3 py-2 text-center">GBF</th>
+                      <th className="px-3 py-2">H / EUH Kodları</th>
+                      <th className="px-3 py-2 text-center">Yapısal GBF</th>
                       <th className="px-3 py-2 text-right">Durum</th>
                     </tr>
                   </thead>
@@ -710,17 +1001,34 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
                       <tr key={row.rowNo} className={row.error ? 'bg-red-500/5' : ''}>
                         <td className="px-3 py-2 font-mono text-muted-foreground">{row.rowNo}</td>
                         <td className="px-3 py-2 font-medium text-foreground max-w-[200px] truncate">
-                          {row.data.productName || '-'}
+                          {row.payload.productName || '-'}
                         </td>
-                        <td className="px-3 py-2 text-muted-foreground truncate max-w-[130px]">
-                          {row.data.categoryName || '-'}
-                        </td>
-                        <td className="px-3 py-2 text-muted-foreground truncate max-w-[150px]">
-                          {[row.data.brandName, row.data.sdsNumber].filter(Boolean).join(' · ') || '-'}
+                        <td className="px-3 py-2">
+                          {row.hazardCodes.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {row.hazardCodes.slice(0, 4).map((c) => (
+                                <span
+                                  key={c}
+                                  className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800"
+                                >
+                                  {c}
+                                </span>
+                              ))}
+                              {row.hazardCodes.length > 4 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  +{row.hazardCodes.length - 4}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-center tabular-nums">
                           <Badge variant="outline" className="text-[10px]">
-                            {row.filledGbfCount}/16
+                            {row.structuredSections > 0
+                              ? `${row.structuredSections}/16 Alt Başlık`
+                              : `${row.filledSections}/16`}
                           </Badge>
                         </td>
                         <td className="px-3 py-2 text-right">
@@ -756,7 +1064,7 @@ export const HazmatExcelImportDialog: React.FC<HazmatExcelImportDialogProps> = (
                   <strong>Yükleme tamamlandı:</strong> {importSummary.created} yeni eklendi,{' '}
                   {importSummary.updated} güncellendi
                   {importSummary.skipped > 0 ? `, ${importSummary.skipped} atlandı` : ''}. Artık
-                  listeden ilgili maddeleri açıp görsel ve tehlike piktogramlarını seçebilirsiniz.
+                  maddeleri açtığınızda alt başlıklar, önerilen veri alanları ve H/EUH kodları seçili olarak hazır görünecektir.
                 </span>
               </div>
             </div>

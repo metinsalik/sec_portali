@@ -1,104 +1,23 @@
 import React from 'react';
 import { type Finding, RISK_COLORS, RISK_LEVELS, normalizeRiskLevel } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
-import TextAlign from '@tiptap/extension-text-align';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-
-// Custom TipTap Editor Component
-const RichTextEditor = ({
-  content,
-  onChange,
-}: {
-  content: string;
-  onChange: (html: string) => void;
-}) => {
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Underline,
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-    ],
-    content,
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
-    },
-    editorProps: {
-      attributes: {
-        class:
-          'min-h-[150px] p-4 outline-none text-sm text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-bold',
-      },
-    },
-  });
-
-  if (!editor) return null;
-
-  return (
-    <div className="border border-input rounded-lg overflow-hidden bg-background focus-within:ring-2 focus-within:ring-ring transition-all duration-200">
-      <div className="bg-muted/40 border-b border-border p-1.5 flex flex-wrap items-center gap-1">
-        <Button
-          type="button"
-          size="sm"
-          variant={editor.isActive('bold') ? 'secondary' : 'ghost'}
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          className="h-7 px-2.5 text-xs font-bold"
-        >
-          B
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={editor.isActive('italic') ? 'secondary' : 'ghost'}
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          className="h-7 px-2.5 text-xs italic"
-        >
-          I
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={editor.isActive('underline') ? 'secondary' : 'ghost'}
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          className="h-7 px-2.5 text-xs underline"
-        >
-          U
-        </Button>
-        <div className="w-px h-5 bg-border mx-1" />
-        <Button
-          type="button"
-          size="sm"
-          variant={editor.isActive('bulletList') ? 'secondary' : 'ghost'}
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className="h-7 px-2.5 text-xs"
-        >
-          • Liste
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={editor.isActive('orderedList') ? 'secondary' : 'ghost'}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className="h-7 px-2.5 text-xs"
-        >
-          1. Liste
-        </Button>
-      </div>
-      <EditorContent editor={editor} />
-    </div>
-  );
-};
+import { AuditRichTextEditor } from '../components/AuditRichTextEditor';
 
 export default function AnalysisTab({
   findings,
   auditMeta,
   setAuditMeta,
+  facilityId,
+  facilityName,
+  disabled = false,
 }: {
   findings: Finding[];
   auditMeta: any;
   setAuditMeta: any;
+  facilityId?: string;
+  facilityName?: string;
+  disabled?: boolean;
 }) {
   const totalFindings = findings.length;
   const newFindings = findings.filter((f) => f.status === 'Yeni Tespit Edilen').length;
@@ -378,13 +297,16 @@ export default function AnalysisTab({
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Yönetici Özeti</CardTitle>
           <CardDescription>
-            Denetim sürecinin genel görünümü, kritik sorunlar ve acil eylem önerilerini yazın.
+            Denetim sürecinin genel görünümü, kritik sorunlar ve acil eylem önerilerini tablo, maddeleme ve görsellerle zenginleştirerek yazın.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <RichTextEditor
+          <AuditRichTextEditor
             content={auditMeta.executiveSummary || ''}
             onChange={(html) => setAuditMeta({ ...auditMeta, executiveSummary: html })}
+            facilityId={facilityId}
+            facilityName={facilityName}
+            disabled={disabled}
           />
         </CardContent>
       </Card>
@@ -393,13 +315,16 @@ export default function AnalysisTab({
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Genel Değerlendirme ve Sonuç</CardTitle>
           <CardDescription>
-            Denetimin son kapanış değerlendirmesi ve tesise verilen tavsiyeleri buraya ekleyebilirsiniz.
+            Denetimin son kapanış değerlendirmesi, özet tablolar, görseller ve tesise verilen tavsiyeleri buraya ekleyebilirsiniz.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <RichTextEditor
+          <AuditRichTextEditor
             content={auditMeta.generalConclusion || ''}
             onChange={(html) => setAuditMeta({ ...auditMeta, generalConclusion: html })}
+            facilityId={facilityId}
+            facilityName={facilityName}
+            disabled={disabled}
           />
         </CardContent>
       </Card>

@@ -258,6 +258,14 @@ export default function MaterialFormPage() {
     setIsDirty(true);
   };
 
+  // Eğer aktif bölüm yapısal alt başlıklar içeriyorsa doğrudan "Alt başlıklara ayır" sekmesini aç
+  useEffect(() => {
+    const sec = gbfDoc.sections[currentSection];
+    if (isSectionStructured(sec) && !sec?.raw?.trim()) {
+      setActiveView('detail');
+    }
+  }, [currentSection, isDataLoaded]);
+
   const updateGbf = (updater: (prev: GbfDoc) => GbfDoc) => {
     setGbfDoc((prev) => updater(prev));
     setIsDirty(true);

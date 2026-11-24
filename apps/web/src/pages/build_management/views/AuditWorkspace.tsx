@@ -188,6 +188,7 @@ export default function AuditWorkspace({
       category: '',
       subcategory: '',
       findingDesc: '',
+      riskReasoning: '',
       riskDesc: '',
       recommendation: '',
       locationId: '',
@@ -382,6 +383,7 @@ export default function AuditWorkspace({
             category: newFinding.category || '',
             subcategory: newFinding.subcategory || '',
             findingDesc: newFinding.findingDesc || '',
+            riskReasoning: newFinding.riskReasoning || '',
             riskDesc: newFinding.riskDesc || '',
             recommendation: newFinding.recommendation || '',
             locationId: resolvedLocationId,
@@ -421,6 +423,7 @@ export default function AuditWorkspace({
         isStarted: false,
         files: newFinding.files || [],
         findingDesc: newFinding.findingDesc || '',
+        riskReasoning: newFinding.riskReasoning || '',
         riskDesc: newFinding.riskDesc || '',
         recommendation: newFinding.recommendation || '',
         status: 'Yeni Tespit Edilen',
@@ -484,6 +487,7 @@ export default function AuditWorkspace({
       category: keepSameArea ? prev.category : '',
       subcategory: keepSameArea ? prev.subcategory : '',
       findingDesc: '',
+      riskReasoning: '',
       riskDesc: '',
       recommendation: '',
       locationId: keepSameArea ? resolvedLocationId : '',
@@ -1654,6 +1658,19 @@ export default function AuditWorkspace({
                                 />
                               </div>
 
+                              <div>
+                                <label className="block text-xs font-semibold text-foreground mb-1.5">
+                                  Dayanak <span className="text-muted-foreground font-normal">(Mevzuat / Standart — Opsiyonel)</span>
+                                </label>
+                                <Input
+                                  type="text"
+                                  placeholder="Örn. Binaların Yangından Korunması Hakkında Yönetmelik Md. 48, TS EN 671-3..."
+                                  value={newFinding.riskReasoning || ''}
+                                  onChange={e => setNewFinding({ ...newFinding, riskReasoning: e.target.value })}
+                                  className="h-9 text-sm"
+                                />
+                              </div>
+
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                   <label className="block text-xs font-semibold text-foreground mb-1.5">Risk (Etki ve Sonuçları)</label>
@@ -1778,7 +1795,14 @@ export default function AuditWorkspace({
                   <p><strong>Bu rapor yayınlanmıştır.</strong> Analiz verileri değiştirilemez.</p>
                 </div>
               )}
-              <AnalysisTab findings={findings} auditMeta={auditMeta} setAuditMeta={setAuditMeta} />
+              <AnalysisTab
+                findings={findings}
+                auditMeta={auditMeta}
+                setAuditMeta={setAuditMeta}
+                facilityId={auditMeta.locationId}
+                facilityName={facilities.find((f) => f.id === auditMeta.locationId)?.name}
+                disabled={isPublished}
+              />
             </fieldset>
           )}
 

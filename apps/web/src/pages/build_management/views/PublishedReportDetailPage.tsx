@@ -40,6 +40,7 @@ import {
 } from '../types';
 import { saveAudit, uploadAuditFiles } from '../services/auditApi';
 import ReportTemplate from './ReportTemplate';
+import { AUDIT_RICH_CONTENT_CLASS } from '../components/AuditRichTextEditor';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -885,7 +886,7 @@ export default function PublishedReportDetailPage({ reportId }: PublishedReportD
               </CardHeader>
               <CardContent>
                 <div
-                  className="prose prose-sm dark:prose-invert max-w-none text-foreground"
+                  className={AUDIT_RICH_CONTENT_CLASS}
                   dangerouslySetInnerHTML={{ __html: audit.meta.executiveSummary }}
                 />
               </CardContent>
@@ -899,7 +900,7 @@ export default function PublishedReportDetailPage({ reportId }: PublishedReportD
               </CardHeader>
               <CardContent>
                 <div
-                  className="prose prose-sm dark:prose-invert max-w-none text-foreground"
+                  className={AUDIT_RICH_CONTENT_CLASS}
                   dangerouslySetInnerHTML={{ __html: audit.meta.generalConclusion }}
                 />
               </CardContent>

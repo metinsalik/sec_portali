@@ -36,7 +36,7 @@ router.get('/search', authMiddleware, async (req: AuthRequest, res) => {
 // GET all global materials, and check if they exist in a specific facility
 router.get('/global', authMiddleware, async (req: AuthRequest, res) => {
   const { facilityId } = req.query as Record<string, any>;
-  
+
   try {
     const allMaterials = await prisma.hazmatMaterial.findMany({
       include: {
@@ -520,8 +520,13 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
           rawKind && normalizeText(rawKind) === 'madde'
             ? 'madde'
             : rawKind && normalizeText(rawKind).includes('kar')
-            ? 'karışım'
-            : rawKind || null;
+              ? 'karışım'
+              : rawKind || null;
+
+        const incomingStructured =
+          data.sdsStructuredData && typeof data.sdsStructuredData === 'object'
+            ? data.sdsStructuredData
+            : undefined;
 
         const payload = {
           brandName: cleanStr(data.brandName),
@@ -549,6 +554,7 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
           transportInfo: cleanStr(data.transportInfo),
           regulatoryInfo: cleanStr(data.regulatoryInfo),
           otherInfo: cleanStr(data.otherInfo),
+          ...(incomingStructured ? { sdsStructuredData: incomingStructured } : {}),
         };
 
         let material = allGlobalMaterials.find((m) => normalizeText(m.productName) === normalizedProductName);
@@ -565,7 +571,7 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
             data: {
               materialId: material.id,
               action: 'CREATE',
-              details: 'Excel / CSV toplu şablon yüklemesi ile oluşturuldu.',
+              details: 'Excel / CSV toplu yapısal GBF şablonu ile oluşturuldu.',
               username,
             },
           });
@@ -573,9 +579,10 @@ router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
           allGlobalMaterials.push(material);
           results.created++;
         } else if (updateExisting) {
-          // Eğer mevcut kayıtta sdsStructuredData varsa, Excel'den gelen dolu GBF bölümlerini de içine yansıt
-          let nextStructuredData: any = undefined;
-          if (material.sdsStructuredData && typeof material.sdsStructuredData === 'object') {
+          // Eğer Excel'den doğrudan yapısal GBF (sdsStructuredData) geldiyse onu kullan;
+          // aksi halde mevcut kayıtta sdsStructuredData varsa düz GBF sütunlarını içine yansıt
+          let nextStructuredData: any = incomingStructured;
+          if (!nextStructuredData && material.sdsStructuredData && typeof material.sdsStructuredData === 'object') {
             const cloned: any = JSON.parse(JSON.stringify(material.sdsStructuredData));
             if (payload.productKind === 'madde' || payload.productKind === 'karışım') cloned.kind = payload.productKind;
             if (payload.sdsRegime) cloned.regime = payload.sdsRegime;
@@ -942,7 +949,7 @@ router.delete('/:id', authMiddleware, async (req: AuthRequest, res) => {
 
   try {
     const { id } = req.params;
-    
+
     // Check if material exists
     const material = await prisma.hazmatMaterial.findUnique({ where: { id } });
     if (!material) {
