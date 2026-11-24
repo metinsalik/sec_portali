@@ -16,9 +16,11 @@ import {
   Sparkles,
   Clock,
   X,
-  PackageOpen
+  PackageOpen,
+  FileSpreadsheet
 } from 'lucide-react';
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
+import { HazmatExcelImportDialog } from '@/components/hazmat/HazmatExcelImportDialog';
 import { BulkDeleteConfirmDialog } from '@/components/shared/BulkDeleteConfirmDialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +49,14 @@ export default function MaterialsListPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isGlobalAdmin = user?.isAdmin || user?.isManagement;
+  const canBulkImport = !!(
+    user?.isAdmin ||
+    user?.isManagement ||
+    user?.roles?.includes('admin') ||
+    user?.roles?.includes('management') ||
+    user?.roles?.includes('safety')
+  );
+  const [excelImportOpen, setExcelImportOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterBrand, setFilterBrand] = useState('ALL');
@@ -250,7 +260,18 @@ export default function MaterialsListPage() {
             Tüm tesisler için tanımlı merkezi tehlikeli madde veritabanı.
           </p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {canBulkImport && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setExcelImportOpen(true)}
+              className="gap-2 h-9 text-xs font-semibold"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-primary" />
+              Excel / CSV Şablon &amp; Yükle
+            </Button>
+          )}
           <Button
             onClick={() => navigate('/hazmat/materials/new')}
             className="shadow-sm gap-2 h-9 text-xs font-semibold"
@@ -642,6 +663,12 @@ export default function MaterialsListPage() {
         isOpen={!!printMaterial}
         onClose={() => setPrintMaterial(null)}
         material={printMaterial}
+      />
+
+      {/* Excel / CSV Toplu Şablon İndirme & Yükleme Modalı (Yönetici) */}
+      <HazmatExcelImportDialog
+        open={excelImportOpen}
+        onOpenChange={setExcelImportOpen}
       />
     </div>
   );

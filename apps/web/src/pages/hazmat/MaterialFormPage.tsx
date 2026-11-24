@@ -28,8 +28,11 @@ import {
   Layers,
   ClipboardList,
   Info,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { HazmatExcelImportDialog } from '@/components/hazmat/HazmatExcelImportDialog';
 import { HazardStatementSelector } from '@/components/hazmat/HazardStatementSelector';
 import type { GbfDoc, GbfSubData } from '@/components/hazmat/gbf/gbfSchema';
 import {
@@ -104,6 +107,15 @@ export default function MaterialFormPage() {
   const [activeView, setActiveView] = useState<'quick' | 'detail'>('quick');
 
   // UI & Draft State
+  const { user } = useAuth();
+  const canBulkImport = !!(
+    user?.isAdmin ||
+    user?.isManagement ||
+    user?.roles?.includes('admin') ||
+    user?.roles?.includes('management') ||
+    user?.roles?.includes('safety')
+  );
+  const [excelImportOpen, setExcelImportOpen] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(!isEditMode);
   const [isDirty, setIsDirty] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -636,6 +648,18 @@ export default function MaterialFormPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {!isEditMode && canBulkImport && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1.5"
+              onClick={() => setExcelImportOpen(true)}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-primary" />
+              Excel / CSV ile Toplu Yükle
+            </Button>
+          )}
           {!isEditMode && (
             <Button type="button" variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" onClick={handleClearDraft}>
               <RotateCcw className="w-3.5 h-3.5 mr-1" />
@@ -1421,6 +1445,13 @@ export default function MaterialFormPage() {
           </div>
         </>
       )}
+
+      {/* Excel / CSV Toplu Şablon İndirme & Yükleme Modalı (Yönetici) */}
+      <HazmatExcelImportDialog
+        open={excelImportOpen}
+        onOpenChange={setExcelImportOpen}
+        onSuccess={() => navigate(returnTo)}
+      />
     </div>
   );
 }

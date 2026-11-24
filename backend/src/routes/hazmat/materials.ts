@@ -407,134 +407,285 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-// Bulk import materials from Excel
-router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
-  const { facilityId, materials } = req.body;
+// Helper: parse YYYY-MM-DD, DD.MM.YYYY, DD/MM/YYYY or Excel serial date safely
+function parseImportDate(raw: any): Date | null {
+  if (raw === null || raw === undefined || raw === '') return null;
+  if (raw instanceof Date && !Number.isNaN(raw.getTime())) return raw;
+  if (typeof raw === 'number' && raw > 20000 && raw < 80000) {
+    // Excel serial date (days since 1899-12-30)
+    const utcDays = Math.floor(raw - 25569);
+    const d = new Date(utcDays * 86400 * 1000);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const str = String(raw).trim();
+  if (!str) return null;
+  // DD.MM.YYYY or DD/MM/YYYY
+  const trMatch = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  if (trMatch) {
+    const [, dd, mm, yyyy] = trMatch;
+    const d = new Date(`${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}T00:00:00.000Z`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const parsed = new Date(str);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
 
-  if (!facilityId || !Array.isArray(materials) || materials.length === 0) {
-    return res.status(400).json({ error: 'facilityId and a non-empty materials array are required' });
+// Bulk import materials from Excel / CSV (Global or Facility-scoped, all 28 text/date/select fields — excludes visuals/pictograms)
+router.post('/import', authMiddleware, async (req: AuthRequest, res) => {
+  const { facilityId, materials, updateExisting = true } = req.body;
+
+  if (!Array.isArray(materials) || materials.length === 0) {
+    return res.status(400).json({ error: 'Yüklenecek madde listesi boş olamaz.' });
   }
 
-  if (!req.user?.isAdmin && !req.user?.isManagement && !req.user?.facilities?.includes(facilityId)) {
-    return res.status(403).json({ error: 'Access denied to this facility' });
+  const isManager = !!(
+    req.user?.isAdmin ||
+    req.user?.isManagement ||
+    req.user?.roles?.includes('admin') ||
+    req.user?.roles?.includes('management') ||
+    req.user?.roles?.includes('safety')
+  );
+
+  if (!isManager) {
+    return res.status(403).json({ error: 'Toplu kimyasal madde yükleme yetkisi yalnızca yöneticilere aittir.' });
   }
 
   try {
     const username = req.user?.username || 'System';
-    let adetUnit = await prisma.hazmatUnit.findFirst({
-      where: { name: { contains: 'adet', mode: 'insensitive' } }
+    const normalizeText = (t: string | null | undefined) => (t || '').toLocaleLowerCase('tr-TR').trim().replace(/\s+/g, ' ');
+    const cleanStr = (v: any): string | null => {
+      if (v === null || v === undefined) return null;
+      const s = String(v).trim();
+      return s.length > 0 ? s : null;
+    };
+
+    const [allGlobalMaterials, allCategories, allUnits] = await Promise.all([
+      prisma.hazmatMaterial.findMany(),
+      prisma.hazmatCategory.findMany({ where: { isActive: true } }),
+      prisma.hazmatUnit.findMany({ where: { isActive: true } }),
+    ]);
+
+    const categoryMap = new Map<string, string>();
+    allCategories.forEach((c) => categoryMap.set(normalizeText(c.name), c.id));
+
+    const unitMap = new Map<string, string>();
+    allUnits.forEach((u) => {
+      unitMap.set(normalizeText(u.name), u.id);
+      if (u.symbol) unitMap.set(normalizeText(u.symbol), u.id);
     });
 
-    if (!adetUnit) {
-      adetUnit = await prisma.hazmatUnit.create({ data: { name: 'Adet', symbol: 'ad' } });
-    }
+    const defaultUnitId =
+      allUnits.find((u) => normalizeText(u.name).includes('adet'))?.id || allUnits[0]?.id || null;
 
-    const results = { created: 0, updated: 0, errors: 0 };
+    const results = {
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: 0,
+      errorDetails: [] as { row: number; productName: string; reason: string }[],
+    };
 
-    // Fetch all existing materials once to do robust in-memory case-insensitive matching
-    const allGlobalMaterials = await prisma.hazmatMaterial.findMany();
-    
-    const normalizeText = (t: string) => (t || '').toLocaleLowerCase('tr-TR').trim();
-
-    for (const data of materials) {
-      if (!data.productName) {
+    for (let idx = 0; idx < materials.length; idx++) {
+      const data = materials[idx];
+      const productName = cleanStr(data.productName);
+      if (!productName) {
         results.errors++;
+        results.errorDetails.push({ row: idx + 2, productName: '-', reason: 'Ürün / Madde Adı zorunludur.' });
         continue;
       }
 
-      const normalizedProductName = normalizeText(data.productName);
+      try {
+        const normalizedProductName = normalizeText(productName);
+        const categoryName = cleanStr(data.categoryName || data.category);
+        const resolvedCategoryId =
+          cleanStr(data.categoryId) ||
+          (categoryName ? categoryMap.get(normalizeText(categoryName)) || null : null);
 
-      // Check if global material exists robustly using Turkish locale lowercasing
-      let material = allGlobalMaterials.find(m => normalizeText(m.productName) === normalizedProductName);
+        const rawSdsNo = cleanStr(data.sdsNumber);
+        const normalizedSdsNumber = rawSdsNo
+          ? rawSdsNo.toUpperCase().startsWith('SDS-')
+            ? rawSdsNo
+            : `SDS-${rawSdsNo}`
+          : null;
 
-      if (!material) {
-        // Create new global material
-        material = await prisma.hazmatMaterial.create({
-          data: {
-            productName: data.productName,
-            brandName: data.brandName || null,
-            usageMethod: data.usageMethod || null,
-            composition: data.composition || null,
-            hazardDescription: data.hazardDescription || null,
-            firstAid: data.firstAid || null,
-            fireFightingMeasures: data.fireFightingMeasures || null,
-            accidentalReleaseMeasures: data.accidentalReleaseMeasures || null,
-            handlingAndStorage: data.handlingAndStorage || null,
-            exposureControlsPpe: data.exposureControlsPpe || data.exposureControls || null,
-            physicalAndChemicalProperties: data.physicalAndChemicalProperties || data.physicalProperties || null,
-            stabilityAndReactivity: data.stabilityAndReactivity || null,
-            toxicologicalInformation: data.toxicologicalInfo || null,
-            disposalConsiderations: data.disposalConsiderations || null,
-            transportInfo: data.transportInfo || null,
-          }
-        });
+        const rawRev = cleanStr(data.sdsRevision);
+        const normalizedSdsRevision = rawRev
+          ? rawRev.toLowerCase().startsWith('rev-')
+            ? rawRev
+            : `Rev-${rawRev}`
+          : null;
 
-        await prisma.hazmatAuditLog.create({
-          data: {
-            materialId: material.id,
-            action: 'CREATE',
-            details: 'Excel içe aktarımı ile oluşturuldu.',
-            username
-          }
-        });
-        
-        allGlobalMaterials.push(material);
-        results.created++;
-      } else {
-        // Update existing material with any new info provided in Excel
-        await prisma.hazmatMaterial.update({
-          where: { id: material.id },
-          data: {
-            brandName: data.brandName || material.brandName,
-            usageMethod: data.usageMethod || material.usageMethod,
-            composition: data.composition || material.composition,
-            hazardDescription: data.hazardDescription || material.hazardDescription,
-            firstAid: data.firstAid || material.firstAid,
-            fireFightingMeasures: data.fireFightingMeasures || material.fireFightingMeasures,
-            accidentalReleaseMeasures: data.accidentalReleaseMeasures || material.accidentalReleaseMeasures,
-            handlingAndStorage: data.handlingAndStorage || material.handlingAndStorage,
-            exposureControlsPpe: data.exposureControlsPpe || data.exposureControls || material.exposureControlsPpe,
-            physicalAndChemicalProperties: data.physicalAndChemicalProperties || data.physicalProperties || material.physicalAndChemicalProperties,
-            stabilityAndReactivity: data.stabilityAndReactivity || material.stabilityAndReactivity,
-            toxicologicalInformation: data.toxicologicalInfo || material.toxicologicalInformation,
-            disposalConsiderations: data.disposalConsiderations || material.disposalConsiderations,
-            transportInfo: data.transportInfo || material.transportInfo,
-          }
-        });
-        
-        await prisma.hazmatAuditLog.create({
-          data: {
-            materialId: material.id,
-            action: 'UPDATE',
-            details: 'Excel içe aktarımı ile mevcut bilgiler güncellendi.',
-            username
-          }
-        });
-        results.updated++;
-      }
+        const rawKind = cleanStr(data.productKind);
+        const normalizedKind =
+          rawKind && normalizeText(rawKind) === 'madde'
+            ? 'madde'
+            : rawKind && normalizeText(rawKind).includes('kar')
+            ? 'karışım'
+            : rawKind || null;
 
-      // Add to facility
-      await prisma.facilityHazmatItem.upsert({
-        where: {
-          facilityId_materialId: { facilityId, materialId: material.id }
-        },
-        update: {
-          amountValue: data.amountValue || 1,
-          unitId: adetUnit.id
-        },
-        create: {
-          facilityId,
-          materialId: material.id,
-          amountValue: data.amountValue || 1,
-          unitId: adetUnit.id
+        const payload = {
+          brandName: cleanStr(data.brandName),
+          categoryId: resolvedCategoryId,
+          sdsNumber: normalizedSdsNumber,
+          sdsRevision: normalizedSdsRevision,
+          sdsDate: parseImportDate(data.sdsDate),
+          sdsRevisionDate: parseImportDate(data.sdsRevisionDate),
+          sdsExpiryDate: parseImportDate(data.sdsExpiryDate),
+          productKind: normalizedKind,
+          sdsRegime: cleanStr(data.sdsRegime),
+          usageMethod: cleanStr(data.usageMethod),
+          hazardDescription: cleanStr(data.hazardDescription),
+          composition: cleanStr(data.composition),
+          firstAid: cleanStr(data.firstAid),
+          fireFightingMeasures: cleanStr(data.fireFightingMeasures),
+          accidentalReleaseMeasures: cleanStr(data.accidentalReleaseMeasures),
+          handlingAndStorage: cleanStr(data.handlingAndStorage),
+          exposureControlsPpe: cleanStr(data.exposureControlsPpe || data.exposureControls),
+          physicalAndChemicalProperties: cleanStr(data.physicalAndChemicalProperties || data.physicalProperties),
+          stabilityAndReactivity: cleanStr(data.stabilityAndReactivity),
+          toxicologicalInformation: cleanStr(data.toxicologicalInformation || data.toxicologicalInfo),
+          ecologicalInformation: cleanStr(data.ecologicalInformation || data.ecologicalInfo),
+          disposalConsiderations: cleanStr(data.disposalConsiderations),
+          transportInfo: cleanStr(data.transportInfo),
+          regulatoryInfo: cleanStr(data.regulatoryInfo),
+          otherInfo: cleanStr(data.otherInfo),
+        };
+
+        let material = allGlobalMaterials.find((m) => normalizeText(m.productName) === normalizedProductName);
+
+        if (!material) {
+          material = await prisma.hazmatMaterial.create({
+            data: {
+              productName,
+              ...payload,
+            },
+          });
+
+          await prisma.hazmatAuditLog.create({
+            data: {
+              materialId: material.id,
+              action: 'CREATE',
+              details: 'Excel / CSV toplu şablon yüklemesi ile oluşturuldu.',
+              username,
+            },
+          });
+
+          allGlobalMaterials.push(material);
+          results.created++;
+        } else if (updateExisting) {
+          // Eğer mevcut kayıtta sdsStructuredData varsa, Excel'den gelen dolu GBF bölümlerini de içine yansıt
+          let nextStructuredData: any = undefined;
+          if (material.sdsStructuredData && typeof material.sdsStructuredData === 'object') {
+            const cloned: any = JSON.parse(JSON.stringify(material.sdsStructuredData));
+            if (payload.productKind === 'madde' || payload.productKind === 'karışım') cloned.kind = payload.productKind;
+            if (payload.sdsRegime) cloned.regime = payload.sdsRegime;
+            if (!cloned.sections) cloned.sections = {};
+            const gbfMap: Array<[number, string | null]> = [
+              [1, payload.usageMethod], [2, payload.hazardDescription], [3, payload.composition],
+              [4, payload.firstAid], [5, payload.fireFightingMeasures], [6, payload.accidentalReleaseMeasures],
+              [7, payload.handlingAndStorage], [8, payload.exposureControlsPpe], [9, payload.physicalAndChemicalProperties],
+              [10, payload.stabilityAndReactivity], [11, payload.toxicologicalInformation], [12, payload.ecologicalInformation],
+              [13, payload.disposalConsiderations], [14, payload.transportInfo], [15, payload.regulatoryInfo],
+              [16, payload.otherInfo],
+            ];
+            for (const [secNo, val] of gbfMap) {
+              if (val) {
+                cloned.sections[secNo] = { ...(cloned.sections[secNo] || { sub: {}, custom: [] }), raw: val };
+              }
+            }
+            nextStructuredData = cloned;
+          }
+
+          material = await prisma.hazmatMaterial.update({
+            where: { id: material.id },
+            data: {
+              brandName: payload.brandName ?? material.brandName,
+              categoryId: payload.categoryId ?? material.categoryId,
+              sdsNumber: payload.sdsNumber ?? material.sdsNumber,
+              sdsRevision: payload.sdsRevision ?? material.sdsRevision,
+              sdsDate: payload.sdsDate ?? material.sdsDate,
+              sdsRevisionDate: payload.sdsRevisionDate ?? material.sdsRevisionDate,
+              sdsExpiryDate: payload.sdsExpiryDate ?? material.sdsExpiryDate,
+              productKind: payload.productKind ?? material.productKind,
+              sdsRegime: payload.sdsRegime ?? material.sdsRegime,
+              usageMethod: payload.usageMethod ?? material.usageMethod,
+              hazardDescription: payload.hazardDescription ?? material.hazardDescription,
+              composition: payload.composition ?? material.composition,
+              firstAid: payload.firstAid ?? material.firstAid,
+              fireFightingMeasures: payload.fireFightingMeasures ?? material.fireFightingMeasures,
+              accidentalReleaseMeasures: payload.accidentalReleaseMeasures ?? material.accidentalReleaseMeasures,
+              handlingAndStorage: payload.handlingAndStorage ?? material.handlingAndStorage,
+              exposureControlsPpe: payload.exposureControlsPpe ?? material.exposureControlsPpe,
+              physicalAndChemicalProperties: payload.physicalAndChemicalProperties ?? material.physicalAndChemicalProperties,
+              stabilityAndReactivity: payload.stabilityAndReactivity ?? material.stabilityAndReactivity,
+              toxicologicalInformation: payload.toxicologicalInformation ?? material.toxicologicalInformation,
+              ecologicalInformation: payload.ecologicalInformation ?? material.ecologicalInformation,
+              disposalConsiderations: payload.disposalConsiderations ?? material.disposalConsiderations,
+              transportInfo: payload.transportInfo ?? material.transportInfo,
+              regulatoryInfo: payload.regulatoryInfo ?? material.regulatoryInfo,
+              otherInfo: payload.otherInfo ?? material.otherInfo,
+              ...(nextStructuredData ? { sdsStructuredData: nextStructuredData } : {}),
+            },
+          });
+
+          await prisma.hazmatAuditLog.create({
+            data: {
+              materialId: material.id,
+              action: 'UPDATE',
+              details: 'Excel / CSV toplu yüklemesi ile mevcut metin alanları güncellendi.',
+              username,
+            },
+          });
+          results.updated++;
+        } else {
+          results.skipped++;
         }
-      });
+
+        // Optional facility link if facilityId is supplied
+        if (facilityId && material) {
+          const parsedAmount =
+            data.amountValue !== undefined && data.amountValue !== null && data.amountValue !== ''
+              ? Number(String(data.amountValue).replace(',', '.'))
+              : null;
+          const unitName = cleanStr(data.unitName || data.unit);
+          const resolvedUnitId =
+            cleanStr(data.unitId) ||
+            (unitName ? unitMap.get(normalizeText(unitName)) || null : null) ||
+            defaultUnitId;
+
+          await prisma.facilityHazmatItem.upsert({
+            where: {
+              facilityId_materialId: { facilityId, materialId: material.id },
+            },
+            update: {
+              ...(parsedAmount !== null && !Number.isNaN(parsedAmount) ? { amountValue: parsedAmount } : {}),
+              ...(resolvedUnitId ? { unitId: resolvedUnitId } : {}),
+            },
+            create: {
+              facilityId,
+              materialId: material.id,
+              amountValue: parsedAmount !== null && !Number.isNaN(parsedAmount) ? parsedAmount : 1,
+              unitId: resolvedUnitId,
+            },
+          });
+        }
+      } catch (rowErr: any) {
+        results.errors++;
+        results.errorDetails.push({
+          row: idx + 2,
+          productName,
+          reason: rowErr?.message || 'Kayıt sırasında hata oluştu.',
+        });
+      }
     }
 
-    res.json({ message: 'Import completed', results });
+    res.json({
+      message: `${results.created} yeni eklendi, ${results.updated} güncellendi${results.skipped ? `, ${results.skipped} atlandı` : ''}.`,
+      results,
+    });
   } catch (error) {
     console.error('Error during bulk import:', error);
-    res.status(500).json({ error: 'Internal server error during import' });
+    res.status(500).json({ error: 'Toplu içe aktarım sırasında sunucu hatası oluştu.' });
   }
 });
 
