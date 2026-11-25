@@ -9,9 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { 
-  UserPlus, Calendar, MapPin, Building2, UserCheck, 
-  AlertCircle, LayoutGrid, ArrowRight, Search, X, Filter 
+import {
+  UserPlus, Calendar, MapPin, Building2, UserCheck,
+  AlertCircle, LayoutGrid, ArrowRight, Search, X, Filter
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,8 +28,9 @@ export function CertificateRenewalDialog({ open, onOpenChange, data = [] }: Cert
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const filteredData = useMemo(() => {
+    const q = searchQuery.toLocaleLowerCase("tr-TR").trim();
     return data.filter((p) => {
-      const matchesSearch = p.fullName?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = !q || (p.fullName || "").toLocaleLowerCase("tr-TR").includes(q);
       if (!matchesSearch) return false;
 
       if (statusFilter === "expired") return p.status?.isExpired;
@@ -42,16 +43,16 @@ export function CertificateRenewalDialog({ open, onOpenChange, data = [] }: Cert
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl w-[96vw] max-h-[88vh] p-0 overflow-hidden rounded-xl border border-border bg-card flex flex-col shadow-lg">
-        {/* Header */}
-        <DialogHeader className="p-6 bg-muted/40 border-b border-border shrink-0">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                <Calendar className="w-5 h-5" />
+      <DialogContent className="sm:max-w-4xl w-[95vw] max-h-[86vh] p-0 overflow-hidden rounded-lg border border-border bg-card flex flex-col shadow-lg gap-0">
+        {/* Compact Header */}
+        <DialogHeader className="px-5 py-3.5 bg-muted/30 border-b border-border shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+                <Calendar className="w-4 h-4" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+                <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                   Sertifika Yenileme Takvimi
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
@@ -60,13 +61,13 @@ export function CertificateRenewalDialog({ open, onOpenChange, data = [] }: Cert
               </div>
             </div>
 
-            <Badge variant="outline" className="h-7 px-3 text-xs font-semibold bg-background border-border w-fit">
+            <Badge variant="outline" className="h-6 px-2.5 text-xs font-semibold bg-background border-border w-fit tabular-nums">
               {filteredData.length} / {data.length} Profesyonel
             </Badge>
           </div>
 
           {/* Filter Bar */}
-          <div className="flex flex-wrap items-center gap-2.5 mt-4 pt-3 border-t border-border/50">
+          <div className="flex flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-border/50">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
@@ -164,8 +165,8 @@ export function CertificateRenewalDialog({ open, onOpenChange, data = [] }: Cert
                             isExpired
                               ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent"
                               : isCritical
-                              ? "bg-destructive/10 text-destructive border-destructive/20"
-                              : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+                                ? "bg-destructive/10 text-destructive border-destructive/20"
+                                : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
                           )}
                         >
                           {isExpired ? "Süresi Dolmuş" : isCritical ? "Kritik" : "Yenileme Bekliyor"}
@@ -216,8 +217,9 @@ export function ResourceGapDialog({ open, onOpenChange, title, data = [], type, 
   const [dangerFilter, setDangerFilter] = useState<string>("all");
 
   const filteredData = useMemo(() => {
+    const q = searchQuery.toLocaleLowerCase("tr-TR").trim();
     return data.filter((r) => {
-      const matchesSearch = r.facilityName?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = !q || (r.facilityName || "").toLocaleLowerCase("tr-TR").includes(q);
       if (!matchesSearch) return false;
 
       if (dangerFilter !== "all" && r.dangerClass !== dangerFilter) return false;
@@ -230,16 +232,16 @@ export function ResourceGapDialog({ open, onOpenChange, title, data = [], type, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl w-[96vw] max-h-[88vh] p-0 overflow-hidden rounded-xl border border-border bg-card flex flex-col shadow-lg">
-        {/* Header */}
-        <DialogHeader className="p-6 bg-muted/40 border-b border-border shrink-0">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                <Icon className="w-5 h-5" />
+      <DialogContent className="sm:max-w-5xl w-[95vw] max-h-[86vh] p-0 overflow-hidden rounded-lg border border-border bg-card flex flex-col shadow-lg gap-0">
+        {/* Compact Header */}
+        <DialogHeader className="px-5 py-3.5 bg-muted/30 border-b border-border shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                <Icon className="w-4 h-4" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+                <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                   {title}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
@@ -248,13 +250,13 @@ export function ResourceGapDialog({ open, onOpenChange, title, data = [], type, 
               </div>
             </div>
 
-            <Badge variant="outline" className="h-7 px-3 text-xs font-semibold bg-background border-border w-fit">
+            <Badge variant="outline" className="h-6 px-2.5 text-xs font-semibold bg-background border-border w-fit tabular-nums">
               {filteredData.length} / {data.length} Eksik Tesis
             </Badge>
           </div>
 
           {/* Filter Bar */}
-          <div className="flex flex-wrap items-center gap-2.5 mt-4 pt-3 border-t border-border/50">
+          <div className="flex flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-border/50">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
@@ -348,7 +350,7 @@ export function ResourceGapDialog({ open, onOpenChange, title, data = [], type, 
                     <TableRow key={r.facilityId} className="hover:bg-muted/40 transition-colors border-b border-border/50 last:border-0">
                       <TableCell className="py-4 px-4">
                         <div className="flex flex-col">
-                          <Link 
+                          <Link
                             to={`/panel/facilities/${r.facilityId}`}
                             className="font-semibold text-sm text-foreground hover:text-primary transition-colors inline-flex items-center gap-1.5"
                           >
@@ -363,8 +365,8 @@ export function ResourceGapDialog({ open, onOpenChange, title, data = [], type, 
                                 r.dangerClass === "Çok Tehlikeli"
                                   ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20"
                                   : r.dangerClass === "Tehlikeli"
-                                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
-                                  : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+                                    ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+                                    : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
                               )}
                             >
                               {r.dangerClass}
@@ -476,8 +478,9 @@ export function CityDetailDialog({ open, onOpenChange, cityName, data }: CityDet
   }, [districts]);
 
   const filteredFacilities = useMemo(() => {
+    const q = searchQuery.toLocaleLowerCase("tr-TR").trim();
     return allFacilities.filter((f) => {
-      const matchesSearch = f.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = !q || (f.name || "").toLocaleLowerCase("tr-TR").includes(q);
       if (!matchesSearch) return false;
 
       if (dangerFilter !== "all" && f.dangerClass !== dangerFilter) return false;
@@ -489,16 +492,16 @@ export function CityDetailDialog({ open, onOpenChange, cityName, data }: CityDet
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-6xl w-[96vw] max-h-[88vh] p-0 overflow-hidden rounded-xl border border-border bg-card flex flex-col shadow-lg">
-        {/* Header */}
-        <DialogHeader className="p-6 bg-muted/40 border-b border-border shrink-0">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                <MapPin className="w-5 h-5" />
+      <DialogContent className="sm:max-w-5xl w-[95vw] max-h-[86vh] p-0 overflow-hidden rounded-lg border border-border bg-card flex flex-col shadow-lg gap-0">
+        {/* Compact Header */}
+        <DialogHeader className="px-5 py-3.5 bg-muted/30 border-b border-border shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                <MapPin className="w-4 h-4" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-bold tracking-tight text-foreground uppercase">
+                <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                   <span className="text-primary">{cityName}</span> Portföy Raporu
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
@@ -508,17 +511,17 @@ export function CityDetailDialog({ open, onOpenChange, cityName, data }: CityDet
             </div>
 
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="h-7 px-3 text-xs font-semibold bg-background border-border">
+              <Badge variant="outline" className="h-6 px-2.5 text-xs font-semibold bg-background border-border tabular-nums">
                 {data.count || 0} Aktif Tesis
               </Badge>
-              <Badge variant="secondary" className="h-7 px-3 text-xs font-semibold">
+              <Badge variant="secondary" className="h-6 px-2.5 text-xs font-semibold tabular-nums">
                 {districtNames.length} İlçe
               </Badge>
             </div>
           </div>
 
           {/* Filter Bar */}
-          <div className="flex flex-wrap items-center gap-2.5 mt-4 pt-3 border-t border-border/50">
+          <div className="flex flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-border/50">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
@@ -663,8 +666,8 @@ export function CityDetailDialog({ open, onOpenChange, cityName, data }: CityDet
                             f.dangerClass === "Çok Tehlikeli"
                               ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20"
                               : f.dangerClass === "Tehlikeli"
-                              ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
-                              : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+                                ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+                                : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
                           )}
                         >
                           {f.dangerClass}

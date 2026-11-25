@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y openssl ca-certificates netcat-openbsd 
 
 # Add node_modules bins to PATH for direct execution
 ENV PATH="/app/node_modules/.bin:/app/backend/node_modules/.bin:$PATH"
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Copy package descriptors for all workspaces
 COPY package.json package-lock.json ./
@@ -13,7 +14,7 @@ COPY apps/web/package.json apps/web/
 COPY packages/ packages/
 
 # Install dependencies (workspaces will link)
-RUN npm ci --legacy-peer-deps
+RUN node --no-maglev /usr/local/lib/node_modules/npm/bin/npm-cli.js ci --legacy-peer-deps
 
 # Copy source code
 COPY backend/ backend/

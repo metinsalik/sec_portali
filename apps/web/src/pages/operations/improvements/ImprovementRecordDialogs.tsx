@@ -514,29 +514,34 @@ const parseExistingChainInfo = (text?: string | null) => {
 
 interface ActionNoteProps {
   record: ImprovementRecord | null;
+  bulkRecordIds?: string[];
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, onSuccess }) => {
+export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, bulkRecordIds, onClose, onSuccess }) => {
   if (!record) return null;
 
-  const initialRecordDate = record.recordDate
+  const isBulkMode = Boolean(bulkRecordIds && bulkRecordIds.length > 0);
+  const bulkCount = bulkRecordIds?.length || 0;
+
+  const initialRecordDate = !isBulkMode && record.recordDate
     ? new Date(record.recordDate).toISOString().split('T')[0]
     : '';
-  const initialDueDate = record.dueDate
+  const initialDueDate = !isBulkMode && record.dueDate
     ? new Date(record.dueDate).toISOString().split('T')[0]
     : '';
 
   const existingChain = useMemo(() => {
+    if (isBulkMode) return { talepNo: '', siparisNo: '', firma: '' };
     return parseExistingChainInfo(`${record.currentNote || ''} ${record.actionPlan || ''}`);
-  }, [record.currentNote, record.actionPlan]);
+  }, [isBulkMode, record.currentNote, record.actionPlan]);
 
-  const [note, setNote] = useState(record.currentNote || '');
-  const [actionPlan, setActionPlan] = useState(record.actionPlan || '');
+  const [note, setNote] = useState(isBulkMode ? '' : (record.currentNote || ''));
+  const [actionPlan, setActionPlan] = useState(isBulkMode ? '' : (record.actionPlan || ''));
   const [recordDate, setRecordDate] = useState(initialRecordDate);
   const [dueDate, setDueDate] = useState(initialDueDate);
-  const [status, setStatus] = useState(record.status);
+  const [status, setStatus] = useState(isBulkMode ? 'Devam Ediyor' : record.status);
   const [evidencePhotos, setEvidencePhotos] = useState<ImprovementFileAttachment[]>([]);
   const [attachedDocs, setAttachedDocs] = useState<ImprovementFileAttachment[]>([]);
   const [uploadingDoc, setUploadingDoc] = useState(false);
@@ -617,7 +622,7 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
   // Bunları düşünerek bir zincir yapmak lazım. Talep ve SS numarasını isteyip
   // otomatik olarak onları da yapılmış gösterip %'liği ona göre verdirelim."
   // ─────────────────────────────────────────────────────────────────────────
-  const baseProgress = record.progress || 0;
+  const baseProgress = isBulkMode ? 0 : (record.progress || 0);
   const isCompletionStep = status === 'Tamamlandı' || selectedTemplateId === 'TAMAMLANDI';
   const isNotStartedStep = status === 'Başlamadı';
 
@@ -776,32 +781,57 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API}/api/operations/improvements/records/${record.id}/action-note`, {
-        method: 'PATCH',
+      const endpoint = isBulkMode
+        ? `${API}/api/operations/improvements/records/bulk-action-note`
+        : `${API}/api/operations/improvements/records/${record.id}/action-note`;
+      const method = isBulkMode ? 'POST' : 'PATCH';
+      const bodyPayload = isBulkMode
+        ? {
+            ids: bulkRecordIds,
+            currentNote: note,
+            status,
+            progress: calcProgress,
+            progressAdded: calcAdded,
+            actionPlan: actionPlan.trim() ? actionPlan.trim() : undefined,
+            dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+            evidencePhotos,
+            documents: attachedDocs,
+            stepType: activeTemplate?.id || 'DIGER',
+            stepTitle: activeTemplate?.title || 'Aksiyon Notu',
+            stepFields,
+          }
+        : {
+            currentNote: note,
+            status,
+            progress: calcProgress,
+            progressAdded: calcAdded,
+            actionPlan,
+            recordDate: recordDate ? new Date(recordDate).toISOString() : null,
+            dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+            evidencePhotos,
+            documents: attachedDocs,
+            stepType: activeTemplate?.id || 'DIGER',
+            stepTitle: activeTemplate?.title || 'Aksiyon Notu',
+            stepFields,
+          };
+
+      const res = await fetch(endpoint, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : ''
         },
-        body: JSON.stringify({
-          currentNote: note,
-          status,
-          progress: calcProgress,
-          progressAdded: calcAdded,
-          actionPlan,
-          recordDate: recordDate ? new Date(recordDate).toISOString() : null,
-          dueDate: dueDate ? new Date(dueDate).toISOString() : null,
-          evidencePhotos,
-          documents: attachedDocs,
-          stepType: activeTemplate?.id || 'DIGER',
-          stepTitle: activeTemplate?.title || 'Aksiyon Notu',
-          stepFields,
-        })
+        body: JSON.stringify(bodyPayload)
       });
 
       const d = await res.json();
       if (!res.ok || !d.success) throw new Error(d.message || 'Güncellenemedi');
 
-      toast.success('Aksiyon adımı ve süreç zinciri başarıyla kaydedildi.');
+      toast.success(
+        isBulkMode
+          ? (d.message || `${bulkCount} kayda toplu aksiyon ve süreç zinciri başarıyla işlendi.`)
+          : 'Aksiyon adımı ve süreç zinciri başarıyla kaydedildi.'
+      );
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -820,10 +850,17 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
           <div>
             <h3 className="text-base font-bold text-foreground flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              Süreç Adımı & Aksiyon Girişi
+              {isBulkMode ? 'Toplu Süreç Adımı & Aksiyon Girişi' : 'Süreç Adımı & Aksiyon Girişi'}
+              {isBulkMode && (
+                <Badge className="bg-primary/15 text-primary border border-primary/30 text-xs tabular-nums">
+                  {bulkCount} Kayıt Seçili
+                </Badge>
+              )}
             </h3>
             <p className="text-xs text-muted-foreground truncate max-w-md">
-              {getRecordFacilityName(record.facility, record.facilityId)} — {record.sheetType} #{record.rowNo}
+              {isBulkMode
+                ? `Seçili ${bulkCount} bulgunun tamamına aynı aksiyon adımı ve süreç zinciri uygulanacak`
+                : `${getRecordFacilityName(record.facility, record.facilityId)} — ${record.sheetType} #${record.rowNo}`}
             </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer">
@@ -833,13 +870,22 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[82vh] overflow-y-auto text-xs">
 
-          {/* İlgili Tespit Hatırlatması */}
-          <div className="p-3 bg-muted/30 border rounded-xl text-xs space-y-1">
-            <span className="text-muted-foreground font-semibold block">İlgili Tespit:</span>
-            <p className="text-foreground line-clamp-2 italic">
-              "{record.finding}"
-            </p>
-          </div>
+          {/* İlgili Tespit Hatırlatması veya Toplu İşlem Özeti */}
+          {isBulkMode ? (
+            <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl text-xs space-y-1">
+              <span className="text-primary font-bold block">Toplu Aksiyon Modu ({bulkCount} Kayıt):</span>
+              <p className="text-muted-foreground leading-relaxed">
+                Seçtiğiniz tüm kayıtlara aynı süreç aşaması, şablon cümle, durum, ilerleme yüzdesi ve ortak kanıtlar tek seferde işlenecektir. İş planı ve termin tarihini boş bırakırsanız her kaydın mevcut kendi değeri korunur.
+              </p>
+            </div>
+          ) : (
+            <div className="p-3 bg-muted/30 border rounded-xl text-xs space-y-1">
+              <span className="text-muted-foreground font-semibold block">İlgili Tespit:</span>
+              <p className="text-foreground line-clamp-2 italic">
+                "{record.finding}"
+              </p>
+            </div>
+          )}
 
           {/* 🔗 SÜREÇ ZİNCİRİ GÖRSEL TAKİBİ (PIPELINE TRACKER) */}
           <div className="p-3 bg-muted/30 border border-border/80 rounded-xl space-y-2">
@@ -1254,7 +1300,11 @@ export const ActionNoteDialog: React.FC<ActionNoteProps> = ({ record, onClose, o
               Vazgeç
             </Button>
             <Button type="submit" size="sm" disabled={loading} className="bg-primary text-primary-foreground font-bold cursor-pointer">
-              {loading ? 'Kaydediliyor...' : 'Aksiyonu ve İlerlemeyi Kaydet'}
+              {loading
+                ? 'Kaydediliyor...'
+                : isBulkMode
+                  ? `${bulkCount} Kayda Toplu Kaydet`
+                  : 'Aksiyonu ve İlerlemeyi Kaydet'}
             </Button>
           </div>
         </form>

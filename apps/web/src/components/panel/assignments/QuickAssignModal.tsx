@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -19,14 +20,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   UserPlus,
   Clock,
-  Calendar,
   CreditCard,
   Loader2,
   Info,
+  AlertTriangle,
   Check,
   ChevronsUpDown,
 } from "lucide-react";
@@ -60,12 +68,10 @@ export function QuickAssignModal({
 }: QuickAssignModalProps) {
   const queryClient = useQueryClient();
 
-  const [assignType, setAssignType] = useState<
-    "IGU" | "Hekim" | "DSP" | "Vekil"
-  >(type);
-  const [assignmentMode, setAssignmentMode] = useState<
-    "Kısmi Zamanlı" | "Tam Zamanlı"
-  >("Kısmi Zamanlı");
+  const [assignType, setAssignType] = useState<"IGU" | "Hekim" | "DSP" | "Vekil">(type);
+  const [assignmentMode, setAssignmentMode] = useState<"Kısmi Zamanlı" | "Tam Zamanlı">(
+    "Kısmi Zamanlı"
+  );
   const [openCombobox, setOpenCombobox] = useState(false);
 
   React.useEffect(() => {
@@ -89,7 +95,7 @@ export function QuickAssignModal({
   const doAssign = async (data: any, confirmed = false) => {
     const res = await api.post(
       "/panel/assignments",
-      confirmed ? { ...data, confirmed: true } : data,
+      confirmed ? { ...data, confirmed: true } : data
     );
     if (!res.ok) {
       const err = await res.json();
@@ -107,14 +113,11 @@ export function QuickAssignModal({
     mutationFn: (data: any) => doAssign(data),
     onSuccess: (result) => {
       if (!result) return;
-      queryClient.invalidateQueries({
-        queryKey: ["facilities-with-compliance"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["facility-detail", facility?.id],
-      });
+      queryClient.invalidateQueries({ queryKey: ["facilities-with-compliance"] });
+      queryClient.invalidateQueries({ queryKey: ["facility-detail", facility?.id] });
       queryClient.invalidateQueries({ queryKey: ["panel-dashboard"] });
-      toast.success("Atama başarıyla yapıldı");
+      queryClient.invalidateQueries({ queryKey: ["assignments-status"] });
+      toast.success("Atama başarıyla tamamlandı.");
       onOpenChange(false);
       onSuccess?.();
     },
@@ -129,14 +132,11 @@ export function QuickAssignModal({
     mutationFn: () => doAssign(pendingAssignment, true),
     onSuccess: (result) => {
       if (!result) return;
-      queryClient.invalidateQueries({
-        queryKey: ["facilities-with-compliance"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["facility-detail", facility?.id],
-      });
+      queryClient.invalidateQueries({ queryKey: ["facilities-with-compliance"] });
+      queryClient.invalidateQueries({ queryKey: ["facility-detail", facility?.id] });
       queryClient.invalidateQueries({ queryKey: ["panel-dashboard"] });
-      toast.success("Atama başarıyla yapıldı");
+      queryClient.invalidateQueries({ queryKey: ["assignments-status"] });
+      toast.success("Atama başarıyla tamamlandı.");
       setShowConfirmDialog(false);
       setPendingAssignment(null);
       onOpenChange(false);
@@ -182,7 +182,7 @@ export function QuickAssignModal({
       if (!res.ok) throw new Error("Yüklenemedi");
       return res.json();
     },
-    enabled: open && type !== "Vekil",
+    enabled: open && assignType !== "Vekil",
   });
 
   const { data: employerReps = [] } = useQuery<any[]>({
@@ -192,7 +192,7 @@ export function QuickAssignModal({
       if (!res.ok) throw new Error("Yüklenemedi");
       return res.json();
     },
-    enabled: open && type === "Vekil",
+    enabled: open && assignType === "Vekil",
   });
 
   const handleAssignSubmit = (e: React.FormEvent) => {
@@ -202,10 +202,8 @@ export function QuickAssignModal({
     assignMutation.mutate({
       facilityId: facility.id,
       type: assignType,
-      professionalId:
-        assignType !== "Vekil" ? formData.professionalId : undefined,
-      employerRepId:
-        assignType === "Vekil" ? formData.employerRepId : undefined,
+      professionalId: assignType !== "Vekil" ? formData.professionalId : undefined,
+      employerRepId: assignType === "Vekil" ? formData.employerRepId : undefined,
       durationMinutes: parseInt(formData.durationMinutes) || 0,
       isFullTime: assignmentMode === "Tam Zamanlı" || assignType === "Vekil",
       startDate: formData.startDate,
@@ -214,336 +212,276 @@ export function QuickAssignModal({
     });
   };
 
-  const handleConfirmAssignment = () => {
-    confirmMutation.mutate();
-  };
-
-  const handleCancelConfirm = () => {
-    setShowConfirmDialog(false);
-    setPendingAssignment(null);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[90vh] p-0 overflow-hidden border-none shadow-lg rounded-xl flex flex-col">
-        <DialogHeader className="px-8 py-6 bg-slate-900 text-white shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-              <UserPlus className="w-5 h-5 text-white/70" />
+      <DialogContent className="sm:max-w-lg w-[95vw] max-h-[90vh] p-0 overflow-hidden rounded-lg border border-border bg-card shadow-lg flex flex-col gap-0">
+        <DialogHeader className="px-5 py-3.5 bg-muted/30 border-b border-border shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
+              <UserPlus className="w-4 h-4" />
             </div>
-            <div>
-              <DialogTitle className="text-lg font-bold tracking-tight">
+            <div className="min-w-0">
+              <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                 Hızlı Atama Yap
               </DialogTitle>
-              <DialogDescription className="text-white/40 text-xs mt-1 font-medium">
-                {facility?.name || facility?.facilityName} için {type} ataması
+              <DialogDescription className="text-xs text-muted-foreground truncate mt-0.5">
+                {facility?.name || facility?.facilityName} — {assignType} ataması
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <form
-          onSubmit={handleAssignSubmit}
-          className="flex-1 flex flex-col overflow-hidden bg-card text-card-foreground"
-        >
-          <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">
-                      Atama Rolü *
-                    </label>
-                    <Select
-                      value={assignType}
-                      onValueChange={(v: any) => {
-                        setAssignType(v);
-                        setFormData({
-                          ...formData,
-                          professionalId: "",
-                          employerRepId: "",
-                        });
-                      }}
+        <form onSubmit={handleAssignSubmit} className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-foreground">Atama Rolü *</Label>
+                <Select
+                  value={assignType}
+                  onValueChange={(v: any) => {
+                    setAssignType(v);
+                    setFormData((prev) => ({
+                      ...prev,
+                      professionalId: "",
+                      employerRepId: "",
+                    }));
+                  }}
+                >
+                  <SelectTrigger className="w-full h-9 rounded-lg border-border text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-lg">
+                    <SelectItem value="IGU" className="text-xs">İSG Uzmanı</SelectItem>
+                    <SelectItem value="Hekim" className="text-xs">İşyeri Hekimi</SelectItem>
+                    <SelectItem value="DSP" className="text-xs">Diğer Sağlık Personeli</SelectItem>
+                    <SelectItem value="Vekil" className="text-xs">İşveren Vekili</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-foreground">
+                  {assignType === "Vekil" ? "İşveren Vekili *" : "Profesyonel *"}
+                </Label>
+                <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openCombobox}
+                      className="w-full justify-between rounded-lg border-border h-9 text-xs font-normal px-3"
                     >
-                      <SelectTrigger className="rounded-xl border-border h-11 text-sm font-medium focus:ring-primary/10">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="IGU">İSG Uzmanı</SelectItem>
-                        <SelectItem value="Hekim">İşyeri Hekimi</SelectItem>
-                        <SelectItem value="DSP">
-                          Diğer Sağlık Personeli
-                        </SelectItem>
-                        <SelectItem value="Vekil">İşveren Vekili</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">
-                      {assignType === "Vekil"
-                        ? "İşveren Vekili Seçin *"
-                        : "Profesyonel Seçin *"}
-                    </label>
-                    <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={openCombobox}
-                          className="w-full justify-between rounded-xl border-border h-11 text-sm font-medium focus-visible:ring-primary/10 bg-transparent px-3"
-                        >
-                          <span className="truncate">
-                            {assignType === "Vekil" && formData.employerRepId
-                              ? employerReps.find((r: any) => r.id.toString() === formData.employerRepId)?.fullName
-                              : assignType !== "Vekil" && formData.professionalId
-                              ? professionals.find((p: any) => p.id.toString() === formData.professionalId)?.fullName
-                              : "Kişi Seçin..."}
-                          </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-xl border-border" align="start">
-                        <Command className="rounded-xl overflow-hidden">
-                          <CommandInput placeholder="Kişi Ara..." className="h-10 border-none focus:ring-0" />
-                          <CommandList className="max-h-64 custom-scrollbar">
-                            <CommandEmpty>Kişi bulunamadı.</CommandEmpty>
-                            <CommandGroup>
-                              {assignType === "Vekil"
-                                ? employerReps.map((r: any) => (
-                                    <CommandItem
-                                      key={r.id}
-                                      value={r.fullName}
-                                      onSelect={() => {
-                                        setFormData({
-                                          ...formData,
-                                          employerRepId: r.id.toString(),
-                                        });
-                                        setOpenCombobox(false);
-                                      }}
-                                      className="text-xs py-2 px-3 rounded-md cursor-pointer"
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          formData.employerRepId === r.id.toString() ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      {r.fullName} ({r.title || "İşveren Vekili"})
-                                    </CommandItem>
-                                  ))
-                                : professionals
-                                    .filter((p: any) => {
-                                      if (assignType === "IGU") {
-                                        const isVeryDangerous = facility?.dangerClass === "Çok Tehlikeli";
-                                        const hasAClassAssigned = facility?.assignments?.some(
-                                          (a: any) =>
-                                            a.type === "IGU" &&
-                                            a.professional?.titleClass === "A Sınıfı IGU"
-                                        );
-
-                                        if (isVeryDangerous && !hasAClassAssigned) {
-                                          return p.titleClass === "A Sınıfı IGU";
-                                        }
-                                        return p.titleClass.includes("IGU");
-                                      }
-                                      if (assignType === "Hekim")
-                                        return p.titleClass === "İşyeri Hekimi";
-                                      if (assignType === "DSP")
-                                        return p.titleClass === "DSP";
-                                      return false;
-                                    })
-                                    .map((p: any) => (
-                                      <CommandItem
-                                        key={p.id}
-                                        value={p.fullName}
-                                        onSelect={() => {
-                                          setFormData({
-                                            ...formData,
-                                            professionalId: p.id.toString(),
-                                          });
-                                          setOpenCombobox(false);
-                                        }}
-                                        className="text-xs py-2 px-3 rounded-md cursor-pointer"
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            formData.professionalId === p.id.toString() ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        {p.fullName} ({p.titleClass})
-                                      </CommandItem>
-                                    ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                      <span className="truncate">
+                        {assignType === "Vekil" && formData.employerRepId
+                          ? employerReps.find((r: any) => r.id.toString() === formData.employerRepId)?.fullName
+                          : assignType !== "Vekil" && formData.professionalId
+                            ? professionals.find((p: any) => p.id.toString() === formData.professionalId)?.fullName
+                            : "Kişi seçin..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0 rounded-lg border-border" align="start">
+                    <Command>
+                      <CommandInput placeholder="Kişi ara..." className="h-9 text-xs" />
+                      <CommandList className="max-h-56">
+                        <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">
+                          Kişi bulunamadı.
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {assignType === "Vekil"
+                            ? employerReps.map((r: any) => (
+                              <CommandItem
+                                key={r.id}
+                                value={r.fullName}
+                                onSelect={() => {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    employerRepId: r.id.toString(),
+                                  }));
+                                  setOpenCombobox(false);
+                                }}
+                                className="text-xs py-1.5 px-2.5 cursor-pointer"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-3.5 w-3.5",
+                                    formData.employerRepId === r.id.toString()
+                                      ? "opacity-100"
+                                      : "opacity-0"
+                                  )}
+                                />
+                                {r.fullName} ({r.title || "İşveren Vekili"})
+                              </CommandItem>
+                            ))
+                            : professionals
+                              .filter((p: any) => {
+                                if (assignType === "IGU") {
+                                  const isVeryDangerous = facility?.dangerClass === "Çok Tehlikeli";
+                                  const hasAClassAssigned = facility?.assignments?.some(
+                                    (a: any) =>
+                                      a.type === "IGU" &&
+                                      a.professional?.titleClass === "A Sınıfı IGU"
+                                  );
+                                  if (isVeryDangerous && !hasAClassAssigned) {
+                                    return p.titleClass === "A Sınıfı IGU";
+                                  }
+                                  return p.titleClass.includes("IGU");
+                                }
+                                if (assignType === "Hekim") return p.titleClass === "İşyeri Hekimi";
+                                if (assignType === "DSP") return p.titleClass === "DSP";
+                                return false;
+                              })
+                              .map((p: any) => (
+                                <CommandItem
+                                  key={p.id}
+                                  value={p.fullName}
+                                  onSelect={() => {
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      professionalId: p.id.toString(),
+                                    }));
+                                    setOpenCombobox(false);
+                                  }}
+                                  className="text-xs py-1.5 px-2.5 cursor-pointer"
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-3.5 w-3.5",
+                                      formData.professionalId === p.id.toString()
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {p.fullName} ({p.titleClass})
+                                </CommandItem>
+                              ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
 
               {assignType !== "Vekil" && (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">
-                    Atama Türü *
-                  </label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-foreground">Atama Türü *</Label>
                   <Select
                     value={assignmentMode}
                     onValueChange={(v: any) => {
                       setAssignmentMode(v);
                       if (v === "Tam Zamanlı") {
-                        setFormData({ ...formData, durationMinutes: "11700" });
+                        setFormData((prev) => ({ ...prev, durationMinutes: "11700" }));
                       }
                     }}
                   >
-                    <SelectTrigger className="rounded-xl border-border h-11 text-sm font-medium focus:ring-primary/10">
+                    <SelectTrigger className="w-full h-9 rounded-lg border-border text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="Kısmi Zamanlı">
-                        Kısmi Zamanlı
-                      </SelectItem>
-                      <SelectItem value="Tam Zamanlı">
-                        Tam Zamanlı
-                      </SelectItem>
+                    <SelectContent className="rounded-lg">
+                      <SelectItem value="Kısmi Zamanlı" className="text-xs">Kısmi Zamanlı</SelectItem>
+                      <SelectItem value="Tam Zamanlı" className="text-xs">Tam Zamanlı</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               )}
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">
-                  Süre (Dk/Ay) *
-                </label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-foreground">Süre (Dk/Ay) *</Label>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                   <Input
                     type="number"
                     value={formData.durationMinutes}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        durationMinutes: e.target.value,
-                      })
+                      setFormData((prev) => ({ ...prev, durationMinutes: e.target.value }))
                     }
                     required
-                    readOnly={
-                      assignmentMode === "Tam Zamanlı" || assignType === "Vekil"
-                    }
+                    readOnly={assignmentMode === "Tam Zamanlı" || assignType === "Vekil"}
                     className={cn(
-                      "pl-10 rounded-xl border-border h-11 text-sm font-medium focus-visible:ring-primary/10",
-                      (assignmentMode === "Tam Zamanlı" ||
-                        assignType === "Vekil") &&
-                        "bg-slate-50 text-slate-500",
+                      "pl-8 h-9 rounded-lg text-xs tabular-nums",
+                      (assignmentMode === "Tam Zamanlı" || assignType === "Vekil") &&
+                      "bg-muted text-muted-foreground"
                     )}
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">
-                  Başlangıç Tarihi *
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) =>
-                      setFormData({ ...formData, startDate: e.target.value })
-                    }
-                    required
-                    className="pl-10 rounded-xl border-border h-11 text-sm font-medium focus-visible:ring-primary/10"
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-foreground">Başlangıç Tarihi *</Label>
+                <Input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, startDate: e.target.value }))
+                  }
+                  required
+                  className="h-9 rounded-lg text-xs tabular-nums"
+                />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">
-                  Maliyet Tipi
-                </label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-foreground">Maliyet Tipi</Label>
                 <Select
                   value={formData.costType}
-                  onValueChange={(v) =>
-                    setFormData({ ...formData, costType: v })
-                  }
+                  onValueChange={(v) => setFormData((prev) => ({ ...prev, costType: v }))}
                 >
-                  <SelectTrigger className="rounded-xl border-border h-11 text-sm font-medium focus:ring-primary/10">
+                  <SelectTrigger className="w-full h-9 rounded-lg border-border text-xs">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem
-                      value="Aylık Sabit"
-                      className="text-xs font-medium"
-                    >
-                      Aylık Sabit
-                    </SelectItem>
-                    <SelectItem value="Saatlik" className="text-xs font-medium">
-                      Saatlik
-                    </SelectItem>
-                    <SelectItem
-                      value="Çalışan Başı"
-                      className="text-xs font-medium"
-                    >
-                      Çalışan Başı
-                    </SelectItem>
+                  <SelectContent className="rounded-lg">
+                    <SelectItem value="Aylık Sabit" className="text-xs">Aylık Sabit</SelectItem>
+                    <SelectItem value="Saatlik" className="text-xs">Saatlik</SelectItem>
+                    <SelectItem value="Çalışan Başı" className="text-xs">Çalışan Başı</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">
-                  Birim Fiyat (₺)
-                </label>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-medium text-foreground">Birim Fiyat (₺)</Label>
                 <div className="relative">
-                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <CreditCard className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                   <Input
                     type="number"
                     value={formData.unitPrice}
                     onChange={(e) =>
-                      setFormData({ ...formData, unitPrice: e.target.value })
+                      setFormData((prev) => ({ ...prev, unitPrice: e.target.value }))
                     }
-                    className="pl-10 rounded-xl border-border h-11 text-sm font-medium focus-visible:ring-primary/10"
+                    className="pl-8 h-9 rounded-lg text-xs tabular-nums"
                     placeholder="0"
                   />
                 </div>
               </div>
-
-
             </div>
 
-            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-lg flex flex-col gap-2">
-              <div className="flex gap-3">
-                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
-                  Atama yapılmadan önce personelin kalan kapasitesi sistem
-                  tarafından kontrol edilecektir. Kapasite yetersizse işlem
-                  reddedilir.
-                </p>
-              </div>
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                Atama yapılmadan önce personelin kalan kapasitesi sistem tarafından otomatik kontrol edilir. Kapasite yetersizse işlem reddedilir.
+              </p>
             </div>
           </div>
 
-          <DialogFooter className="px-8 py-6 bg-muted/50 border-t border-border shrink-0 gap-3">
+          <DialogFooter className="mx-0 mb-0 rounded-none px-5 py-3.5 bg-muted/30 border-t border-border shrink-0 gap-2 sm:gap-2">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
+              size="sm"
               onClick={() => onOpenChange(false)}
-              className="rounded-xl h-11 px-6 font-bold text-xs text-slate-400 hover:text-slate-600 transition-colors"
+              className="h-8 rounded-lg text-xs"
             >
               Vazgeç
             </Button>
             <Button
               type="submit"
+              size="sm"
               disabled={
                 assignMutation.isPending ||
-                (type === "Vekil"
-                  ? !formData.employerRepId
-                  : !formData.professionalId)
+                (assignType === "Vekil" ? !formData.employerRepId : !formData.professionalId)
               }
-              className="rounded-xl h-11 px-10 font-bold text-xs bg-slate-900 hover:bg-slate-800 shadow-xl text-white transition-all active:scale-95"
+              className="h-8 px-4 rounded-lg text-xs font-semibold gap-1.5"
             >
-              {assignMutation.isPending && (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              )}
+              {assignMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Atamayı Tamamla
             </Button>
           </DialogFooter>
@@ -551,39 +489,39 @@ export function QuickAssignModal({
       </DialogContent>
 
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent className="sm:max-w-[420px] w-[95vw] max-h-[90vh] p-0 overflow-hidden border-none shadow-lg rounded-xl flex flex-col">
-          <AlertDialogHeader className="px-8 py-6 bg-slate-900 text-white shrink-0">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                <Info className="w-5 h-5 text-white/70" />
+        <AlertDialogContent className="sm:max-w-md rounded-lg border border-border bg-card p-0 overflow-hidden gap-0">
+          <AlertDialogHeader className="px-5 py-4 bg-muted/30 border-b border-border">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                <AlertTriangle className="w-4 h-4" />
               </div>
               <div>
-                <AlertDialogTitle className="text-lg font-bold tracking-tight">
-                  Atama Onayı
+                <AlertDialogTitle className="text-sm font-semibold text-foreground">
+                  Çoklu Tesis Atama Onayı
                 </AlertDialogTitle>
-                <AlertDialogDescription className="text-white/40 text-xs mt-1 font-medium">
-                  Bu profesyonel zaten başka bir tesiste atanmış durumda. Yine
-                  de eklemek istiyor musunuz?
+                <AlertDialogDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Bu profesyonel zaten başka bir tesiste aktif olarak atanmış durumda. Yine de bu tesise eklemek istiyor musunuz?
                 </AlertDialogDescription>
               </div>
             </div>
           </AlertDialogHeader>
-          <AlertDialogFooter className="px-8 py-6 bg-card text-card-foreground/50 border-t border-border shrink-0 gap-3">
+          <AlertDialogFooter className="mx-0 mb-0 rounded-none px-5 py-3.5 bg-card border-t border-border gap-2 sm:gap-2">
             <AlertDialogCancel
-              onClick={handleCancelConfirm}
-              className="rounded-xl h-11 px-6 font-bold text-xs text-slate-400 hover:text-slate-600 transition-colors bg-transparent border-none shadow-none"
+              onClick={() => {
+                setShowConfirmDialog(false);
+                setPendingAssignment(null);
+              }}
+              className="h-8 rounded-lg text-xs mt-0"
             >
               Vazgeç
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleConfirmAssignment}
+              onClick={() => confirmMutation.mutate()}
               disabled={confirmMutation.isPending}
-              className="rounded-xl h-11 px-10 font-bold text-xs bg-slate-900 hover:bg-slate-800 shadow-xl text-white transition-all active:scale-95"
+              className="h-8 rounded-lg text-xs gap-1.5"
             >
-              {confirmMutation.isPending && (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              )}
-              Ekle
+              {confirmMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Onayla ve Ekle
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 import { 
   Search, ArrowUp, ArrowDown, Download, RefreshCw, X, Calendar, 
   Tag, Shield, AlertTriangle, CheckCircle2, Building2, Filter, Plus, Check, Trash2, ListOrdered,
-  Camera, FileText, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight 
+  Camera, FileText, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Sparkles 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
@@ -67,6 +67,7 @@ export const ImprovementTable: React.FC<Props> = ({
   const [deleteConfirmRecord, setDeleteConfirmRecord] = useState<ImprovementRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set());
+  const [bulkActionOpen, setBulkActionOpen] = useState<boolean>(false);
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState<boolean>(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
   const [isRenumbering, setIsRenumbering] = useState<boolean>(false);
@@ -1073,10 +1074,10 @@ export const ImprovementTable: React.FC<Props> = ({
 
       </div>
 
-      {/* Yöneticiler İçin Toplu Seçim / Silme Barı */}
+      {/* Yöneticiler İçin Toplu İşlem Barı (Toplu Aksiyon Gir & Toplu Sil) */}
       {hasAdminAccess && selectedRecordIds.size > 0 && (
-        <div className="px-4 py-2.5 bg-red-50/80 dark:bg-red-950/30 border-b border-red-200 dark:border-red-900/50 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-red-900 dark:text-red-200">
+        <div className="px-4 py-2.5 bg-primary/5 border-b border-primary/20 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-foreground">
             <span className="font-semibold">
               {selectedRecordIds.size} kayıt seçildi
             </span>
@@ -1084,7 +1085,7 @@ export const ImprovementTable: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={selectAllFiltered}
-                className="text-primary hover:underline font-semibold ml-1"
+                className="text-primary hover:underline font-semibold ml-1 cursor-pointer"
               >
                 Filtrelenen tüm {filteredRecords.length} kaydı seç
               </button>
@@ -1092,20 +1093,32 @@ export const ImprovementTable: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setSelectedRecordIds(new Set())}
-              className="text-muted-foreground hover:text-foreground underline ml-1"
+              className="text-muted-foreground hover:text-foreground underline ml-1 cursor-pointer"
             >
               Seçimi Temizle
             </button>
           </div>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setBulkDeleteConfirmOpen(true)}
-            className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Seçilenleri Sil ({selectedRecordIds.size})
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setBulkActionOpen(true)}
+              className="h-8 text-xs flex items-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Toplu Aksiyon Gir ({selectedRecordIds.size})
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteConfirmOpen(true)}
+              className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Seçilenleri Sil ({selectedRecordIds.size})
+            </Button>
+          </div>
         </div>
       )}
 
@@ -1948,6 +1961,24 @@ export const ImprovementTable: React.FC<Props> = ({
           </div>
         </div>
       )}
+
+      {/* Toplu Aksiyon Girişi Modalı (Yöneticiler — Tekil Aksiyon Gir penceresinin birebir aynısı) */}
+      {hasAdminAccess && bulkActionOpen && selectedRecordIds.size > 0 && (() => {
+        const selectedIdList = Array.from(selectedRecordIds);
+        const anchorRecord = records.find((r) => r.id === selectedIdList[0]) || null;
+        return anchorRecord ? (
+          <ActionNoteDialog
+            record={anchorRecord}
+            bulkRecordIds={selectedIdList}
+            onClose={() => setBulkActionOpen(false)}
+            onSuccess={() => {
+              setSelectedRecordIds(new Set());
+              setBulkActionOpen(false);
+              onRefresh();
+            }}
+          />
+        ) : null;
+      })()}
 
       {/* Toplu Kayıt Silme Onay Modalı (Yöneticiler) */}
       <BulkDeleteConfirmDialog

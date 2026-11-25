@@ -5,13 +5,13 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { 
-  Building2, Calendar, Calculator, Check, 
-  AlertCircle, ChevronDown, ChevronUp, Receipt, 
+import {
+  Building2, Calendar, Calculator, Check,
+  AlertCircle, ChevronDown, ChevronUp, Receipt,
   History, Info, Loader2, User, ArrowLeft, FileText, Download, FileSpreadsheet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,18 +32,18 @@ interface CalculationDetail {
   description: string;
 }
 interface Reconciliation {
-  id: number; 
-  facilityId: string; 
-  facility: Facility; 
+  id: number;
+  facilityId: string;
+  facility: Facility;
   osgbCompanyId: number;
-  osgbCompany: OSGBCompany; 
-  month: string; 
+  osgbCompany: OSGBCompany;
+  month: string;
   calculatedAmount?: number;
   invoiceAmount?: number;
   difference?: number;
   calculationDetails?: CalculationDetail[];
-  amount?: number; 
-  note?: string; 
+  amount?: number;
+  note?: string;
   status: string;
   createdAt: string;
 }
@@ -129,15 +129,10 @@ export default function ReconciliationDetailsPage() {
   const handleExport = async (month?: string) => {
     try {
       toast.info('Rapor hazırlanıyor...');
-      const url = month 
-        ? `${import.meta.env.VITE_API_URL || '/api'}/panel/reconciliation/export?osgbId=${osgbId}&month=${month}`
-        : `${import.meta.env.VITE_API_URL || '/api'}/panel/reconciliation/export?osgbId=${osgbId}`;
-      
-      const res = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const path = month
+        ? `/panel/reconciliation/export?osgbId=${osgbId}&month=${month}`
+        : `/panel/reconciliation/export?osgbId=${osgbId}`;
+      const res = await api.get(path);
       if (!res.ok) throw new Error();
       const blob = await res.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
@@ -147,6 +142,7 @@ export default function ReconciliationDetailsPage() {
       document.body.appendChild(a);
       a.click();
       a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
       toast.success('Mutabakat raporu indirildi.');
     } catch {
       toast.error('Dışa aktarma başarısız oldu.');
@@ -197,68 +193,70 @@ export default function ReconciliationDetailsPage() {
             <Skeleton className="h-4 w-32" />
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-24 rounded-xl" />
-          <Skeleton className="h-24 rounded-xl" />
-          <Skeleton className="h-24 rounded-xl" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Skeleton className="h-20 rounded-lg" />
+          <Skeleton className="h-20 rounded-lg" />
+          <Skeleton className="h-20 rounded-lg" />
         </div>
-        <div className="space-y-4 pt-4">
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-20 rounded-xl" />
+        <div className="space-y-3 pt-2">
+          <Skeleton className="h-16 rounded-lg" />
+          <Skeleton className="h-16 rounded-lg" />
+          <Skeleton className="h-16 rounded-lg" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/panel/reconciliation')}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{osgbInfo?.name || 'OSGB Detayları'}</h1>
-          <p className="text-sm text-muted-foreground">Hesap Defteri & Aylık Mutabakat Geçmişi</p>
+    <div className="space-y-4 pb-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => navigate('/panel/reconciliation')}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">{osgbInfo?.name || 'OSGB Detayları'}</h1>
+            <p className="text-xs text-muted-foreground">Hesap Defteri & Aylık Mutabakat Geçmişi</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 self-end sm:self-center">
+          <Button variant="outline" size="sm" className="h-8 rounded-lg text-xs gap-1.5" onClick={() => handleExport()}>
+            <FileSpreadsheet className="w-3.5 h-3.5" /> Tümünü İndir
+          </Button>
+          <Button onClick={() => setSyncModalOpen(true)} size="sm" className="h-8 rounded-lg text-xs font-semibold gap-1.5">
+            <Calculator className="w-3.5 h-3.5" /> Dönem Hesapla
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-primary/5 border-primary/10">
-          <CardContent className="pt-6">
-            <p className="text-xs font-bold text-primary/60 uppercase tracking-widest mb-1">TOPLAM BAKİYE</p>
-            <p className="text-2xl font-black font-mono">₺{filteredItems.reduce((sum, i) => sum + (i.difference || 0), 0).toLocaleString('tr-TR')}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Card className="rounded-lg bg-primary/5 border-primary/20 shadow-xs">
+          <CardContent className="p-3.5">
+            <p className="text-[11px] font-semibold text-primary/80 uppercase tracking-wider mb-0.5">TOPLAM BAKİYE</p>
+            <p className="text-xl font-bold font-mono tabular-nums text-foreground">₺{filteredItems.reduce((sum, i) => sum + (i.difference || 0), 0).toLocaleString('tr-TR')}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">TOPLAM FATURA</p>
-            <p className="text-2xl font-black font-mono">₺{filteredItems.reduce((sum, i) => sum + (i.invoiceAmount || 0), 0).toLocaleString('tr-TR')}</p>
+        <Card className="rounded-lg border-border shadow-xs">
+          <CardContent className="p-3.5">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">TOPLAM FATURA</p>
+            <p className="text-xl font-bold font-mono tabular-nums text-foreground">₺{filteredItems.reduce((sum, i) => sum + (i.invoiceAmount || 0), 0).toLocaleString('tr-TR')}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">KAYIT SAYISI</p>
-            <p className="text-2xl font-black font-mono">{filteredItems.length} Ay / Tesis</p>
+        <Card className="rounded-lg border-border shadow-xs">
+          <CardContent className="p-3.5">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">KAYIT SAYISI</p>
+            <p className="text-xl font-bold font-mono tabular-nums text-foreground">{filteredItems.length} Ay / Tesis</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="flex items-center justify-between mt-8">
-        <h2 className="text-lg font-bold flex items-center gap-2">
-          <History className="w-5 h-5 text-primary" /> Mutabakat Geçmişi
+      <div className="flex items-center justify-between pt-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+          <History className="w-4 h-4 text-primary" /> Mutabakat Geçmişi
         </h2>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => handleExport()}>
-            <FileSpreadsheet className="w-4 h-4 mr-2" /> Tümünü İndir
-          </Button>
-          <Button onClick={() => setSyncModalOpen(true)} size="sm">
-            <Calculator className="w-4 h-4 mr-2" /> Dönem Hesapla
-          </Button>
-        </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {groupedByMonth.map(([month, facilityItems]) => {
           const totalCalc = facilityItems.reduce((sum, i) => sum + (i.calculatedAmount || 0), 0);
           const totalInv = facilityItems.reduce((sum, i) => sum + (i.invoiceAmount || 0), 0);
@@ -266,91 +264,91 @@ export default function ReconciliationDetailsPage() {
           const isMonthExpanded = expandedMonth === month;
 
           return (
-            <Card key={month} className="overflow-hidden border-none shadow-sm ring-1 ring-border">
-              <div 
+            <Card key={month} className="overflow-hidden rounded-lg border border-border shadow-xs">
+              <div
                 className={cn(
-                  "flex items-center p-5 gap-6 cursor-pointer hover:bg-muted/30 transition-all",
-                  isMonthExpanded && "bg-muted/20 border-b"
+                  "flex flex-wrap sm:flex-nowrap items-center p-4 gap-4 cursor-pointer hover:bg-muted/30 transition-colors",
+                  isMonthExpanded && "bg-muted/20 border-b border-border"
                 )}
                 onClick={() => setExpandedMonth(isMonthExpanded ? null : month)}
               >
-                <div className="flex items-center gap-5 flex-1">
-                  <div className="w-12 h-12 rounded-xl bg-background border-2 border-primary/10 flex flex-col items-center justify-center shrink-0">
-                    <span className="text-[9px] font-black text-primary/40 uppercase leading-none mb-1">{month.split('-')[0]}</span>
-                    <span className="text-sm font-black text-primary leading-none">{month.split('-')[1]}</span>
+                <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex flex-col items-center justify-center shrink-0 tabular-nums">
+                    <span className="text-[9px] font-semibold text-primary/70 leading-none mb-0.5">{month.split('-')[0]}</span>
+                    <span className="text-xs font-bold text-primary leading-none">{month.split('-')[1]}</span>
                   </div>
-                  <div>
-                    <p className="text-base font-bold tracking-tight">{format(new Date(month + '-01'), 'MMMM yyyy', { locale: tr })}</p>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{facilityItems.length} Tesis</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-12 px-8 border-x border-dashed mx-4">
-                  <div className="text-right">
-                    <p className="text-[9px] font-bold text-muted-foreground/60 uppercase mb-0.5">SİSTEM</p>
-                    <p className="text-sm font-mono font-bold tracking-tighter">₺{totalCalc.toLocaleString('tr-TR')}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[9px] font-bold text-muted-foreground/60 uppercase mb-0.5">FATURA</p>
-                    <p className={cn("text-sm font-mono font-bold tracking-tighter", totalInv > 0 && "text-primary")}>₺{totalInv.toLocaleString('tr-TR')}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold tracking-tight text-foreground truncate">{format(new Date(month + '-01'), 'MMMM yyyy', { locale: tr })}</p>
+                    <p className="text-[11px] text-muted-foreground tabular-nums">{facilityItems.length} Tesis</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 w-32 justify-end">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleExport(month); }}>
-                    <Download className="w-4 h-4" />
+                <div className="flex items-center gap-6 px-4 border-x border-border/60">
+                  <div className="text-right">
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase">SİSTEM</p>
+                    <p className="text-xs font-mono font-semibold tabular-nums">₺{totalCalc.toLocaleString('tr-TR')}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase">FATURA</p>
+                    <p className={cn("text-xs font-mono font-semibold tabular-nums", totalInv > 0 && "text-primary")}>₺{totalInv.toLocaleString('tr-TR')}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 justify-end shrink-0">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={(e) => { e.stopPropagation(); handleExport(month); }}>
+                    <Download className="w-3.5 h-3.5" />
                   </Button>
                   {totalDiff === 0 && totalInv > 0 ? (
-                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-bold">MUTABIK</Badge>
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-semibold">MUTABIK</Badge>
                   ) : totalInv > 0 ? (
-                    <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-200 font-bold">FARK VAR</Badge>
+                    <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[10px] font-semibold">FARK VAR</Badge>
                   ) : (
-                    <Badge variant="secondary" className="opacity-50">BEKLEMEDE</Badge>
+                    <Badge variant="secondary" className="text-[10px]">BEKLEMEDE</Badge>
                   )}
                   <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", isMonthExpanded && "rotate-180")} />
                 </div>
               </div>
 
               {isMonthExpanded && (
-                <div className="p-4 space-y-6 bg-muted/5 animate-in slide-in-from-top-2">
+                <div className="p-4 space-y-4 bg-muted/10">
                   {facilityItems.map((fItem) => (
-                    <div key={fItem.id} className="bg-background rounded-lg border shadow-sm overflow-hidden border-primary/5">
-                      <div className="bg-muted/20 px-5 py-3 flex items-center justify-between border-b">
-                        <div className="flex items-center gap-3">
+                    <div key={fItem.id} className="bg-card rounded-lg border border-border shadow-xs overflow-hidden">
+                      <div className="bg-muted/30 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 border-b border-border">
+                        <div className="flex items-center gap-2.5">
                           <Building2 className="w-4 h-4 text-primary" />
-                          <span className="font-bold text-sm">{fItem.facility?.name}</span>
-                          <Badge variant={statusVariants[fItem.status] ?? 'secondary'} className="h-5 text-[10px] font-bold">
+                          <span className="font-semibold text-xs text-foreground">{fItem.facility?.name}</span>
+                          <Badge variant={statusVariants[fItem.status] ?? 'secondary'} className="h-5 text-[10px] font-semibold">
                             {fItem.status}
                           </Badge>
                         </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold text-emerald-600" onClick={() => handleStatusChange(fItem, 'Onaylandı')}>
+                        <div className="flex gap-1.5">
+                          <Button size="sm" variant="ghost" className="h-7 rounded-lg text-[11px] font-semibold text-emerald-600 dark:text-emerald-400" onClick={() => handleStatusChange(fItem, 'Onaylandı')}>
                             <Check className="w-3 h-3 mr-1" /> Onayla
                           </Button>
-                          <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold text-red-600" onClick={() => handleStatusChange(fItem, 'Uyuşmazlık')}>
+                          <Button size="sm" variant="ghost" className="h-7 rounded-lg text-[11px] font-semibold text-destructive" onClick={() => handleStatusChange(fItem, 'Uyuşmazlık')}>
                             <AlertCircle className="w-3 h-3 mr-1" /> Uyuşmazlık
                           </Button>
                         </div>
                       </div>
 
-                      <div className="p-5">
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 mb-4">
+                      <div className="p-4">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5 mb-3.5">
                           {fItem.calculationDetails?.map((detail, dIdx) => (
-                            <div key={dIdx} className="bg-muted/5 rounded-xl p-3 border border-dashed flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                                  <User className="w-4 h-4 text-muted-foreground" />
+                            <div key={dIdx} className="bg-muted/20 rounded-lg p-3 border border-border flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
+                                  <User className="w-3.5 h-3.5 text-muted-foreground" />
                                 </div>
-                                <div>
-                                  <p className="text-xs font-bold leading-none mb-1">{detail.professionalName}</p>
-                                  <p className="text-[9px] text-muted-foreground uppercase">{detail.description}</p>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-semibold leading-none mb-1 truncate">{detail.professionalName}</p>
+                                  <p className="text-[10px] text-muted-foreground truncate">{detail.description}</p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-4">
-                                <p className="text-xs font-mono font-bold">₺{detail.cost.toLocaleString('tr-TR')}</p>
-                                <Input 
-                                  type="number" 
-                                  className="h-7 w-20 text-right font-mono text-[10px] p-1 bg-background"
+                              <div className="flex items-center gap-3 shrink-0">
+                                <p className="text-xs font-mono font-semibold tabular-nums">₺{detail.cost.toLocaleString('tr-TR')}</p>
+                                <Input
+                                  type="number"
+                                  className="h-7 w-20 text-right font-mono text-[11px] px-2 rounded-lg bg-background tabular-nums"
                                   defaultValue={detail.invoiceAmount || ''}
                                   onBlur={(e) => handleUpdateProfessionalInvoice(fItem, detail.professionalId, e.target.value)}
                                   placeholder="Fatura"
@@ -360,26 +358,26 @@ export default function ReconciliationDetailsPage() {
                           ))}
                         </div>
 
-                        <div className="flex items-center justify-between pt-4 border-t border-dashed">
-                          <div className="flex items-center gap-6">
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border">
+                          <div className="flex items-center gap-5">
                             <div className="space-y-0.5">
-                              <p className="text-[9px] font-bold text-muted-foreground uppercase">FATURA TUTARI</p>
-                              <Input 
-                                type="number" 
-                                className="h-8 w-28 text-right font-mono text-sm font-bold bg-primary/5 border-primary/20"
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase">FATURA TUTARI</p>
+                              <Input
+                                type="number"
+                                className="h-8 w-28 text-right font-mono text-xs font-semibold rounded-lg bg-primary/5 border-primary/20 tabular-nums"
                                 value={fItem.invoiceAmount || ''}
                                 onChange={(e) => handleUpdateFacilityInvoice(fItem, e.target.value)}
                               />
                             </div>
-                            <div className="space-y-0.5 px-6 border-l border-muted">
-                              <p className="text-[9px] font-bold text-muted-foreground uppercase">BAKİYE</p>
-                              <p className={cn("text-lg font-mono font-black", (fItem.difference || 0) === 0 ? "text-emerald-600" : "text-red-600")}>
+                            <div className="space-y-0.5 pl-5 border-l border-border">
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase">BAKİYE</p>
+                              <p className={cn("text-base font-mono font-bold tabular-nums", (fItem.difference || 0) === 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive")}>
                                 ₺{fItem.difference?.toLocaleString('tr-TR') || 0}
                               </p>
                             </div>
                           </div>
-                          <Input 
-                            className="h-8 text-[10px] italic bg-muted/20 border-none max-w-xs"
+                          <Input
+                            className="h-8 text-xs rounded-lg bg-muted/30 border-border max-w-xs"
                             placeholder="Not..."
                             defaultValue={fItem.note || ''}
                             onBlur={(e) => updateMutation.mutate({ id: fItem.id, data: { note: e.target.value } })}
@@ -396,24 +394,49 @@ export default function ReconciliationDetailsPage() {
       </div>
 
       <Dialog open={syncModalOpen} onOpenChange={setSyncModalOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader><DialogTitle>Dönem Hesaplaması</DialogTitle></DialogHeader>
-          <div className="py-6 space-y-4">
-            <div className="bg-primary/5 p-4 rounded-xl flex gap-3 border border-primary/10">
-              <Info className="w-5 h-5 text-primary shrink-0" />
-              <p className="text-xs text-primary/80 leading-relaxed">
+        <DialogContent className="sm:max-w-md w-[95vw] rounded-lg border border-border bg-card p-0 overflow-hidden shadow-lg flex flex-col gap-0">
+          <DialogHeader className="px-5 py-3.5 bg-muted/30 border-b border-border shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
+                <Calculator className="w-4 h-4" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-semibold tracking-tight text-foreground">Dönem Hesaplaması</DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Aylık OSGB maliyetlerini hesap defterine aktarın
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="p-5 space-y-4">
+            <div className="bg-primary/5 p-3 rounded-lg flex items-start gap-2.5 border border-primary/15">
+              <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-[11px] text-foreground/80 leading-relaxed">
                 Seçilen aydaki tüm aktif OSGB atamaları taranacak ve maliyetler hesap defterine işlenecektir.
               </p>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold">Hesaplanacak Dönem</label>
-              <Input type="month" className="h-12 font-bold text-lg" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} />
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">Hesaplanacak Dönem *</label>
+              <Input
+                type="month"
+                className="h-9 rounded-lg text-xs font-medium tabular-nums"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+              />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSyncModalOpen(false)}>İptal</Button>
-            <Button onClick={() => syncMutation.mutate(selectedMonth)} disabled={syncMutation.isPending}>
-              {syncMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Hesapla
+          <DialogFooter className="mx-0 mb-0 rounded-none px-5 py-3.5 bg-muted/30 border-t border-border shrink-0 gap-2 sm:gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSyncModalOpen(false)} className="h-8 rounded-lg text-xs">
+              İptal
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => syncMutation.mutate(selectedMonth)}
+              disabled={syncMutation.isPending}
+              className="h-8 px-4 rounded-lg text-xs font-semibold gap-1.5"
+            >
+              {syncMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Hesapla
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1784,6 +1784,172 @@ const isImprovementAdmin = (req: AuthRequest): boolean => {
   );
 };
 
+// 7.1 TOPLU AKSİYON GİRİŞİ (Yalnızca Yöneticiler — 200+ kayda tek seferde aksiyon işleme)
+router.post('/records/bulk-action-note', async (req: AuthRequest, res: Response) => {
+  try {
+    if (!isImprovementAdmin(req)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Toplu aksiyon girişi yetkisi sadece yöneticilere aittir.',
+      });
+    }
+
+    const user = getUser(req);
+    const {
+      ids,
+      currentNote,
+      status,
+      actionPlan,
+      dueDate,
+      evidencePhotos,
+      documents,
+      stepType,
+      stepTitle,
+      stepFields,
+      progress,
+    } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'En az bir kayıt seçilmelidir.' });
+    }
+
+    const uniqueIds = Array.from(new Set(ids.map((x: any) => String(x || '').trim()).filter(Boolean)));
+    if (uniqueIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Geçerli kayıt kimliği bulunamadı.' });
+    }
+
+    const validEvidence = Array.isArray(evidencePhotos) ? evidencePhotos.slice(0, 3) : [];
+    const validDocs = Array.isArray(documents) ? documents : [];
+    const cleanNote = typeof currentNote === 'string' ? currentNote.trim() : '';
+    const cleanActionPlan = typeof actionPlan === 'string' && actionPlan.trim() ? actionPlan.trim() : undefined;
+    const parsedDueDate = dueDate ? new Date(dueDate) : undefined;
+    const hasValidDueDate = Boolean(parsedDueDate && !Number.isNaN(parsedDueDate.getTime()));
+
+    if (!cleanNote && !cleanActionPlan && validEvidence.length === 0 && validDocs.length === 0 && !status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Lütfen bir aksiyon açıklaması, durum, iş planı veya kanıt ekleyin.',
+      });
+    }
+
+    const existingRecords = await prisma.improvementRecord.findMany({
+      where: { id: { in: uniqueIds } },
+    });
+
+    if (existingRecords.length === 0) {
+      return res.status(404).json({ success: false, message: 'Seçilen kayıtlar bulunamadı.' });
+    }
+
+    const historyPayload = {
+      photos: validEvidence,
+      documents: validDocs,
+      stepType: stepType || null,
+      stepTitle: stepTitle || 'Toplu Aksiyon Girişi',
+      stepFields: stepFields || null,
+      isBulk: true,
+    };
+
+    // 50'şerli paketler halinde hızlı ve güvenli güncelleme
+    const BATCH_SIZE = 50;
+    let updatedCount = 0;
+
+    for (let i = 0; i < existingRecords.length; i += BATCH_SIZE) {
+      const chunk = existingRecords.slice(i, i + BATCH_SIZE);
+
+      await prisma.$transaction(async (tx) => {
+        for (const existing of chunk) {
+          const currentProg = existing.progress || 0;
+          let newStatus = status || existing.status || 'Devam Ediyor';
+          let newProgress = currentProg;
+          let actualAdded = 0;
+
+          if (newStatus === 'Tamamlandı' || stepType === 'TAMAMLANDI') {
+            newStatus = 'Tamamlandı';
+            newProgress = 100;
+            actualAdded = Math.max(0, 100 - currentProg);
+          } else if (newStatus === 'Başlamadı') {
+            newProgress = 0;
+            actualAdded = 0;
+          } else if (newStatus === 'İptal Edildi') {
+            newProgress = currentProg;
+            actualAdded = 0;
+          } else {
+            if (progress !== undefined && progress !== null && !Number.isNaN(Number(progress))) {
+              newProgress = Math.min(99, Math.max(0, Number(progress)));
+              actualAdded = Math.max(0, newProgress - currentProg);
+            } else {
+              const tpl = stepType ? DEFAULT_ACTION_TEMPLATES.find((t) => t.id === stepType) : undefined;
+              const weight = tpl?.progressWeight ?? 10;
+              actualAdded = Math.max(0, weight);
+              newProgress = Math.min(99, currentProg + actualAdded);
+            }
+          }
+
+          const updateData: any = {
+            status: newStatus,
+            progress: newProgress,
+            updatedBy: user.username,
+          };
+
+          if (cleanNote) {
+            updateData.currentNote = cleanNote;
+          }
+          if (cleanActionPlan !== undefined) {
+            updateData.actionPlan = cleanActionPlan;
+          }
+          if (hasValidDueDate && parsedDueDate) {
+            updateData.dueDate = parsedDueDate;
+          }
+
+          if (validDocs.length > 0) {
+            const existingDocs: any[] = Array.isArray(existing.documents) ? (existing.documents as any[]) : [];
+            const mergedDocs = [...existingDocs];
+            validDocs.forEach((d: any) => {
+              if (d?.url && !mergedDocs.some((m) => m.url === d.url)) {
+                mergedDocs.push(d);
+              }
+            });
+            updateData.documents = mergedDocs;
+          }
+
+          await tx.improvementRecord.update({
+            where: { id: existing.id },
+            data: updateData,
+          });
+
+          await tx.improvementRecordHistory.create({
+            data: {
+              recordId: existing.id,
+              previousNote: existing.currentNote,
+              newNote: cleanNote || `[Toplu Aksiyon] Durum: ${newStatus} (%${newProgress})`,
+              previousStatus: existing.status,
+              newStatus,
+              progress: newProgress,
+              progressAdded: actualAdded,
+              stepType: stepType || 'TOPLU_AKSIYON',
+              stepTitle: stepTitle ? `${stepTitle} (Toplu)` : 'Toplu Aksiyon Girişi',
+              evidencePhotos: historyPayload,
+              changedBy: user.username,
+              changedByName: user.fullName || user.username,
+            },
+          });
+
+          updatedCount++;
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      updatedCount,
+      message: `${updatedCount} kayda toplu aksiyon başarıyla işlendi.`,
+    });
+  } catch (error: any) {
+    console.error('Error during bulk action note:', error);
+    res.status(500).json({ success: false, message: error.message || 'Toplu aksiyon kaydedilemedi.' });
+  }
+});
+
 // 8. TEKİL KAYIT SİL VE SIRA NUMARALARINI GÜNCELLE (Yalnızca Yöneticiler)
 router.delete('/records/:id', async (req: AuthRequest, res: Response) => {
   try {

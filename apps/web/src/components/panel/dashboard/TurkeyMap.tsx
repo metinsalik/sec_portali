@@ -39,29 +39,27 @@ export function TurkeyMapSection({ cityData, onCityClick, selectedCity }: Turkey
   const activeCityCount = Object.keys(cityData || {}).length;
 
   return (
-    <Card className="rounded-xl border border-border bg-card shadow-xs transition-all duration-200">
-      <CardHeader className="pb-3 flex flex-row items-center justify-between border-b border-border/40">
-        <div className="space-y-1">
-          <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-              <MapPin className="w-4 h-4" />
+    <Card className="rounded-lg border border-border bg-card shadow-xs transition-all duration-200">
+      <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b border-border/50">
+        <div className="space-y-0.5">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <MapPin className="w-3.5 h-3.5" />
             </div>
             Portföy Coğrafi Dağılımı (İl Bazlı)
           </CardTitle>
-          <CardDescription className="text-xs text-muted-foreground">
-            Tesislerin Türkiye geneli il bazlı yoğunluğu. Detaylı ilçe ve tesis raporu için il üzerine tıklayın.
+          <CardDescription className="text-[11px] text-muted-foreground">
+            İlçe ve tesis detayları için il üzerine tıklayın.
           </CardDescription>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="h-7 px-2.5 text-xs font-medium bg-muted/50 border-border">
-            {activeCityCount} Aktif İl
-          </Badge>
-        </div>
+        <Badge variant="outline" className="h-6 px-2 text-[11px] font-semibold bg-muted/50 border-border tabular-nums">
+          {activeCityCount} Aktif İl
+        </Badge>
       </CardHeader>
 
-      <CardContent className="p-4 sm:p-6">
-        <div className="relative w-full min-h-[380px] flex items-center justify-center bg-muted/20 dark:bg-muted/10 rounded-xl border border-border/60 p-4 transition-colors">
+      <CardContent className="p-3 sm:p-4">
+        <div className="relative w-full min-h-[320px] flex items-center justify-center bg-muted/20 dark:bg-muted/10 rounded-lg border border-border/60 p-3 transition-colors">
           <TooltipProvider delayDuration={100}>
             <TurkeyMap
               customStyle={{

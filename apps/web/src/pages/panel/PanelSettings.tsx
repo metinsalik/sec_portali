@@ -35,9 +35,10 @@ const PanelSettings = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentYear = new Date().getFullYear();
 
-  // URL state synchronization for year
+  // URL state synchronization for year (safe NaN guard)
   const paramYear = searchParams.get('year');
-  const year = paramYear ? parseInt(paramYear, 10) : currentYear;
+  const parsedParamYear = paramYear ? parseInt(paramYear, 10) : NaN;
+  const year = !Number.isNaN(parsedParamYear) && parsedParamYear >= 2020 && parsedParamYear <= 2050 ? parsedParamYear : currentYear;
 
   const setYear = (newYear: number) => {
     const next = new URLSearchParams(searchParams);
@@ -126,30 +127,30 @@ const PanelSettings = () => {
   ];
 
   return (
-    <div className="space-y-6 pb-20">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b">
+    <div className="space-y-4 pb-10">
+      {/* Compact Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Panel Ayarları</h1>
-            <Badge variant="outline" className="text-xs font-semibold px-2">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Panel Ayarları</h1>
+            <Badge variant="outline" className="h-5 text-[11px] font-semibold px-2">
               İSG Cezaları
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            İSG profesyoneli eksik atama ve yasal idari para cezası parametrelerini yapılandırın.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            İSG profesyoneli eksik atama ve yasal idari para cezası parametreleri
           </p>
         </div>
 
         {/* Yıl Seçimi */}
-        <div className="flex items-center gap-2.5 bg-card p-1.5 rounded-xl border border-border/70 shadow-2xs">
-          <Calendar className="w-4 h-4 text-muted-foreground ml-2" />
-          <span className="text-xs font-semibold text-muted-foreground">Tarife Yılı:</span>
+        <div className="flex items-center gap-2 bg-card px-2.5 py-1 rounded-lg border border-border shadow-2xs">
+          <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground">Tarife Yılı:</span>
           <Select 
             value={year.toString()} 
             onValueChange={(val) => setYear(parseInt(val, 10))}
           >
-            <SelectTrigger className="h-8 w-28 text-xs font-bold bg-background">
+            <SelectTrigger className="h-7 w-28 text-xs font-semibold bg-background">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

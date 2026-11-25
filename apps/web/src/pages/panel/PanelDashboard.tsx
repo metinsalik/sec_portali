@@ -1,15 +1,25 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '@/lib/api';
-import { 
-  Building2, Users, AlertTriangle, 
-  ShieldAlert, TrendingUp, Wallet, Gavel, 
-  UserPlus, UserMinus, Activity, MapPin, 
-  LayoutGrid, Calendar, ArrowRight, ShieldCheck,
-  FileText, Sparkles
+import {
+  Building2,
+  Users,
+  ShieldAlert,
+  Wallet,
+  Gavel,
+  UserPlus,
+  UserMinus,
+  Activity,
+  MapPin,
+  LayoutGrid,
+  Calendar,
+  ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  ExternalLink,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -18,12 +28,30 @@ import { DashboardFilterBar } from '@/components/panel/dashboard/DashboardFilter
 import { EmployeeTrendChart } from '@/components/panel/dashboard/TrendChart';
 import { TurkeyMapSection } from '@/components/panel/dashboard/TurkeyMap';
 import { CityDistribution } from '@/components/panel/dashboard/CityDistribution';
-import { 
-  CertificateRenewalDialog, 
-  ResourceGapDialog, 
-  CityDetailDialog 
+import {
+  CertificateRenewalDialog,
+  ResourceGapDialog,
+  CityDetailDialog,
 } from '@/components/panel/dashboard/DashboardDialogs';
 import { QuickAssignModal } from '@/components/panel/assignments/QuickAssignModal';
+import { cn } from '@/lib/utils';
+
+interface FacilitySummaryItem {
+  id: string;
+  name: string;
+  city: string;
+  district: string;
+  type: string;
+  dangerClass: string;
+  employeeCount: number;
+  complianceScore: number;
+  monthlyOsgbCost: number;
+  monthlyPenaltyRisk: number;
+  iguCompliant: boolean;
+  hekimCompliant: boolean;
+  dspCompliant: boolean;
+  overallCompliant: boolean;
+}
 
 interface DashboardData {
   kpis: {
@@ -34,6 +62,7 @@ interface DashboardData {
     monthlyPenaltyRisk: number;
     cumulativePenaltyRisk2026: number;
   };
+  facilitiesSummary?: FacilitySummaryItem[];
   upcomingCertificates: any[];
   resourceGaps: {
     specialists: any[];
@@ -45,47 +74,50 @@ interface DashboardData {
   employeeTrend: any[];
 }
 
+const normTr = (s?: string | null) => (s || '').toLocaleLowerCase('tr-TR').trim();
+
 export default function PanelDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // ── URL-SYNCHRONIZED STATE (Akıllı URL Filtreleme & Durum Yönetimi) ─────────
+  // ── URL-SYNCHRONIZED SMART FILTERS ────────────────────────────────────────
   const activeTab = searchParams.get('tab') || 'overview';
   const searchTerm = searchParams.get('q') || '';
   const selectedCityFilter = searchParams.get('city') || 'all';
   const selectedDanger = searchParams.get('danger') || 'all';
+  const selectedType = searchParams.get('type') || 'all';
+  const gapRoleFilter = searchParams.get('gapRole') || 'all';
   const activeDialog = searchParams.get('dialog');
   const selectedCityForDialog = searchParams.get('selectedCity') || null;
 
-  // Local state for modal assignment
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assignType, setAssignType] = useState<'IGU' | 'Hekim' | 'DSP' | 'Vekil'>('IGU');
   const [selectedFacility, setSelectedFacility] = useState<any>(null);
 
-  // Helper to update URL params cleanly
-  const updateParams = useCallback((updates: Record<string, string | null>) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      Object.entries(updates).forEach(([key, value]) => {
-        if (value === null || value === '' || value === 'all' || (key === 'tab' && value === 'overview')) {
-          next.delete(key);
-        } else {
-          next.set(key, value);
-        }
-      });
-      return next;
-    }, { replace: true });
-  }, [setSearchParams]);
+  const updateParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          Object.entries(updates).forEach(([key, value]) => {
+            if (
+              value === null ||
+              value === '' ||
+              value === 'all' ||
+              (key === 'tab' && value === 'overview')
+            ) {
+              next.delete(key);
+            } else {
+              next.set(key, value);
+            }
+          });
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
 
-  // ── GERİ GELDİĞİNDE KALDIĞI YERİ HATIRLAMA (Scroll Restoration) ────────────
-  useEffect(() => {
-    const handleScroll = () => {
-      sessionStorage.setItem('panel_dashboard_scrollY', window.scrollY.toString());
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // ── DATA FETCHING ─────────────────────────────────────────────────────────
   const { data, isLoading, isFetching, refetch } = useQuery<DashboardData>({
     queryKey: ['panel-dashboard'],
     queryFn: async () => {
@@ -96,84 +128,213 @@ export default function PanelDashboard() {
     staleTime: 60 * 1000,
   });
 
-  // Restore scroll position after loading completes
-  useEffect(() => {
-    if (!isLoading) {
-      const savedY = sessionStorage.getItem('panel_dashboard_scrollY');
-      if (savedY) {
-        const scrollY = parseInt(savedY, 10);
-        if (!isNaN(scrollY) && scrollY > 0) {
-          requestAnimationFrame(() => {
-            window.scrollTo({ top: scrollY, behavior: 'instant' });
-          });
-        }
-      }
-    }
-  }, [isLoading]);
-
-  // City list for filters
   const availableCities = useMemo(() => {
     if (!data?.cityDistribution) return [];
     return Object.keys(data.cityDistribution).sort((a, b) => a.localeCompare(b, 'tr'));
   }, [data?.cityDistribution]);
 
-  // ── FILTERED DATA CALCULATION ─────────────────────────────────────────────
+  const availableTypes = useMemo(() => {
+    const list = data?.facilitiesSummary || [];
+    return Array.from(new Set(list.map((f) => f.type).filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b, 'tr')
+    );
+  }, [data?.facilitiesSummary]);
+
+  const activeFiltersCount = useMemo(() => {
+    let c = 0;
+    if (searchTerm) c++;
+    if (selectedCityFilter !== 'all') c++;
+    if (selectedDanger !== 'all') c++;
+    if (selectedType !== 'all') c++;
+    return c;
+  }, [searchTerm, selectedCityFilter, selectedDanger, selectedType]);
+
+  // ── REAL FILTERED FACILITIES & LIVE RECOMPUTED KPIS ───────────────────────
+  const filteredFacilities = useMemo(() => {
+    const list = data?.facilitiesSummary || [];
+    const q = normTr(searchTerm);
+    return list.filter((f) => {
+      if (selectedCityFilter !== 'all' && f.city !== selectedCityFilter) return false;
+      if (selectedDanger !== 'all' && f.dangerClass !== selectedDanger) return false;
+      if (selectedType !== 'all' && f.type !== selectedType) return false;
+      if (q) {
+        const hit =
+          normTr(f.name).includes(q) ||
+          normTr(f.city).includes(q) ||
+          normTr(f.district).includes(q) ||
+          normTr(f.type).includes(q);
+        if (!hit) return false;
+      }
+      return true;
+    });
+  }, [data?.facilitiesSummary, searchTerm, selectedCityFilter, selectedDanger, selectedType]);
+
+  const filteredFacilityIds = useMemo(
+    () => new Set(filteredFacilities.map((f) => f.id)),
+    [filteredFacilities]
+  );
+
+  const computedKpis = useMemo(() => {
+    const hasSummary = (data?.facilitiesSummary?.length || 0) > 0;
+    if (!hasSummary || activeFiltersCount === 0) {
+      return (
+        data?.kpis || {
+          totalFacilities: 0,
+          totalEmployees: 0,
+          averageComplianceScore: 0,
+          monthlyOsgbCost: 0,
+          monthlyPenaltyRisk: 0,
+          cumulativePenaltyRisk2026: 0,
+        }
+      );
+    }
+
+    const totalFacilities = filteredFacilities.length;
+    const totalEmployees = filteredFacilities.reduce((s, f) => s + f.employeeCount, 0);
+    const averageComplianceScore =
+      totalFacilities > 0
+        ? filteredFacilities.reduce((s, f) => s + f.complianceScore, 0) / totalFacilities
+        : 0;
+    const monthlyOsgbCost = filteredFacilities.reduce((s, f) => s + f.monthlyOsgbCost, 0);
+    const monthlyPenaltyRisk = filteredFacilities.reduce((s, f) => s + f.monthlyPenaltyRisk, 0);
+
+    return {
+      totalFacilities,
+      totalEmployees,
+      averageComplianceScore,
+      monthlyOsgbCost,
+      monthlyPenaltyRisk,
+      cumulativePenaltyRisk2026: monthlyPenaltyRisk * 12,
+    };
+  }, [data?.kpis, data?.facilitiesSummary, filteredFacilities, activeFiltersCount]);
+
+  // Filtered City Distribution (reactive to danger/type/search filters!)
+  const filteredCityDistribution = useMemo(() => {
+    if (!data?.facilitiesSummary?.length || activeFiltersCount === 0) {
+      return data?.cityDistribution || {};
+    }
+    const dist: Record<string, number> = {};
+    filteredFacilities.forEach((f) => {
+      const c = f.city || 'Belirtilmemiş';
+      dist[c] = (dist[c] || 0) + 1;
+    });
+    return dist;
+  }, [data?.facilitiesSummary, data?.cityDistribution, filteredFacilities, activeFiltersCount]);
+
+  // Filtered Upcoming Certificates
+  const filteredCertificates = useMemo(() => {
+    const list = data?.upcomingCertificates || [];
+    if (activeFiltersCount === 0) return list;
+    const q = normTr(searchTerm);
+    return list.filter((c) => {
+      if (q && normTr(c.fullName).includes(q)) return true;
+      if (selectedCityFilter !== 'all') {
+        if (Array.isArray(c.cities) && !c.cities.includes(selectedCityFilter)) return false;
+      }
+      if (Array.isArray(c.facilityIds) && c.facilityIds.length > 0 && filteredFacilityIds.size > 0) {
+        return c.facilityIds.some((id: string) => filteredFacilityIds.has(id));
+      }
+      return !q;
+    });
+  }, [data?.upcomingCertificates, activeFiltersCount, searchTerm, selectedCityFilter, filteredFacilityIds]);
+
+  // Filtered Resource Gaps
   const filteredResourceGaps = useMemo(() => {
     if (!data?.resourceGaps) return { specialists: [], doctors: [], dsp: [] };
+    const hasSummary = (data?.facilitiesSummary?.length || 0) > 0;
+    const q = normTr(searchTerm);
 
-    const filterList = (list: any[]) => {
-      return list.filter((r) => {
-        // Search filter
-        if (searchTerm) {
-          const term = searchTerm.toLowerCase();
-          const matchName = r.facilityName?.toLowerCase().includes(term);
-          if (!matchName) return false;
+    const filterList = (list: any[]) =>
+      list.filter((r) => {
+        if (hasSummary && activeFiltersCount > 0) {
+          return filteredFacilityIds.has(r.facilityId);
         }
-        // Danger class filter
-        if (selectedDanger !== 'all' && r.dangerClass !== selectedDanger) {
-          return false;
-        }
-        // City filter
-        if (selectedCityFilter !== 'all') {
-          // If city details are available, verify facility's city
-          if (data.cityDetails && data.cityDetails[selectedCityFilter]) {
-            const cityFacs: any[] = [];
-            Object.values(data.cityDetails[selectedCityFilter].districts || {}).forEach((d: any) => {
-              cityFacs.push(...(d.facilities || []));
-            });
-            const existsInCity = cityFacs.some((f) => f.id === r.facilityId);
-            if (!existsInCity) return false;
-          }
-        }
+        if (q && !normTr(r.facilityName).includes(q)) return false;
+        if (selectedDanger !== 'all' && r.dangerClass !== selectedDanger) return false;
         return true;
       });
-    };
 
     return {
       specialists: filterList(data.resourceGaps.specialists),
       doctors: filterList(data.resourceGaps.doctors),
       dsp: filterList(data.resourceGaps.dsp),
     };
-  }, [data, searchTerm, selectedDanger, selectedCityFilter]);
+  }, [data, activeFiltersCount, filteredFacilityIds, searchTerm, selectedDanger]);
 
-  // Count active filters
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    if (searchTerm) count++;
-    if (selectedCityFilter !== 'all') count++;
-    if (selectedDanger !== 'all') count++;
-    return count;
-  }, [searchTerm, selectedCityFilter, selectedDanger]);
+  // Unified flat list for inline "Kaynak Açıkları" tracking table
+  const combinedGapsList = useMemo(() => {
+    const rows: Array<{
+      key: string;
+      role: 'IGU' | 'Hekim' | 'DSP';
+      roleLabel: string;
+      facilityId: string;
+      facilityName: string;
+      city: string;
+      dangerClass: string;
+      employeeCount: number;
+      missingLabel: string;
+      raw: any;
+    }> = [];
+
+    if (gapRoleFilter === 'all' || gapRoleFilter === 'IGU') {
+      filteredResourceGaps.specialists.forEach((r) => {
+        const diff = Math.max(0, (r.igu?.requiredMinutes || 0) - (r.igu?.assignedMinutes || 0));
+        rows.push({
+          key: `igu-${r.facilityId}`,
+          role: 'IGU',
+          roleLabel: 'İSG Uzmanı',
+          facilityId: r.facilityId,
+          facilityName: r.facilityName,
+          city: r.city || '—',
+          dangerClass: r.dangerClass,
+          employeeCount: r.employeeCount || 0,
+          missingLabel: diff > 0 ? `${diff} dk eksik` : 'Sınıf uyumsuz',
+          raw: r,
+        });
+      });
+    }
+    if (gapRoleFilter === 'all' || gapRoleFilter === 'Hekim') {
+      filteredResourceGaps.doctors.forEach((r) => {
+        const diff = Math.max(0, (r.hekim?.requiredMinutes || 0) - (r.hekim?.assignedMinutes || 0));
+        rows.push({
+          key: `hekim-${r.facilityId}`,
+          role: 'Hekim',
+          roleLabel: 'İşyeri Hekimi',
+          facilityId: r.facilityId,
+          facilityName: r.facilityName,
+          city: r.city || '—',
+          dangerClass: r.dangerClass,
+          employeeCount: r.employeeCount || 0,
+          missingLabel: `${diff} dk eksik`,
+          raw: r,
+        });
+      });
+    }
+    if (gapRoleFilter === 'all' || gapRoleFilter === 'DSP') {
+      filteredResourceGaps.dsp.forEach((r) => {
+        const diff = Math.max(0, (r.dsp?.requiredMinutes || 0) - (r.dsp?.assignedMinutes || 0));
+        rows.push({
+          key: `dsp-${r.facilityId}`,
+          role: 'DSP',
+          roleLabel: 'DSP',
+          facilityId: r.facilityId,
+          facilityName: r.facilityName,
+          city: r.city || '—',
+          dangerClass: r.dangerClass,
+          employeeCount: r.employeeCount || 0,
+          missingLabel: diff > 0 ? `${diff} dk eksik` : 'Atama yok',
+          raw: r,
+        });
+      });
+    }
+
+    return rows;
+  }, [filteredResourceGaps, gapRoleFilter]);
 
   const handleResetFilters = useCallback(() => {
-    updateParams({
-      q: null,
-      city: null,
-      danger: null,
-    });
+    updateParams({ q: null, city: null, danger: null, type: null, gapRole: null });
   }, [updateParams]);
 
-  // Handlers for dialogs with URL preservation
   const handleOpenDialog = (dialogName: string, city?: string) => {
     updateParams({
       dialog: dialogName,
@@ -182,73 +343,60 @@ export default function PanelDashboard() {
   };
 
   const handleCloseDialog = () => {
-    updateParams({
-      dialog: null,
-      selectedCity: null,
-    });
+    updateParams({ dialog: null, selectedCity: null });
   };
 
   const handleCityClick = (cityName: string) => {
-    updateParams({
-      dialog: 'city-detail',
-      selectedCity: cityName,
-    });
+    updateParams({ dialog: 'city-detail', selectedCity: cityName });
   };
 
   if (isLoading) {
     return <DashboardSkeleton />;
   }
 
-  const kpi = data?.kpis;
-  const totalUpcomingCerts = data?.upcomingCertificates?.length || 0;
+  const totalFacilitiesAll = data?.kpis?.totalFacilities || 0;
+  const totalUpcomingCerts = filteredCertificates.length;
   const totalSpecialistGaps = filteredResourceGaps.specialists.length;
   const totalDoctorGaps = filteredResourceGaps.doctors.length;
   const totalDspGaps = filteredResourceGaps.dsp.length;
   const totalGapsCount = totalSpecialistGaps + totalDoctorGaps + totalDspGaps;
+  const currentYear = new Date().getFullYear();
 
   return (
-    <div className="space-y-6 pb-12 animate-fade-in">
-      {/* ── HEADER ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/50 pb-5">
+    <div className="space-y-4 pb-10">
+      {/* ── COMPACT HEADER (30-design-system) ─────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-              Yönetim Paneli
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              İSG Yönetim Paneli
             </h1>
-            <Badge variant="outline" className="h-6 px-2.5 text-xs font-semibold bg-primary/5 text-primary border-primary/20">
-              <Sparkles className="w-3 h-3 mr-1" /> Canlı İzleme
+            <Badge variant="outline" className="h-5 px-2 text-[10px] font-semibold bg-primary/5 text-primary border-primary/20">
+              Canlı
             </Badge>
           </div>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-primary shrink-0" />
-            Portföy geneli İSG yasal uyumluluk, atama açıkları ve finansal risk göstergeleri
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Portföy geneli yasal uyumluluk, eksik atamalar ve finansal risk göstergeleri
           </p>
         </div>
 
-        <div className="flex items-center gap-3 self-start md:self-auto">
-          <div className="text-right hidden sm:block">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Son Senkronizasyon
-            </p>
-            <p className="text-xs font-bold text-foreground">
-              {new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-            </p>
-          </div>
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="h-9 px-3 rounded-lg text-xs font-semibold gap-1.5 shadow-xs"
-          >
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button asChild variant="outline" size="sm" className="h-8 px-3 rounded-lg text-xs font-medium gap-1.5">
+            <Link to="/panel/assignments">
+              <UserPlus className="w-3.5 h-3.5" />
+              Atamalar
+            </Link>
+          </Button>
+          <Button asChild size="sm" className="h-8 px-3 rounded-lg text-xs font-medium gap-1.5">
             <Link to="/panel/facilities">
               <Building2 className="w-3.5 h-3.5" />
-              Tesisler ({kpi?.totalFacilities || 0})
+              Tesisler ({computedKpis.totalFacilities})
             </Link>
           </Button>
         </div>
       </div>
 
-      {/* ── SMART FILTER BAR (URL Parametreli) ────────────────────────────── */}
+      {/* ── SMART FILTER BAR (URL Parametreli & Gerçek Hesaplamalı) ───────── */}
       <DashboardFilterBar
         searchTerm={searchTerm}
         onSearchChange={(q) => updateParams({ q })}
@@ -257,199 +405,286 @@ export default function PanelDashboard() {
         availableCities={availableCities}
         selectedDanger={selectedDanger}
         onDangerChange={(danger) => updateParams({ danger })}
+        selectedType={selectedType}
+        onTypeChange={(type) => updateParams({ type })}
+        availableTypes={availableTypes}
         activeFiltersCount={activeFiltersCount}
         onResetFilters={handleResetFilters}
         onRefresh={() => refetch()}
         isRefreshing={isFetching}
-        totalFilteredCount={
-          activeFiltersCount > 0
-            ? Math.max(0, (kpi?.totalFacilities || 0) - (selectedDanger !== 'all' || selectedCityFilter !== 'all' ? totalGapsCount : 0))
-            : undefined
-        }
-        totalCount={kpi?.totalFacilities}
+        totalFilteredCount={activeFiltersCount > 0 ? filteredFacilities.length : undefined}
+        totalCount={totalFacilitiesAll}
       />
 
-      {/* ── PRIMARY KPIS ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard 
-          title="Toplam Tesis" 
-          value={kpi?.totalFacilities || 0} 
-          icon={Building2} 
-          description="Aktif hizmet verilen İSG tesisi"
+      {/* ── COMPACT PRIMARY KPI STRIP ─────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <CompactKPICard
+          title="Toplam Tesis"
+          value={computedKpis.totalFacilities}
+          icon={Building2}
+          hint="Aktif İSG tesisi"
           to="/panel/facilities"
         />
-        <KPICard 
-          title="Toplam Çalışan" 
-          value={kpi?.totalEmployees.toLocaleString('tr-TR') || 0} 
-          icon={Users} 
-          description="Tüm tesislerdeki kayıtlı çalışanlar"
+        <CompactKPICard
+          title="Toplam Çalışan"
+          value={computedKpis.totalEmployees.toLocaleString('tr-TR')}
+          icon={Users}
+          hint="Kayıtlı çalışan"
         />
-        <KPICard 
-          title="Ortalama Uyum Skoru" 
-          value={`%${kpi?.averageComplianceScore ? kpi.averageComplianceScore.toFixed(1) : 0}`} 
-          icon={ShieldAlert} 
-          description="Yasal atama karşılama oranı"
+        <CompactKPICard
+          title="Ortalama Uyum"
+          value={`%${computedKpis.averageComplianceScore ? computedKpis.averageComplianceScore.toFixed(1) : 0}`}
+          icon={ShieldAlert}
+          hint="Yasal karşılama oranı"
           status={
-            (kpi?.averageComplianceScore || 0) >= 90
+            computedKpis.averageComplianceScore >= 90
               ? 'success'
-              : (kpi?.averageComplianceScore || 0) >= 70
-              ? 'warning'
-              : 'destructive'
+              : computedKpis.averageComplianceScore >= 70
+                ? 'warning'
+                : 'destructive'
           }
         />
-        <Card 
-          className="rounded-xl border border-border bg-card shadow-xs hover:border-primary/50 hover:shadow-sm transition-all duration-200 cursor-pointer group"
+        <CompactKPICard
+          title="Sertifika Yenileme"
+          value={totalUpcomingCerts}
+          icon={Calendar}
+          hint="Süresi yaklaşan / dolmuş"
+          status={totalUpcomingCerts === 0 ? 'success' : 'warning'}
           onClick={() => handleOpenDialog('certs')}
-        >
-          <CardContent className="p-5">
-            <div className="flex justify-between items-start">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
-                  Sertifika Yenileme
-                </p>
-                <div className="text-2xl font-bold tracking-tight text-foreground">
-                  {totalUpcomingCerts}
-                </div>
-              </div>
-              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:bg-amber-500/20 transition-colors">
-                <Calendar className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-3 text-xs">
-              <span className="text-muted-foreground">Süresi yaklaşan uzman & hekim</span>
-              <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-            </div>
-          </CardContent>
-        </Card>
+          interactive
+        />
       </div>
 
-      {/* ── DASHBOARD VIEW TABS ──────────────────────────────────────────── */}
-      <Tabs 
-        value={activeTab} 
+      {/* ── VIEW TABS ─────────────────────────────────────────────────────── */}
+      <Tabs
+        value={activeTab}
         onValueChange={(tab) => updateParams({ tab })}
-        className="space-y-6"
+        className="space-y-4"
       >
-        <div className="flex items-center justify-between overflow-x-auto pb-1">
-          <TabsList className="h-10 p-1 bg-muted/60 border border-border rounded-xl">
-            <TabsTrigger value="overview" className="rounded-lg text-xs font-medium px-3.5 gap-1.5">
-              <LayoutGrid className="w-3.5 h-3.5" />
-              Genel Bakış
-            </TabsTrigger>
-            <TabsTrigger value="map" className="rounded-lg text-xs font-medium px-3.5 gap-1.5">
-              <MapPin className="w-3.5 h-3.5" />
-              Bölgesel Harita
-              <Badge variant="secondary" className="h-4 px-1.5 text-[10px] rounded-full">
-                {availableCities.length}
+        <TabsList className="h-9 p-1 bg-muted/60 border border-border rounded-lg flex-wrap h-auto">
+          <TabsTrigger value="overview" className="rounded-md text-xs font-medium px-3 py-1 gap-1.5">
+            <LayoutGrid className="w-3.5 h-3.5" />
+            Genel Bakış
+          </TabsTrigger>
+          <TabsTrigger value="gaps" className="rounded-md text-xs font-medium px-3 py-1 gap-1.5">
+            <UserMinus className="w-3.5 h-3.5" />
+            Kaynak Açıkları
+            {totalGapsCount > 0 && (
+              <Badge variant="destructive" className="h-4 px-1.5 text-[10px] rounded-full tabular-nums">
+                {totalGapsCount}
               </Badge>
-            </TabsTrigger>
-            <TabsTrigger value="gaps" className="rounded-lg text-xs font-medium px-3.5 gap-1.5">
-              <UserMinus className="w-3.5 h-3.5" />
-              Kaynak Açıkları
-              {totalGapsCount > 0 && (
-                <Badge variant="destructive" className="h-4 px-1.5 text-[10px] rounded-full">
-                  {totalGapsCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="financials" className="rounded-lg text-xs font-medium px-3.5 gap-1.5">
-              <Wallet className="w-3.5 h-3.5" />
-              Finansal Risk
-            </TabsTrigger>
-          </TabsList>
-        </div>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="map" className="rounded-md text-xs font-medium px-3 py-1 gap-1.5">
+            <MapPin className="w-3.5 h-3.5" />
+            Bölgesel Harita
+            <Badge variant="secondary" className="h-4 px-1.5 text-[10px] rounded-full tabular-nums">
+              {Object.keys(filteredCityDistribution).length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="financials" className="rounded-md text-xs font-medium px-3 py-1 gap-1.5">
+            <Wallet className="w-3.5 h-3.5" />
+            Finansal Risk
+          </TabsTrigger>
+        </TabsList>
 
-        {/* ── TAB 1: OVERVIEW ────────────────────────────────────────────── */}
-        <TabsContent value="overview" className="space-y-6 outline-none">
-          {/* Resource Gaps Summary */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <UserPlus className="w-4 h-4 text-primary" />
-                Kaynak Planlama & Eksik Atama Uyarıları
-              </h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => updateParams({ tab: 'gaps' })}
-                className="h-7 text-xs text-primary gap-1"
-              >
-                Tümünü İncele <ArrowRight className="w-3 h-3" />
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <KPICard 
-                title="Eksik İSG Uzmanı" 
-                value={totalSpecialistGaps} 
-                icon={UserMinus} 
-                description="Süre veya sınıf eksiği olan tesisler"
-                status={totalSpecialistGaps === 0 ? 'success' : 'destructive'}
-                onClick={() => handleOpenDialog('gap-igu')}
-                interactive
-              />
-              <KPICard 
-                title="Eksik İşyeri Hekimi" 
-                value={totalDoctorGaps} 
-                icon={UserMinus} 
-                description="Hekim ataması eksik olan tesisler"
-                status={totalDoctorGaps === 0 ? 'success' : 'destructive'}
-                onClick={() => handleOpenDialog('gap-hekim')}
-                interactive
-              />
-              <KPICard 
-                title="Eksik DSP" 
-                value={totalDspGaps} 
-                icon={UserMinus} 
-                description="Çok tehlikeli sınıfta eksik DSP"
-                status={totalDspGaps === 0 ? 'success' : 'destructive'}
-                onClick={() => handleOpenDialog('gap-dsp')}
-                interactive
-              />
-            </div>
-          </div>
-
-          {/* Trend Chart and Financial Quick Summary */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-3">
-              <EmployeeTrendChart data={data?.employeeTrend || []} />
-            </div>
-
-            <FinancialCard 
-              title="Aylık OSGB Maliyeti" 
-              value={kpi?.monthlyOsgbCost || 0} 
-              icon={Wallet} 
-              description="Aktif OSGB sözleşmelerinin aylık toplam bedeli"
+        {/* ── TAB 1: OVERVIEW ─────────────────────────────────────────────── */}
+        <TabsContent value="overview" className="space-y-4 outline-none">
+          {/* Compact 3-col Resource Gap Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <CompactKPICard
+              title="Eksik İSG Uzmanı"
+              value={totalSpecialistGaps}
+              icon={UserMinus}
+              hint="Süre veya sınıf eksiği"
+              status={totalSpecialistGaps === 0 ? 'success' : 'destructive'}
+              onClick={() => handleOpenDialog('gap-igu')}
+              interactive
             />
-            <FinancialCard 
-              title="Aylık Ceza Riski" 
-              value={kpi?.monthlyPenaltyRisk || 0} 
-              icon={Gavel} 
-              status="danger"
-              description="Eksik atamalardan kaynaklı aylık idari para cezası riski"
+            <CompactKPICard
+              title="Eksik İşyeri Hekimi"
+              value={totalDoctorGaps}
+              icon={UserMinus}
+              hint="Hekim süre eksiği"
+              status={totalDoctorGaps === 0 ? 'success' : 'destructive'}
+              onClick={() => handleOpenDialog('gap-hekim')}
+              interactive
             />
-            <FinancialCard 
-              title="2026 Kümülatif Ceza Riski" 
-              value={kpi?.cumulativePenaltyRisk2026 || 0} 
-              icon={Activity} 
-              status="danger"
-              description="Yıllık tahmini toplam yaptırım projeksiyonu"
+            <CompactKPICard
+              title="Eksik DSP"
+              value={totalDspGaps}
+              icon={UserMinus}
+              hint="Çok tehlikeli sınıf DSP"
+              status={totalDspGaps === 0 ? 'success' : 'destructive'}
+              onClick={() => handleOpenDialog('gap-dsp')}
+              interactive
             />
           </div>
+
+          {/* Financial Compact Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <CompactFinancialCard
+              title="Aylık OSGB Maliyeti"
+              value={computedKpis.monthlyOsgbCost}
+              icon={Wallet}
+              hint="Aktif OSGB sözleşmeleri toplamı"
+            />
+            <CompactFinancialCard
+              title="Aylık Ceza Riski"
+              value={computedKpis.monthlyPenaltyRisk}
+              icon={Gavel}
+              status="danger"
+              hint="Eksik atama aylık idari yaptırım"
+            />
+            <CompactFinancialCard
+              title={`${currentYear} Yıllık Ceza Projeksiyonu`}
+              value={computedKpis.cumulativePenaltyRisk2026}
+              icon={Activity}
+              status="danger"
+              hint="12 aylık tahmini toplam risk"
+            />
+          </div>
+
+          {/* Employee Trend Chart */}
+          <EmployeeTrendChart data={data?.employeeTrend || []} />
         </TabsContent>
 
-        {/* ── TAB 2: REGIONAL MAP & DISTRIBUTION ─────────────────────────── */}
-        <TabsContent value="map" className="space-y-6 outline-none">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ── TAB 2: INLINE ACTIONABLE RESOURCE GAPS TRACKER ──────────────── */}
+        <TabsContent value="gaps" className="space-y-3 outline-none">
+          {/* Role Filter Pills */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { key: 'all', label: `Tümü (${totalGapsCount})` },
+                { key: 'IGU', label: `İSG Uzmanı (${totalSpecialistGaps})` },
+                { key: 'Hekim', label: `İşyeri Hekimi (${totalDoctorGaps})` },
+                { key: 'DSP', label: `DSP (${totalDspGaps})` },
+              ].map((pill) => (
+                <Button
+                  key={pill.key}
+                  variant={gapRoleFilter === pill.key ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => updateParams({ gapRole: pill.key })}
+                  className="h-7 px-2.5 text-xs rounded-lg tabular-nums"
+                >
+                  {pill.label}
+                </Button>
+              ))}
+            </div>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {combinedGapsList.length} açık takip kaydı
+            </span>
+          </div>
+
+          {/* Live Inline Gaps Table */}
+          <Card className="rounded-lg border border-border bg-card shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-muted/50 border-b border-border">
+                  <tr>
+                    <th className="px-4 py-2.5 font-semibold text-muted-foreground">Tesis</th>
+                    <th className="px-3 py-2.5 font-semibold text-muted-foreground">İl</th>
+                    <th className="px-3 py-2.5 font-semibold text-muted-foreground">Tehlike Sınıfı</th>
+                    <th className="px-3 py-2.5 font-semibold text-muted-foreground text-center">Çalışan</th>
+                    <th className="px-3 py-2.5 font-semibold text-muted-foreground">Eksik Rol</th>
+                    <th className="px-3 py-2.5 font-semibold text-muted-foreground">Eksiklik Detayı</th>
+                    <th className="px-4 py-2.5 font-semibold text-muted-foreground text-right">İşlem</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {combinedGapsList.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <CheckCircle2 className="w-7 h-7 text-emerald-500 opacity-70" />
+                          <span className="font-semibold text-foreground">Açık kaynak eksiği bulunmuyor</span>
+                          <span className="text-[11px]">
+                            Seçili filtre kriterlerine göre tüm yasal atamalar uyumlu görünüyor.
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    combinedGapsList.map((row) => (
+                      <tr key={row.key} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-2.5 font-semibold text-foreground">
+                          <Link
+                            to={`/panel/facilities/${row.facilityId}`}
+                            className="hover:text-primary transition-colors inline-flex items-center gap-1"
+                          >
+                            {row.facilityName}
+                            <ExternalLink className="w-3 h-3 opacity-50" />
+                          </Link>
+                        </td>
+                        <td className="px-3 py-2.5 text-muted-foreground">{row.city}</td>
+                        <td className="px-3 py-2.5">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'text-[10px] h-5 px-2 font-semibold',
+                              row.dangerClass === 'Çok Tehlikeli'
+                                ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20'
+                                : row.dangerClass === 'Tehlikeli'
+                                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+                                  : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
+                            )}
+                          >
+                            {row.dangerClass}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2.5 text-center font-medium tabular-nums">
+                          {row.employeeCount}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Badge variant="secondary" className="text-[10px] h-5 px-2 font-semibold">
+                            {row.roleLabel}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2.5 font-semibold text-destructive tabular-nums">
+                          {row.missingLabel}
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2.5 text-[11px] rounded-md gap-1"
+                            onClick={() => {
+                              setSelectedFacility({
+                                id: row.facilityId,
+                                name: row.facilityName,
+                                dangerClass: row.dangerClass,
+                                compliance: row.raw,
+                              });
+                              setAssignType(row.role);
+                              setAssignModalOpen(true);
+                            }}
+                          >
+                            <UserPlus className="w-3 h-3" />
+                            Hızlı Ata
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ── TAB 3: REGIONAL MAP & DISTRIBUTION ──────────────────────────── */}
+        <TabsContent value="map" className="outline-none">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
-              <TurkeyMapSection 
-                cityData={data?.cityDistribution || {}} 
+              <TurkeyMapSection
+                cityData={filteredCityDistribution}
                 onCityClick={handleCityClick}
                 selectedCity={selectedCityForDialog || selectedCityFilter}
               />
             </div>
             <div className="lg:col-span-1">
-              <CityDistribution 
-                data={data?.cityDistribution || {}} 
+              <CityDistribution
+                data={filteredCityDistribution}
                 onCityClick={handleCityClick}
                 selectedCity={selectedCityForDialog || selectedCityFilter}
               />
@@ -457,121 +692,63 @@ export default function PanelDashboard() {
           </div>
         </TabsContent>
 
-        {/* ── TAB 3: DETAILED RESOURCE GAPS ──────────────────────────────── */}
-        <TabsContent value="gaps" className="space-y-6 outline-none">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="rounded-xl border border-border bg-card p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground uppercase">İSG Uzmanı Açığı</span>
-                <Badge variant={totalSpecialistGaps === 0 ? "outline" : "destructive"}>
-                  {totalSpecialistGaps} Tesis
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Tesislerin çalışma süreleri veya tehlike sınıfı (A, B, C) uyumsuzluğu olan İSG uzmanları.
-              </p>
-              <Button 
-                onClick={() => handleOpenDialog('gap-igu')}
-                className="w-full text-xs font-semibold h-8 rounded-lg"
-              >
-                Uzman Açıklarını İncele ({totalSpecialistGaps})
-              </Button>
-            </Card>
-
-            <Card className="rounded-xl border border-border bg-card p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground uppercase">İşyeri Hekimi Açığı</span>
-                <Badge variant={totalDoctorGaps === 0 ? "outline" : "destructive"}>
-                  {totalDoctorGaps} Tesis
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Tüm tehlike sınıflarında çalışan sayısına göre belirlenen hekim görevlendirme süre eksiklikleri.
-              </p>
-              <Button 
-                onClick={() => handleOpenDialog('gap-hekim')}
-                className="w-full text-xs font-semibold h-8 rounded-lg"
-              >
-                Hekim Açıklarını İncele ({totalDoctorGaps})
-              </Button>
-            </Card>
-
-            <Card className="rounded-xl border border-border bg-card p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground uppercase">DSP Açığı</span>
-                <Badge variant={totalDspGaps === 0 ? "outline" : "destructive"}>
-                  {totalDspGaps} Tesis
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Çok tehlikeli sınıfta yer alan ve mevzuat gereği diğer sağlık personeli atanması gereken tesisler.
-              </p>
-              <Button 
-                onClick={() => handleOpenDialog('gap-dsp')}
-                className="w-full text-xs font-semibold h-8 rounded-lg"
-              >
-                DSP Açıklarını İncele ({totalDspGaps})
-              </Button>
-            </Card>
-          </div>
-        </TabsContent>
-
         {/* ── TAB 4: FINANCIALS & FINES ───────────────────────────────────── */}
-        <TabsContent value="financials" className="space-y-6 outline-none">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FinancialCard 
-              title="Aylık OSGB Maliyeti" 
-              value={kpi?.monthlyOsgbCost || 0} 
-              icon={Wallet} 
-              description="Faturalandırılan veya sözleşme birim fiyatları üzerinden hesaplanan aylık gider"
+        <TabsContent value="financials" className="space-y-4 outline-none">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <CompactFinancialCard
+              title="Aylık OSGB Maliyeti"
+              value={computedKpis.monthlyOsgbCost}
+              icon={Wallet}
+              hint="Sözleşme birim fiyatları üzerinden aylık gider"
             />
-            <FinancialCard 
-              title="Aylık Ceza Riski" 
-              value={kpi?.monthlyPenaltyRisk || 0} 
-              icon={Gavel} 
+            <CompactFinancialCard
+              title="Aylık Ceza Riski"
+              value={computedKpis.monthlyPenaltyRisk}
+              icon={Gavel}
               status="danger"
-              description="6331 sayılı İSG Kanunu Md. 26 uyarınca uygulanabilecek aylık idari yaptırım"
+              hint="6331 Sayılı Kanun Md. 26 aylık risk"
             />
-            <FinancialCard 
-              title="2026 Kümülatif Ceza Riski" 
-              value={kpi?.cumulativePenaltyRisk2026 || 0} 
-              icon={Activity} 
+            <CompactFinancialCard
+              title={`${currentYear} Kümülatif Ceza Riski`}
+              value={computedKpis.cumulativePenaltyRisk2026}
+              icon={Activity}
               status="danger"
-              description="Atamalar tamamlanmadığı takdirde yıl sonuna kadar oluşacak toplam risk"
+              hint="12 aylık tahmini toplam yaptırım"
             />
           </div>
 
-          <Card className="rounded-xl border border-border bg-card shadow-xs">
-            <CardHeader className="pb-3 border-b border-border/40">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+          <Card className="rounded-lg border border-border bg-card shadow-xs">
+            <CardHeader className="py-3 px-4 border-b border-border/50">
+              <CardTitle className="text-xs font-bold uppercase tracking-wider flex items-center gap-2 text-foreground">
                 <ShieldCheck className="w-4 h-4 text-primary" />
                 Mevzuat ve İdari Para Cezası Dayanağı (6331 Sayılı Kanun)
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-5 text-xs text-muted-foreground space-y-3 leading-relaxed">
+            <CardContent className="p-4 text-xs text-muted-foreground space-y-2 leading-relaxed">
               <p>
-                6331 sayılı İş Sağlığı ve Güvenliği Kanunu'nun 26. maddesi gereğince, görevlendirilmesi zorunlu olan 
-                <strong> İş Güvenliği Uzmanı</strong> veya <strong>İşyeri Hekimi</strong> görevlendirmeyen işverene, 
-                görevlendirilmeyen her bir kişi ve aykırılığın devam ettiği her ay için idari para cezası tatbik edilir.
+                6331 sayılı İş Sağlığı ve Güvenliği Kanunu'nun 26. maddesi gereğince, görevlendirilmesi
+                zorunlu olan <strong>İş Güvenliği Uzmanı</strong> veya <strong>İşyeri Hekimi</strong>{' '}
+                görevlendirmeyen işverene, görevlendirilmeyen her bir kişi ve aykırılığın devam ettiği
+                her ay için tehlike sınıfına göre idari para cezası tatbik edilir.
               </p>
               <p>
-                Ayrıca <strong>Çok Tehlikeli</strong> sınıfta yer alan işyerlerinde Diğer Sağlık Personeli (DSP) 
-                görevlendirmemek de aynı şekilde her ay için bağımsız idari para cezasına tabidir.
+                <strong>Çok Tehlikeli</strong> sınıfta yer alan işyerlerinde Diğer Sağlık Personeli (DSP)
+                görevlendirmemek de her ay için bağımsız idari para cezasına tabidir.
               </p>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* ── DIALOGS (URL Parametreleriyle Senkronize) ──────────────────────── */}
-      <CertificateRenewalDialog 
-        open={activeDialog === 'certs'} 
+      {/* ── DIALOGS ───────────────────────────────────────────────────────── */}
+      <CertificateRenewalDialog
+        open={activeDialog === 'certs'}
         onOpenChange={(open) => !open && handleCloseDialog()}
-        data={data?.upcomingCertificates || []}
+        data={filteredCertificates}
       />
 
-      <ResourceGapDialog 
-        open={activeDialog === 'gap-igu'} 
+      <ResourceGapDialog
+        open={activeDialog === 'gap-igu'}
         onOpenChange={(open) => !open && handleCloseDialog()}
         title="Eksik İSG Uzmanı Listesi"
         data={filteredResourceGaps.specialists}
@@ -583,8 +760,8 @@ export default function PanelDashboard() {
         }}
       />
 
-      <ResourceGapDialog 
-        open={activeDialog === 'gap-hekim'} 
+      <ResourceGapDialog
+        open={activeDialog === 'gap-hekim'}
         onOpenChange={(open) => !open && handleCloseDialog()}
         title="Eksik İşyeri Hekimi Listesi"
         data={filteredResourceGaps.doctors}
@@ -596,8 +773,8 @@ export default function PanelDashboard() {
         }}
       />
 
-      <ResourceGapDialog 
-        open={activeDialog === 'gap-dsp'} 
+      <ResourceGapDialog
+        open={activeDialog === 'gap-dsp'}
         onOpenChange={(open) => !open && handleCloseDialog()}
         title="Eksik DSP Listesi"
         data={filteredResourceGaps.dsp}
@@ -609,14 +786,14 @@ export default function PanelDashboard() {
         }}
       />
 
-      <CityDetailDialog 
-        open={activeDialog === 'city-detail' && Boolean(selectedCityForDialog)} 
+      <CityDetailDialog
+        open={activeDialog === 'city-detail' && Boolean(selectedCityForDialog)}
         onOpenChange={(open) => !open && handleCloseDialog()}
         cityName={selectedCityForDialog || ''}
         data={data?.cityDetails?.[selectedCityForDialog || '']}
       />
 
-      <QuickAssignModal 
+      <QuickAssignModal
         open={assignModalOpen}
         onOpenChange={setAssignModalOpen}
         facility={selectedFacility}
@@ -628,116 +805,134 @@ export default function PanelDashboard() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// REUSABLE KPI CARD COMPONENT
+// COMPACT KPI CARD (30-design-system: 0.5rem radius, p-3.5, tabular-nums)
 // ─────────────────────────────────────────────────────────────────────────────
-interface KPICardProps {
+interface CompactKPICardProps {
   title: string;
   value: string | number;
   icon: any;
-  description?: string;
+  hint?: string;
   status?: 'success' | 'warning' | 'destructive';
   onClick?: () => void;
   interactive?: boolean;
   to?: string;
 }
 
-function KPICard({ 
-  title, 
-  value, 
-  icon: Icon, 
-  description, 
-  status, 
-  onClick, 
+function CompactKPICard({
+  title,
+  value,
+  icon: Icon,
+  hint,
+  status,
+  onClick,
   interactive,
-  to 
-}: KPICardProps) {
-  const content = (
-    <CardContent className="p-5">
-      <div className="flex justify-between items-start">
-        <div className="space-y-1">
-          <p className="text-xs font-semibold text-muted-foreground">{title}</p>
-          <div className="text-2xl font-bold tracking-tight text-foreground">{value}</div>
+  to,
+}: CompactKPICardProps) {
+  const isClickable = Boolean(interactive || onClick || to);
+
+  const inner = (
+    <CardContent className="p-3.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium text-muted-foreground truncate">{title}</p>
+          <div className="flex items-baseline gap-2 mt-0.5">
+            <span className="text-xl font-bold tracking-tight tabular-nums text-foreground">
+              {value}
+            </span>
+            {status && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-[9px] h-4 px-1.5 font-semibold uppercase',
+                  status === 'success' && 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
+                  status === 'warning' && 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+                  status === 'destructive' && 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20'
+                )}
+              >
+                {status === 'success' ? 'Uyumlu' : status === 'warning' ? 'Dikkat' : 'Eksik'}
+              </Badge>
+            )}
+          </div>
         </div>
-        <div className="w-10 h-10 rounded-lg bg-muted/60 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-colors">
-          <Icon className="w-5 h-5" />
+        <div className="w-8 h-8 rounded-lg bg-muted/60 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-colors shrink-0">
+          <Icon className="w-4 h-4" />
         </div>
       </div>
-      {description && (
-        <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-border/40 text-xs">
-          <p className="text-muted-foreground truncate">{description}</p>
-          {status && (
-            <Badge 
-              variant="outline" 
-              className={`text-[10px] h-5 px-1.5 font-bold uppercase tracking-tight shrink-0 ${
-                status === 'success' 
-                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20' 
-                  : status === 'warning'
-                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
-                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20'
-              }`}
-            >
-              {status === 'success' ? 'Uyumlu' : status === 'warning' ? 'Orta Uyum' : 'Eksik'}
-            </Badge>
+      {hint && (
+        <div className="flex items-center justify-between gap-1 mt-2 pt-1.5 border-t border-border/40 text-[11px] text-muted-foreground">
+          <span className="truncate">{hint}</span>
+          {isClickable && (
+            <ArrowRight className="w-3 h-3 shrink-0 opacity-60 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
           )}
         </div>
       )}
     </CardContent>
   );
 
-  const cardClasses = `rounded-xl border border-border bg-card shadow-xs group transition-all duration-200 ${
-    interactive || onClick || to ? 'cursor-pointer hover:border-primary/50 hover:shadow-sm' : ''
-  }`;
+  const classes = cn(
+    'rounded-lg border border-border bg-card shadow-xs group transition-all duration-200',
+    isClickable && 'cursor-pointer hover:border-primary/50 hover:shadow-sm'
+  );
 
   if (to) {
     return (
       <Link to={to} className="block">
-        <Card className={cardClasses}>{content}</Card>
+        <Card className={classes}>{inner}</Card>
       </Link>
     );
   }
 
   return (
-    <Card className={cardClasses} onClick={onClick}>
-      {content}
+    <Card className={classes} onClick={onClick}>
+      {inner}
     </Card>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// REUSABLE FINANCIAL CARD COMPONENT
+// COMPACT FINANCIAL CARD
 // ─────────────────────────────────────────────────────────────────────────────
-interface FinancialCardProps {
+function CompactFinancialCard({
+  title,
+  value,
+  icon: Icon,
+  hint,
+  status = 'default',
+}: {
   title: string;
   value: number;
   icon: any;
-  description?: string;
+  hint?: string;
   status?: 'default' | 'danger';
-}
-
-function FinancialCard({ title, value, icon: Icon, description, status = 'default' }: FinancialCardProps) {
+}) {
   const isDanger = status === 'danger';
-
   return (
-    <Card className={`rounded-xl border shadow-xs bg-card transition-all duration-200 ${
-      isDanger ? 'border-destructive/30' : 'border-border'
-    }`}>
-      <CardContent className="p-5">
-        <div className="flex items-start gap-3.5">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-            isDanger ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
-          }`}>
-            <Icon className="w-5 h-5" />
-          </div>
-          <div className="space-y-1 min-w-0">
-            <p className="text-xs font-semibold text-muted-foreground">{title}</p>
-            <p className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate">
-              {value.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 })}
-            </p>
-            {description && (
-              <p className="text-[11px] text-muted-foreground leading-snug pt-1">
-                {description}
-              </p>
+    <Card
+      className={cn(
+        'rounded-lg border shadow-xs bg-card transition-all duration-200',
+        isDanger ? 'border-destructive/30' : 'border-border'
+      )}
+    >
+      <CardContent className="p-3.5">
+        <div className="flex items-center gap-3">
+          <div
+            className={cn(
+              'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+              isDanger ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
             )}
+          >
+            <Icon className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-medium text-muted-foreground truncate">{title}</p>
+            <p className="text-lg font-bold tracking-tight tabular-nums text-foreground truncate">
+              {value.toLocaleString('tr-TR', {
+                style: 'currency',
+                currency: 'TRY',
+                maximumFractionDigits: 0,
+              })}
+            </p>
+            {hint && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{hint}</p>}
           </div>
         </div>
       </CardContent>

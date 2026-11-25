@@ -16,28 +16,28 @@ export function CityDistribution({ data = {}, onCityClick, selectedCity }: CityD
 
   const sortedCities = Object.entries(data).sort((a, b) => b[1] - a[1]);
   const filteredCities = sortedCities.filter(([city]) =>
-    city.toLowerCase().includes(filterQuery.toLowerCase())
+    city.toLocaleLowerCase('tr-TR').includes(filterQuery.toLocaleLowerCase('tr-TR'))
   );
   const maxCount = Math.max(...Object.values(data), 1);
   const totalFacilities = Object.values(data).reduce((sum, count) => sum + count, 0);
 
   return (
-    <Card className="rounded-xl border border-border bg-card shadow-xs transition-all duration-200 flex flex-col">
-      <CardHeader className="pb-3 border-b border-border/40">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                <MapPin className="w-4 h-4" />
+    <Card className="rounded-lg border border-border bg-card shadow-xs transition-all duration-200 flex flex-col">
+      <CardHeader className="py-3 px-4 border-b border-border/50">
+        <div className="flex items-center justify-between gap-2">
+          <div className="space-y-0.5 min-w-0">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                <MapPin className="w-3.5 h-3.5" />
               </div>
-              Bölgesel Tesis Dağılımı
+              <span className="truncate">İl Bazlı Dağılım</span>
             </CardTitle>
-            <CardDescription className="text-xs text-muted-foreground">
-              İllere göre tesis sayıları ve dağılım oranları
+            <CardDescription className="text-[11px] text-muted-foreground">
+              Tesis sayıları ve oranları
             </CardDescription>
           </div>
-          <Badge variant="outline" className="h-7 px-2.5 text-xs font-medium bg-muted/50 border-border">
-            {totalFacilities} Tesis / {sortedCities.length} İl
+          <Badge variant="outline" className="h-6 px-2 text-[11px] font-semibold bg-muted/50 border-border tabular-nums shrink-0">
+            {totalFacilities} / {sortedCities.length} İl
           </Badge>
         </div>
 
@@ -48,13 +48,13 @@ export function CityDistribution({ data = {}, onCityClick, selectedCity }: CityD
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
             placeholder="İl ara..."
-            className="pl-8 h-8 text-xs rounded-lg bg-background/80 border-border focus-visible:ring-1"
+            className="pl-8 h-8 text-xs rounded-lg bg-background border-border"
           />
         </div>
       </CardHeader>
 
-      <CardContent className="pt-4 flex-1">
-        <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
+      <CardContent className="p-3 flex-1">
+        <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
           {filteredCities.map(([city, count]) => {
             const isSelected = selectedCity === city;
             const percentage = Math.round((count / totalFacilities) * 100);

@@ -8,21 +8,21 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Plus, Search, UserCheck, Edit, Archive, Loader2, 
-  Phone, Mail, AlertTriangle, LayoutGrid, List as ListIcon, 
+import {
+  Plus, Search, UserCheck, Edit, Archive, Loader2,
+  Phone, Mail, AlertTriangle, LayoutGrid, List as ListIcon,
   Building2, X, RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface Employer {
-  id: number; 
-  fullName: string; 
-  title?: string; 
-  phone?: string; 
-  email?: string; 
-  username?: string; 
+  id: number;
+  fullName: string;
+  title?: string;
+  phone?: string;
+  email?: string;
+  username?: string;
   isActive: boolean;
   appointments?: { facility: { name: string } }[];
 }
@@ -112,10 +112,10 @@ export default function EmployersPage() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
       return res.json();
     },
-    onSuccess: () => { 
-      queryClient.invalidateQueries({ queryKey: ['employers'] }); 
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employers'] });
       toast.success('İşveren vekili arşive alındı.');
-      setArchiveId(null); 
+      setArchiveId(null);
     },
     onError: (err: any) => toast.error(err.message || 'Arşive alınamadı.')
   });
@@ -123,10 +123,10 @@ export default function EmployersPage() {
   const openAdd = () => { setEditItem(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (e: Employer) => {
     setEditItem(e);
-    setForm({ 
-      fullName: e.fullName, 
-      title: e.title ?? '', 
-      phone: e.phone ?? '', 
+    setForm({
+      fullName: e.fullName,
+      title: e.title ?? '',
+      phone: e.phone ?? '',
       email: e.email ?? '',
       username: e.username ?? ''
     });
@@ -134,46 +134,54 @@ export default function EmployersPage() {
   };
 
   const filtered = useMemo(() => {
+    const q = search.toLocaleLowerCase('tr-TR').trim();
     return employers.filter((e) => {
-      const term = search.toLowerCase();
-      const facilityMatch = e.appointments?.some(a => a.facility?.name.toLowerCase().includes(term));
-      return e.fullName.toLowerCase().includes(term) ||
-             (e.title && e.title.toLowerCase().includes(term)) ||
-             facilityMatch;
+      if (!q) return true;
+      const facilityMatch = e.appointments?.some((a) =>
+        (a.facility?.name || '').toLocaleLowerCase('tr-TR').includes(q)
+      );
+      return (
+        e.fullName.toLocaleLowerCase('tr-TR').includes(q) ||
+        (e.title || '').toLocaleLowerCase('tr-TR').includes(q) ||
+        (e.email || '').toLocaleLowerCase('tr-TR').includes(q) ||
+        (e.phone || '').toLocaleLowerCase('tr-TR').includes(q) ||
+        (e.username || '').toLocaleLowerCase('tr-TR').includes(q) ||
+        Boolean(facilityMatch)
+      );
     });
   }, [employers, search]);
 
   return (
-    <div className="space-y-6 pb-12 animate-fade-in">
-      {/* ── HEADER ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-5">
+    <div className="space-y-4 pb-10">
+      {/* ── COMPACT HEADER ────────────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-border pb-3">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
               İşveren Vekilleri
             </h1>
-            <Badge variant="outline" className="h-6 px-2.5 text-xs font-semibold bg-primary/5 text-primary border-primary/20">
-              {employers.length} Kayıtlı Vekil
+            <Badge variant="outline" className="h-5 px-2 text-[11px] font-semibold bg-primary/5 text-primary border-primary/20 tabular-nums">
+              {employers.length} Vekil
             </Badge>
           </div>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            İSG süreçlerinde işveren adına yetkilendirilmiş vekil ve temsilcileri yönetin.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            İSG süreçlerinde işveren adına yetkilendirilmiş vekil ve temsilciler
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 self-start md:self-auto">
           <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border">
-            <Button 
-              variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
-              size="sm" 
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
               className={cn("h-7 px-2.5 text-xs rounded-md", viewMode === 'list' && "bg-background shadow-xs font-semibold")}
               onClick={() => setViewMode('list')}
             >
               <ListIcon className="w-3.5 h-3.5 mr-1" /> Liste
             </Button>
-            <Button 
-              variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
-              size="sm" 
+            <Button
+              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+              size="sm"
               className={cn("h-7 px-2.5 text-xs rounded-md", viewMode === 'grid' && "bg-background shadow-xs font-semibold")}
               onClick={() => setViewMode('grid')}
             >
@@ -181,9 +189,9 @@ export default function EmployersPage() {
             </Button>
           </div>
 
-          <Button 
-            size="sm" 
-            onClick={openAdd} 
+          <Button
+            size="sm"
+            onClick={openAdd}
             className="h-9 px-3.5 rounded-lg text-xs font-semibold gap-1.5 shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" /> Yeni Vekil
@@ -196,11 +204,11 @@ export default function EmployersPage() {
         <div className="flex items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <Input 
-              placeholder="Ad, unvan veya tesis adı ile ara..." 
-              className="pl-9 pr-8 h-9 text-sm rounded-lg bg-background/80 border-border focus-visible:ring-1" 
-              value={search} 
-              onChange={(e) => setSearch(e.target.value)} 
+            <Input
+              placeholder="Ad, unvan veya tesis adı ile ara..."
+              className="pl-9 pr-8 h-9 text-sm rounded-lg bg-background/80 border-border focus-visible:ring-1"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
             {search && (
               <button
@@ -372,77 +380,81 @@ export default function EmployersPage() {
 
       {/* ── ADD / EDIT DIALOG ─────────────────────────────────────────────── */}
       <Dialog open={modalOpen} onOpenChange={(v) => { setModalOpen(v); if (!v) setEditItem(null); }}>
-        <DialogContent className="sm:max-w-md rounded-xl border border-border bg-card p-0 overflow-hidden shadow-lg">
-          <DialogHeader className="p-6 bg-muted/40 border-b border-border">
+        <DialogContent className="sm:max-w-md w-[95vw] rounded-lg border border-border bg-card p-0 overflow-hidden shadow-lg flex flex-col gap-0">
+          <DialogHeader className="px-5 py-3.5 bg-muted/30 border-b border-border shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
                 <UserCheck className="w-4 h-4" />
               </div>
-              <DialogTitle className="text-lg font-bold text-foreground">
-                {editItem ? 'Vekil Bilgilerini Düzenle' : 'Yeni İşveren Vekili Tanımla'}
-              </DialogTitle>
+              <div className="min-w-0">
+                <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
+                  {editItem ? 'Vekil Bilgilerini Düzenle' : 'Yeni İşveren Vekili Tanımla'}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  İşveren temsilcisi yetki ve iletişim bilgilerini girin.
+                </DialogDescription>
+              </div>
             </div>
-            <DialogDescription className="text-xs text-muted-foreground mt-1">
-              İşveren temsilcisi yetki ve iletişim bilgilerini girin.
-            </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={(ev) => { ev.preventDefault(); saveMutation.mutate(form); }} className="p-6 space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Ad Soyad *</label>
-              <Input 
-                value={form.fullName} 
-                onChange={(ev) => setForm({ ...form, fullName: ev.target.value })} 
-                className="h-9 rounded-lg"
-                placeholder="Örn: Metin Salik"
-                required 
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Unvan</label>
-              <Input 
-                value={form.title} 
-                onChange={(ev) => setForm({ ...form, title: ev.target.value })} 
-                placeholder="Örn: Genel Müdür Yardımcısı" 
-                className="h-9 rounded-lg"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+          <form onSubmit={(ev) => { ev.preventDefault(); saveMutation.mutate(form); }} className="flex flex-col">
+            <div className="p-5 space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Telefon</label>
-                <Input 
-                  value={form.phone} 
-                  onChange={(ev) => setForm({ ...form, phone: ev.target.value })} 
-                  placeholder="05XX XXX XX XX"
-                  className="h-9 rounded-lg"
+                <label className="text-xs font-medium text-foreground">Ad Soyad *</label>
+                <Input
+                  value={form.fullName}
+                  onChange={(ev) => setForm({ ...form, fullName: ev.target.value })}
+                  className="h-9 rounded-lg text-xs"
+                  placeholder="Örn: Metin Salik"
+                  required
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">E-posta</label>
-                <Input 
-                  type="email" 
-                  value={form.email} 
-                  onChange={(ev) => setForm({ ...form, email: ev.target.value })} 
-                  placeholder="vekil@firma.com"
-                  className="h-9 rounded-lg"
+                <label className="text-xs font-medium text-foreground">Unvan</label>
+                <Input
+                  value={form.title}
+                  onChange={(ev) => setForm({ ...form, title: ev.target.value })}
+                  placeholder="Örn: Genel Müdür Yardımcısı"
+                  className="h-9 rounded-lg text-xs"
                 />
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Kullanıcı Adı (İSG-KATİP)</label>
-              <Input 
-                value={form.username} 
-                onChange={(ev) => setForm({ ...form, username: ev.target.value })} 
-                placeholder="TC Kimlik No veya kullanıcı adı"
-                className="h-9 rounded-lg"
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">Telefon</label>
+                  <Input
+                    value={form.phone}
+                    onChange={(ev) => setForm({ ...form, phone: ev.target.value })}
+                    placeholder="05XX XXX XX XX"
+                    className="h-9 rounded-lg text-xs tabular-nums"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">E-posta</label>
+                  <Input
+                    type="email"
+                    value={form.email}
+                    onChange={(ev) => setForm({ ...form, email: ev.target.value })}
+                    placeholder="vekil@firma.com"
+                    className="h-9 rounded-lg text-xs"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Kullanıcı Adı (İSG-KATİP)</label>
+                <Input
+                  value={form.username}
+                  onChange={(ev) => setForm({ ...form, username: ev.target.value })}
+                  placeholder="TC Kimlik No veya kullanıcı adı"
+                  className="h-9 rounded-lg text-xs"
+                />
+              </div>
             </div>
 
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setModalOpen(false)} className="rounded-lg">
+            <DialogFooter className="mx-0 mb-0 rounded-none px-5 py-3.5 bg-muted/30 border-t border-border shrink-0 gap-2 sm:gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setModalOpen(false)} className="h-8 rounded-lg text-xs">
                 Vazgeç
               </Button>
-              <Button type="submit" size="sm" disabled={saveMutation.isPending} className="rounded-lg gap-1.5">
+              <Button type="submit" size="sm" disabled={saveMutation.isPending} className="h-8 px-4 rounded-lg text-xs font-semibold gap-1.5">
                 {saveMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 {editItem ? 'Güncelle' : 'Kaydet'}
               </Button>
@@ -453,25 +465,32 @@ export default function EmployersPage() {
 
       {/* ── ARCHIVE CONFIRMATION DIALOG ──────────────────────────────────── */}
       <Dialog open={archiveId !== null} onOpenChange={(v) => !v && setArchiveId(null)}>
-        <DialogContent className="sm:max-w-md rounded-xl border border-border bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-500" /> İşveren Vekilini Arşive Al
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground mt-1">
-              Bu vekil kaydı pasife alınacaktır. Devam etmek istiyor musunuz?
-            </DialogDescription>
+        <DialogContent className="sm:max-w-md w-[95vw] rounded-lg border border-border bg-card p-0 overflow-hidden shadow-lg flex flex-col gap-0">
+          <DialogHeader className="px-5 py-4 bg-muted/30 border-b border-border">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              <div>
+                <DialogTitle className="text-sm font-semibold text-foreground">
+                  İşveren Vekilini Arşive Al
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  Bu vekil kaydı pasife alınacaktır. Devam etmek istiyor musunuz?
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <DialogFooter className="pt-2">
-            <Button variant="outline" size="sm" onClick={() => setArchiveId(null)} className="rounded-lg">
+          <DialogFooter className="mx-0 mb-0 rounded-none px-5 py-3.5 bg-card border-t border-border gap-2 sm:gap-2">
+            <Button variant="outline" size="sm" onClick={() => setArchiveId(null)} className="h-8 rounded-lg text-xs">
               İptal
             </Button>
-            <Button 
-              variant="destructive" 
-              size="sm" 
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={() => archiveId && archiveMutation.mutate(archiveId)}
               disabled={archiveMutation.isPending}
-              className="rounded-lg gap-1.5"
+              className="h-8 px-4 rounded-lg text-xs font-semibold gap-1.5"
             >
               {archiveMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Arşive Al

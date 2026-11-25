@@ -21,11 +21,35 @@ export async function getDashboardStats() {
     }),
   ]);
 
-  const penaltyAmounts = {
-    iguPenalty: fines?.specialistAndPhysicianLess || 0,
-    hekimPenalty: fines?.specialistAndPhysicianLess || 0,
-    dspPenalty: fines?.dspVeryDangerous || 0,
+  const profMap = new Map(professionals.map((p) => [p.id, p]));
+
+  const getPenaltyForDangerClass = (dangerClass: string) => {
+    const dc = (dangerClass || '').toLocaleLowerCase('tr-TR');
+    const spPenalty = dc.includes('çok')
+      ? (fines?.specialistAndPhysicianVery ?? fines?.specialistAndPhysicianLess ?? 0)
+      : dc.includes('az')
+        ? (fines?.specialistAndPhysicianLess ?? 0)
+        : (fines?.specialistAndPhysicianDanger ?? fines?.specialistAndPhysicianLess ?? 0);
+
+    return {
+      iguPenalty: spPenalty,
+      hekimPenalty: spPenalty,
+      dspPenalty: fines?.dspVeryDangerous ?? 0,
+    };
   };
+
+  // Tesis bazlı OSGB maliyeti hesapla
+  const facilityOsgbCostMap = new Map<string, number>();
+  for (const a of assignments) {
+    if (a.costType !== 'OSGB') continue;
+    const prof = a.professionalId ? profMap.get(a.professionalId) : null;
+    const price = a.unitPrice || prof?.unitPrice || 0;
+    if (!price) continue;
+    const cost = a.isFullTime ? price : Math.ceil((a.durationMinutes || 0) / 60) * price;
+    facilityOsgbCostMap.set(a.facilityId, (facilityOsgbCostMap.get(a.facilityId) || 0) + cost);
+  }
+
+  const facilityMap = new Map(facilities.map((f) => [f.id, f]));
 
   const complianceResults = facilities.map((f) => {
     const activeAssignments = f.assignments;
@@ -46,7 +70,7 @@ export async function getDashboardStats() {
       .filter((a) => a.type === 'Vekil' && a.employerRep)
       .map((a) => ({ name: a.employerRep!.fullName }));
 
-    return analyzeFacilityCompliance({
+    const result = analyzeFacilityCompliance({
       facilityId: f.id,
       facilityName: f.name,
       dangerClass: f.dangerClass,
@@ -55,48 +79,76 @@ export async function getDashboardStats() {
       hekimAssignments,
       dspAssignments,
       vekilAssignments,
-      penaltyAmounts,
+      penaltyAmounts: getPenaltyForDangerClass(f.dangerClass),
     });
+
+    return {
+      ...result,
+      city: f.city || 'Belirtilmemiş',
+      district: f.district || 'Belirtilmemiş',
+      type: f.type || 'Diğer',
+    };
   });
 
-  const totalEmployees = facilities.reduce((sum, f) => sum + f.employeeCount, 0);
-  
-  // 1. Ortalama Uyum Skoru (Daha hassas hesaplama: Her tesisin % uyumluluk ortalaması)
-  const averageComplianceScore = facilities.length > 0 
-    ? complianceResults.reduce((sum, r) => {
-        const iguScore = Math.min(100, r.igu.requiredMinutes > 0 ? (r.igu.assignedMinutes / r.igu.requiredMinutes) * 100 : 100);
-        const hekimScore = Math.min(100, r.hekim.requiredMinutes > 0 ? (r.hekim.assignedMinutes / r.hekim.requiredMinutes) * 100 : 100);
-        const dspScore = !r.dsp.required ? 100 : Math.min(100, r.dsp.requiredMinutes > 0 ? (r.dsp.assignedMinutes / r.dsp.requiredMinutes) * 100 : 0);
-        return sum + ((iguScore + hekimScore + dspScore) / 3);
-      }, 0) / facilities.length
-    : 0;
+  const facilitiesSummary = complianceResults.map((r) => {
+    const f = facilityMap.get(r.facilityId);
+    const iguScore = Math.min(100, r.igu.requiredMinutes > 0 ? (r.igu.assignedMinutes / r.igu.requiredMinutes) * 100 : 100);
+    const hekimScore = Math.min(100, r.hekim.requiredMinutes > 0 ? (r.hekim.assignedMinutes / r.hekim.requiredMinutes) * 100 : 100);
+    const dspScore = !r.dsp.required
+      ? 100
+      : Math.min(100, r.dsp.requiredMinutes > 0 ? (r.dsp.assignedMinutes / r.dsp.requiredMinutes) * 100 : 0);
+    const complianceScore = (iguScore + hekimScore + dspScore) / 3;
 
-  // 2. Aylık OSGB Maliyeti (Reconciliation logic ile senkronize edildi)
-  const monthlyOsgbCost = assignments
-    .filter((a) => a.costType === 'OSGB' && (a.unitPrice || (a.professionalId && professionals.find(p => p.id === a.professionalId)?.unitPrice)))
-    .reduce((sum, a) => {
-      const professional = a.professionalId ? professionals.find(p => p.id === a.professionalId) : null;
-      const price = a.unitPrice || professional?.unitPrice || 0;
-      if (a.isFullTime) return sum + price;
-      // Kısmi süreli: Saate yuvarla
-      const hours = Math.ceil(a.durationMinutes / 60);
-      return sum + (hours * price);
-    }, 0);
+    return {
+      id: r.facilityId,
+      name: r.facilityName,
+      city: r.city,
+      district: r.district,
+      type: r.type,
+      dangerClass: r.dangerClass,
+      employeeCount: f?.employeeCount || 0,
+      complianceScore: Number(complianceScore.toFixed(1)),
+      monthlyOsgbCost: facilityOsgbCostMap.get(r.facilityId) || 0,
+      monthlyPenaltyRisk: r.monthlyPenaltyRisk || 0,
+      iguCompliant: r.igu.isCompliant,
+      hekimCompliant: r.hekim.isCompliant,
+      dspCompliant: !r.dsp.required || r.dsp.isCompliant,
+      overallCompliant: r.igu.isCompliant && r.hekim.isCompliant && (!r.dsp.required || r.dsp.isCompliant),
+    };
+  });
 
-  const monthlyPenaltyRisk = complianceResults.reduce((sum, r) => sum + r.monthlyPenaltyRisk, 0);
-  
-  // 2026 Kümülatif Ceza Riski (Şu ana kadar olan aylar + gelecek aylar tahmini)
-  const currentMonth = new Date().getMonth() + 1; // 1-12
-  const cumulativePenaltyRisk2026 = monthlyPenaltyRisk * 12; // Basit projeksiyon
+  const totalEmployees = facilitiesSummary.reduce((sum, f) => sum + f.employeeCount, 0);
+  const averageComplianceScore =
+    facilitiesSummary.length > 0
+      ? facilitiesSummary.reduce((sum, f) => sum + f.complianceScore, 0) / facilitiesSummary.length
+      : 0;
+  const monthlyOsgbCost = facilitiesSummary.reduce((sum, f) => sum + f.monthlyOsgbCost, 0);
+  const monthlyPenaltyRisk = facilitiesSummary.reduce((sum, f) => sum + f.monthlyPenaltyRisk, 0);
+  const cumulativePenaltyRisk2026 = monthlyPenaltyRisk * 12;
 
-  // Sertifika Yenileme
+  // Sertifika Yenileme (aktif atandığı şehir/tesis bilgisiyle birlikte)
+  const profFacilityIdsMap = new Map<number, string[]>();
+  for (const a of assignments) {
+    if (!a.professionalId) continue;
+    const arr = profFacilityIdsMap.get(a.professionalId) || [];
+    if (!arr.includes(a.facilityId)) arr.push(a.facilityId);
+    profFacilityIdsMap.set(a.professionalId, arr);
+  }
+
   const upcomingCertificates = professionals
-    .map((p) => ({
-      id: p.id,
-      fullName: p.fullName,
-      certificateDate: p.certificateDate,
-      status: getCertificateStatus(p.certificateDate),
-    }))
+    .map((p) => {
+      const fIds = profFacilityIdsMap.get(p.id) || [];
+      const cities = Array.from(new Set(fIds.map((id) => facilityMap.get(id)?.city).filter(Boolean)));
+      return {
+        id: p.id,
+        fullName: p.fullName,
+        titleClass: p.titleClass,
+        certificateDate: p.certificateDate,
+        cities,
+        facilityIds: fIds,
+        status: getCertificateStatus(p.certificateDate),
+      };
+    })
     .filter((p) => p.status.isWarning || p.status.isCritical || p.status.isExpired)
     .sort((a, b) => (a.status.daysLeft ?? 9999) - (b.status.daysLeft ?? 9999));
 
@@ -115,7 +167,7 @@ export async function getDashboardStats() {
       };
     }
     acc[city].count += 1;
-    
+
     const district = f.district || 'Belirtilmemiş';
     if (!acc[city].districts[district]) {
       acc[city].districts[district] = { count: 0, facilities: [] };
@@ -127,7 +179,7 @@ export async function getDashboardStats() {
       dangerClass: f.dangerClass,
       employeeCount: f.employeeCount,
     });
-    
+
     return acc;
   }, {});
 
@@ -140,6 +192,7 @@ export async function getDashboardStats() {
       monthlyPenaltyRisk,
       cumulativePenaltyRisk2026,
     },
+    facilitiesSummary,
     upcomingCertificates,
     resourceGaps: {
       specialists: missingSpecialists,
@@ -154,17 +207,22 @@ export async function getDashboardStats() {
 }
 
 export async function getEmployeeTrend() {
-  const facilities = await prisma.facility.findMany({ 
-    where: { isActive: true }, 
-    select: { employeeCount: true } 
+  const facilities = await prisma.facility.findMany({
+    where: { isActive: true },
+    select: { employeeCount: true },
   });
   const currentTotal = facilities.reduce((sum, f) => sum + f.employeeCount, 0);
 
-  const monthlyTrendData: { month: string; totalCount: number; percentChange: number | null; countChange: number | null }[] = [];
-  
+  const monthlyTrendData: {
+    month: string;
+    totalCount: number;
+    percentChange: number | null;
+    countChange: number | null;
+  }[] = [];
+
   const now = new Date();
   let previousTotal = 0;
-  const trendBase = currentTotal > 0 ? currentTotal : 1500; 
+  const trendBase = currentTotal > 0 ? currentTotal : 1500;
 
   const months = [];
   for (let i = 11; i >= 0; i--) {
@@ -174,20 +232,18 @@ export async function getEmployeeTrend() {
 
   months.forEach((date, index) => {
     const monthStr = date.toISOString().substring(0, 7);
-    
-    const multipliers = [
-      0.82, 0.84, 0.85, 0.88, 0.90, 0.91, 0.93, 0.95, 0.96, 0.98, 0.99, 1.00
-    ];
-    
-    const wave = Math.sin(index) * 0.015; 
+
+    const multipliers = [0.82, 0.84, 0.85, 0.88, 0.9, 0.91, 0.93, 0.95, 0.96, 0.98, 0.99, 1.0];
+
+    const wave = Math.sin(index) * 0.015;
     let factor = multipliers[index] + wave;
     if (index === 11) factor = 1.0;
-    
+
     const count = Math.round(trendBase * factor);
-    
+
     let percentChange: number | null = null;
     let countChange: number | null = null;
-    
+
     if (previousTotal > 0) {
       countChange = count - previousTotal;
       percentChange = (countChange / previousTotal) * 100;
@@ -197,9 +253,9 @@ export async function getEmployeeTrend() {
       month: monthStr,
       totalCount: count,
       percentChange,
-      countChange
+      countChange,
     });
-    
+
     previousTotal = count;
   });
 

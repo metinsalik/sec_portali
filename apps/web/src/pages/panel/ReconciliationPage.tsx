@@ -101,18 +101,17 @@ export default function ReconciliationPage() {
   const handleExportAll = async () => {
     try {
       toast.info('Genel mutabakat raporu hazırlanıyor...');
-      const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/panel/reconciliation/export`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      const res = await api.get('/panel/reconciliation/export');
       if (!res.ok) throw new Error();
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `genel_mutabakat_raporu_${new Date().toLocaleDateString('tr-TR')}.xlsx`;
+      a.download = `genel_mutabakat_raporu_${new Date().toISOString().slice(0, 10)}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Genel mutabakat raporu başarıyla indirildi.');
     } catch {
       toast.error('Dışa aktarma başarısız oldu.');
@@ -160,16 +159,14 @@ export default function ReconciliationPage() {
     return Object.values(groups).sort((a, b) => b.mismatchCount - a.mismatchCount || a.osgb.name.localeCompare(b.osgb.name));
   }, [items]);
 
-  // Filtreleme
+  // Filtreleme (Turkish locale-safe + doğru "Mutabık" filtresi)
   const filteredSummaries = useMemo(() => {
+    const q = searchQuery.toLocaleLowerCase('tr-TR').trim();
     return osgbSummaries.filter(summary => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        if (!summary.osgb.name.toLowerCase().includes(q)) return false;
-      }
+      if (q && !summary.osgb.name.toLocaleLowerCase('tr-TR').includes(q)) return false;
       if (statusFilter === 'mismatch' && summary.mismatchCount === 0) return false;
       if (statusFilter === 'pending' && summary.pendingCount === 0) return false;
-      if (statusFilter === 'balanced' && summary.mismatchCount > 0) return false;
+      if (statusFilter === 'balanced' && (summary.mismatchCount > 0 || summary.pendingCount > 0)) return false;
       return true;
     });
   }, [osgbSummaries, searchQuery, statusFilter]);
@@ -184,106 +181,98 @@ export default function ReconciliationPage() {
   const hasActiveFilters = Boolean(searchQuery || statusFilter !== 'all');
 
   return (
-    <div className="space-y-6 pb-20">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b">
+    <div className="space-y-4 pb-10">
+      {/* Compact Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Mutabakat Merkezi</h1>
-            <Badge variant="outline" className="text-xs font-semibold px-2">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Mutabakat Merkezi</h1>
+            <Badge variant="outline" className="h-5 text-[11px] font-semibold px-2 tabular-nums">
               {osgbSummaries.length} OSGB
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            OSGB firmaları ile olan mali hesap hareketlerini, aylık faturaları ve mutabakat dengesini yönetin.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            OSGB firmaları ile mali hesap hareketleri, aylık faturalar ve mutabakat dengesi
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExportAll} className="h-9">
-            <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
-            Genel Rapor İndir
+          <Button variant="outline" size="sm" onClick={handleExportAll} className="h-8 text-xs rounded-lg">
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+            Genel Rapor
           </Button>
           <Button 
             size="sm" 
             onClick={() => autoSyncMutation.mutate()} 
             disabled={autoSyncMutation.isPending}
-            className="h-9 shadow-sm"
+            className="h-8 text-xs rounded-lg"
           >
             {autoSyncMutation.isPending ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
             ) : (
-              <RefreshCw className="w-4 h-4 mr-2" />
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
             )} 
-            Tüm Ayları Senkronize Et
+            Ayları Senkronize Et
           </Button>
         </div>
       </div>
 
-      {/* KPI İstatistik Kartları */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-border/60 shadow-sm bg-card transition-all hover:border-primary/40">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Toplam Bakiye</span>
-              <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                <TrendingUp className="w-4 h-4" />
-              </div>
+      {/* Compact KPI Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="rounded-lg border border-border shadow-xs bg-card">
+          <CardContent className="p-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-muted-foreground">Toplam Bakiye</span>
+              <TrendingUp className="w-4 h-4 text-primary" />
             </div>
             <p className={cn(
-              "text-2xl font-black font-mono tracking-tight",
+              "text-xl font-bold tabular-nums tracking-tight mt-1",
               stats.totalDiff !== 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600"
             )}>
               ₺{stats.totalDiff.toLocaleString('tr-TR')}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">Sistem ve fatura farkı</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Sistem ve fatura farkı</p>
           </CardContent>
         </Card>
 
         <Card className={cn(
-          "border-border/60 shadow-sm bg-card transition-all",
-          stats.totalMismatch > 0 ? "border-red-500/40 bg-red-500/5 hover:border-red-500/60" : "hover:border-primary/40"
+          "rounded-lg border shadow-xs bg-card",
+          stats.totalMismatch > 0 ? "border-destructive/40 bg-destructive/5" : "border-border"
         )}>
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Uyuşmazlıklar</span>
-              <div className={cn("p-2 rounded-lg", stats.totalMismatch > 0 ? "bg-red-500/10 text-red-600" : "bg-muted text-muted-foreground")}>
-                <AlertCircle className="w-4 h-4" />
-              </div>
+          <CardContent className="p-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-muted-foreground">Uyuşmazlıklar</span>
+              <AlertCircle className={cn("w-4 h-4", stats.totalMismatch > 0 ? "text-destructive" : "text-muted-foreground")} />
             </div>
-            <p className={cn("text-2xl font-black font-mono tracking-tight", stats.totalMismatch > 0 ? "text-red-600" : "text-foreground")}>
+            <p className={cn("text-xl font-bold tabular-nums tracking-tight mt-1", stats.totalMismatch > 0 ? "text-destructive" : "text-foreground")}>
               {stats.totalMismatch}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">İncelenmesi gereken kayıt</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">İncelenmesi gereken kayıt</p>
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm bg-card transition-all hover:border-primary/40">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Bekleyen Kayıtlar</span>
-              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600">
-                <Calculator className="w-4 h-4" />
-              </div>
+        <Card className="rounded-lg border border-border shadow-xs bg-card">
+          <CardContent className="p-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-muted-foreground">Bekleyen</span>
+              <Calculator className="w-4 h-4 text-amber-600" />
             </div>
-            <p className="text-2xl font-black font-mono tracking-tight text-amber-600">
+            <p className="text-xl font-bold tabular-nums tracking-tight text-amber-600 mt-1">
               {stats.totalPending}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">Onay bekleyen dönem</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Onay bekleyen dönem</p>
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm bg-card transition-all hover:border-primary/40">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Aktif OSGB</span>
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
+        <Card className="rounded-lg border border-border shadow-xs bg-card">
+          <CardContent className="p-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-muted-foreground">Aktif OSGB</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             </div>
-            <p className="text-2xl font-black font-mono tracking-tight text-foreground">
+            <p className="text-xl font-bold tabular-nums tracking-tight text-foreground mt-1">
               {osgbSummaries.length}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">Mutabakat portföyü</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Mutabakat portföyü</p>
           </CardContent>
         </Card>
       </div>
@@ -383,21 +372,21 @@ export default function ReconciliationPage() {
 
       {/* Yükleme Durumu (Skeleton) */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <Card key={i} className="border-border/60 shadow-sm p-5 space-y-4">
+            <Card key={i} className="rounded-lg border-border shadow-xs p-4 space-y-3">
               <div className="flex items-center gap-3">
-                <Skeleton className="w-10 h-10 rounded-xl" />
+                <Skeleton className="w-9 h-9 rounded-lg" />
                 <div className="space-y-1.5 flex-1">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-3 w-1/3" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-2 gap-3 pt-1">
                 <Skeleton className="h-10 w-full rounded-lg" />
                 <Skeleton className="h-10 w-full rounded-lg" />
               </div>
-              <div className="pt-3 border-t flex justify-between items-center">
+              <div className="pt-2.5 border-t border-border flex justify-between items-center">
                 <Skeleton className="h-5 w-20 rounded-full" />
                 <Skeleton className="h-5 w-24 rounded-md" />
               </div>
@@ -405,22 +394,22 @@ export default function ReconciliationPage() {
           ))}
         </div>
       ) : filteredSummaries.length === 0 ? (
-        <div className="text-center py-16 bg-card rounded-2xl border border-dashed border-border/70 p-8">
-          <div className="w-14 h-14 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto mb-4 text-muted-foreground">
-            <FileText className="w-7 h-7 stroke-[1.5]" />
+        <div className="text-center py-14 bg-card rounded-lg border border-dashed border-border p-6">
+          <div className="w-11 h-11 rounded-lg bg-muted/60 flex items-center justify-center mx-auto mb-3 text-muted-foreground">
+            <FileText className="w-5 h-5 stroke-[1.5]" />
           </div>
-          <h3 className="text-base font-bold text-foreground">Kayıt Bulunamadı</h3>
-          <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-            {hasActiveFilters 
-              ? 'Arama ve filtre kriterlerinize uygun mutabakat kaydı bulunamadı.' 
+          <h3 className="text-sm font-semibold text-foreground">Kayıt Bulunamadı</h3>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+            {hasActiveFilters
+              ? 'Arama ve filtre kriterlerinize uygun mutabakat kaydı bulunamadı.'
               : 'Sistemde henüz kayıtlı hesap mutabakatı bulunmuyor.'}
           </p>
           {hasActiveFilters && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => updateFilters({ q: null, status: null })}
-              className="mt-4 text-xs"
+              className="mt-4 h-8 rounded-lg text-xs"
             >
               Filtreleri Temizle
             </Button>
@@ -428,72 +417,72 @@ export default function ReconciliationPage() {
         </div>
       ) : viewMode === 'grid' ? (
         /* Grid Görünümü */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredSummaries.map((summary) => (
-            <Card 
-              key={summary.osgb.id} 
+            <Card
+              key={summary.osgb.id}
               className={cn(
-                "group cursor-pointer border-border/70 shadow-xs hover:shadow-md hover:border-primary/50 transition-all duration-200 overflow-hidden relative flex flex-col justify-between bg-card",
-                summary.mismatchCount > 0 && "hover:border-red-500/50"
+                "group cursor-pointer rounded-lg border-border shadow-xs hover:shadow-sm hover:border-primary/50 transition-all duration-200 overflow-hidden relative flex flex-col justify-between bg-card",
+                summary.mismatchCount > 0 && "hover:border-destructive/50"
               )}
               onClick={() => navigate(`/panel/reconciliation/${summary.osgb.id}`)}
             >
               {summary.mismatchCount > 0 && (
                 <div className="absolute top-3 right-3 z-10">
-                  <Badge variant="destructive" className="font-semibold text-[11px] px-2 shadow-xs animate-pulse">
+                  <Badge variant="destructive" className="font-semibold text-[10px] px-2 h-5">
                     {summary.mismatchCount} Uyuşmazlık
                   </Badge>
                 </div>
               )}
-              <CardHeader className="p-5 pb-3">
+              <CardHeader className="p-4 pb-2.5">
                 <div className="flex items-center gap-3 pr-20">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Receipt className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
+                    <Receipt className="w-4 h-4" />
                   </div>
-                  <div>
-                    <CardTitle className="text-base font-bold tracking-tight text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                  <div className="min-w-0">
+                    <CardTitle className="text-sm font-semibold tracking-tight text-foreground line-clamp-1 group-hover:text-primary transition-colors">
                       {summary.osgb.name}
                     </CardTitle>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5 tabular-nums">
                       <Clock className="w-3 h-3" /> Son Dönem: <span className="font-mono font-medium text-foreground">{summary.lastMonth}</span>
                     </p>
                   </div>
                 </div>
               </CardHeader>
 
-              <CardContent className="p-5 pt-2 space-y-4">
-                <div className="grid grid-cols-2 gap-3 p-3 bg-muted/30 rounded-xl border border-border/40">
+              <CardContent className="p-4 pt-2 space-y-3">
+                <div className="grid grid-cols-2 gap-3 p-3 bg-muted/30 rounded-lg border border-border">
                   <div className="space-y-0.5">
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">TOPLAM BAKİYE</p>
                     <p className={cn(
-                      "text-base font-mono font-bold tracking-tight",
-                      summary.totalDiff !== 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600"
+                      "text-sm font-mono font-bold tracking-tight tabular-nums",
+                      summary.totalDiff !== 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
                     )}>
                       ₺{summary.totalDiff.toLocaleString('tr-TR')}
                     </p>
                   </div>
                   <div className="space-y-0.5 text-right">
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">HESAPLANAN</p>
-                    <p className="text-base font-mono font-bold tracking-tight text-foreground">
+                    <p className="text-sm font-mono font-bold tracking-tight text-foreground tabular-nums">
                       ₺{summary.totalCalc.toLocaleString('tr-TR')}
                     </p>
                   </div>
                 </div>
 
-                <div className="pt-2 flex items-center justify-between border-t border-border/60">
+                <div className="pt-2 flex items-center justify-between border-t border-border">
                   <div className="flex items-center gap-1.5">
                     {summary.pendingCount > 0 ? (
-                      <Badge variant="outline" className="text-[10px] font-medium bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-900/50">
+                      <Badge variant="outline" className="text-[10px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
                         {summary.pendingCount} Bekleyen
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-[10px] font-medium bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-900/50">
+                      <Badge variant="outline" className="text-[10px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
                         Tümü Güncel
                       </Badge>
                     )}
                   </div>
                   <div className="text-primary flex items-center gap-1 text-xs font-semibold group-hover:translate-x-0.5 transition-transform">
-                    Hesap Defteri <ChevronRight className="w-4 h-4" />
+                    Hesap Defteri <ChevronRight className="w-3.5 h-3.5" />
                   </div>
                 </div>
               </CardContent>
@@ -502,68 +491,68 @@ export default function ReconciliationPage() {
         </div>
       ) : (
         /* Liste (Table) Görünümü */
-        <div className="border border-border/60 rounded-xl overflow-hidden bg-card shadow-xs">
+        <div className="border border-border rounded-lg overflow-hidden bg-card shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="bg-muted/40 text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/60">
+              <thead className="bg-muted/40 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <tr>
-                  <th className="px-5 py-3">OSGB Kuruluşu</th>
-                  <th className="px-5 py-3">Son Dönem</th>
-                  <th className="px-5 py-3 text-right">Hesaplanan Tutar</th>
-                  <th className="px-5 py-3 text-right">Fatura Edilen</th>
-                  <th className="px-5 py-3 text-right">Bakiye / Fark</th>
-                  <th className="px-5 py-3 text-center">Durum</th>
-                  <th className="px-5 py-3 text-right">İşlem</th>
+                  <th className="px-4 py-2.5">OSGB Kuruluşu</th>
+                  <th className="px-4 py-2.5">Son Dönem</th>
+                  <th className="px-4 py-2.5 text-right">Hesaplanan Tutar</th>
+                  <th className="px-4 py-2.5 text-right">Fatura Edilen</th>
+                  <th className="px-4 py-2.5 text-right">Bakiye / Fark</th>
+                  <th className="px-4 py-2.5 text-center">Durum</th>
+                  <th className="px-4 py-2.5 text-right">İşlem</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
                 {filteredSummaries.map((summary) => (
-                  <tr 
-                    key={summary.osgb.id} 
+                  <tr
+                    key={summary.osgb.id}
                     className="hover:bg-muted/20 transition-colors cursor-pointer group"
                     onClick={() => navigate(`/panel/reconciliation/${summary.osgb.id}`)}
                   >
-                    <td className="px-5 py-3.5 font-semibold text-foreground">
+                    <td className="px-4 py-3 font-semibold text-xs text-foreground">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                          <Receipt className="w-4 h-4" />
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
+                          <Receipt className="w-3.5 h-3.5" />
                         </div>
                         <span className="group-hover:text-primary transition-colors line-clamp-1">{summary.osgb.name}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 font-mono text-xs text-muted-foreground">
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground tabular-nums">
                       {summary.lastMonth}
                     </td>
-                    <td className="px-5 py-3.5 text-right font-mono font-semibold text-foreground">
+                    <td className="px-4 py-3 text-right font-mono text-xs font-semibold text-foreground tabular-nums">
                       ₺{summary.totalCalc.toLocaleString('tr-TR')}
                     </td>
-                    <td className="px-5 py-3.5 text-right font-mono font-semibold text-foreground">
+                    <td className="px-4 py-3 text-right font-mono text-xs font-semibold text-foreground tabular-nums">
                       ₺{summary.totalInv.toLocaleString('tr-TR')}
                     </td>
-                    <td className="px-5 py-3.5 text-right font-mono font-bold">
+                    <td className="px-4 py-3 text-right font-mono text-xs font-bold tabular-nums">
                       <span className={cn(
-                        summary.totalDiff !== 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600"
+                        summary.totalDiff !== 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
                       )}>
                         ₺{summary.totalDiff.toLocaleString('tr-TR')}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-center">
+                    <td className="px-4 py-3 text-center">
                       {summary.mismatchCount > 0 ? (
                         <Badge variant="destructive" className="text-[10px] font-semibold">
                           {summary.mismatchCount} Uyuşmazlık
                         </Badge>
                       ) : summary.pendingCount > 0 ? (
-                        <Badge variant="outline" className="text-[10px] font-semibold bg-amber-500/10 text-amber-600 border-amber-200">
+                        <Badge variant="outline" className="text-[10px] font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20">
                           {summary.pendingCount} Bekleyen
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 border-emerald-200">
+                        <Badge variant="outline" className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
                           Mutabık
                         </Badge>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <Button variant="ghost" size="sm" className="h-8 text-xs font-semibold gap-1 text-primary">
+                    <td className="px-4 py-3 text-right">
+                      <Button variant="ghost" size="sm" className="h-7 rounded-lg text-xs font-semibold gap-1 text-primary">
                         Detay <ChevronRight className="w-3.5 h-3.5" />
                       </Button>
                     </td>

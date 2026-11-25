@@ -195,18 +195,18 @@ interface UpdateAssignmentData {
 
   if (isLoading) {
     return (
-      <div className="p-8 space-y-6 animate-pulse">
-        <div className="h-24 bg-muted text-muted-foreground rounded-lg" />
-        <div className="grid grid-cols-3 gap-6">
-          <div className="h-64 bg-muted text-muted-foreground rounded-lg" />
-          <div className="h-64 bg-muted text-muted-foreground rounded-lg" />
-          <div className="h-64 bg-muted text-muted-foreground rounded-lg" />
+      <div className="space-y-4 animate-pulse">
+        <div className="h-20 bg-muted rounded-lg" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="h-64 bg-muted rounded-lg" />
+          <div className="h-64 bg-muted rounded-lg" />
+          <div className="h-64 bg-muted rounded-lg" />
         </div>
       </div>
     );
   }
 
-  if (!facility) return <div>Tesis bulunamadı.</div>;
+  if (!facility) return <div className="py-12 text-center text-sm text-muted-foreground">Tesis bulunamadı.</div>;
 
   // Legal Requirement Calculation
   const getRequirements = (count: number, dangerClass: string) => {
@@ -326,233 +326,249 @@ interface UpdateAssignmentData {
   };
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-4 pb-10 animate-in fade-in duration-300">
       {/* Compact Header */}
-      <div className="flex items-center justify-between bg-card text-card-foreground p-6 rounded-xl shadow-sm border border-border">
-        <div className="flex items-center gap-6">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card text-card-foreground p-4 rounded-lg shadow-xs border border-border">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => navigate(-1)}
-            className="w-12 h-12 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+            className="w-8 h-8 rounded-lg hover:bg-muted shrink-0"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-4 h-4" />
           </Button>
-          <div className="w-px h-10 bg-muted text-muted-foreground" />
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">{facility.name}</h1>
+          <div className="w-px h-8 bg-border shrink-0" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg font-semibold tracking-tight text-foreground truncate">{facility.name}</h1>
               <Badge variant="outline" className={cn(
-                "text-[10px] font-bold uppercase px-2",
-                facility.dangerClass === 'Çok Tehlikeli' ? "text-red-500 border-red-100 bg-red-50/30" : 
-                facility.dangerClass === 'Tehlikeli' ? "text-orange-500 border-orange-100 bg-orange-50/30" : "text-emerald-500 border-emerald-100 bg-emerald-50/30"
+                "text-[10px] font-semibold uppercase px-2 h-5",
+                facility.dangerClass === 'Çok Tehlikeli'
+                  ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20"
+                  : facility.dangerClass === 'Tehlikeli'
+                    ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+                    : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
               )}>
                 {facility.dangerClass}
               </Badge>
             </div>
-            <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
-              <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-0.5">
+              <div className="flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5" />
                 {facility.district} / {facility.city}
               </div>
-              <div className="w-1 h-1 rounded-full bg-slate-300" />
-              <div className="flex items-center gap-1.5">
+              <span className="text-border">•</span>
+              <div className="flex items-center gap-1">
                 <Building2 className="w-3.5 h-3.5" />
                 {facility.type}
               </div>
-              <div className="w-1 h-1 rounded-full bg-slate-300" />
-              <div className="flex items-center gap-1.5">
+              <span className="text-border">•</span>
+              <div className="flex items-center gap-1 tabular-nums">
                 <Users className="w-3.5 h-3.5" />
                 {facility.employeeCount} Çalışan
               </div>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="w-10 h-10 rounded-xl border-border bg-white" title="Görüntüle">
-            <Eye className="w-4 h-4 text-slate-700" />
-          </Button>
-
+        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
           <div className="relative">
-            <input 
-              type="file" 
-              accept=".xlsx,.xls" 
-              id="katip-upload" 
-              className="hidden" 
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              id="katip-upload"
+              className="hidden"
               onChange={handleKatipUpload}
             />
-            <Button 
-              variant="outline" 
-              size="icon"
-              className="w-10 h-10 rounded-xl border-border bg-card hover:bg-muted"
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2.5 rounded-lg border-border text-xs gap-1.5"
               onClick={() => document.getElementById('katip-upload')?.click()}
               disabled={isUploadingKatip}
               title="İSG-KATİP Aktar"
             >
-              {isUploadingKatip ? <Loader2 className="w-4 h-4 animate-spin text-slate-700" /> : <Upload className="w-4 h-4 text-slate-700" />}
+              {isUploadingKatip ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              <span className="hidden md:inline">KATİP Aktar</span>
             </Button>
           </div>
 
-          <Button variant="outline" size="icon" className="w-10 h-10 rounded-xl border-border bg-card hover:bg-muted" title="Rapor" onClick={() => window.print()}>
-            <FileText className="w-4 h-4 text-slate-700" />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2.5 rounded-lg border-border text-xs gap-1.5"
+            title="Yazdır / Rapor"
+            onClick={() => window.print()}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Yazdır</span>
           </Button>
 
-          <Button 
-            size="icon"
-            className="w-10 h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-md ml-1"
+          <Button
+            size="sm"
+            className="h-8 px-3 rounded-lg text-xs font-semibold gap-1.5"
             onClick={() => openAssignModal('IGU')}
-            title="Atama Yap"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-3.5 h-3.5" />
+            Atama Yap
           </Button>
         </div>
       </div>
 
       {/* 3-Column Requirements Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* IGU Requirement */}
         <Card className={cn(
-          "bg-card shadow-sm hover:shadow-md rounded-2xl overflow-hidden transition-all duration-300 border",
-          !isIguMet ? "border-red-200/60 dark:border-red-900/40 shadow-red-500/5" : 
-          isIguExcess ? "border-amber-200/60 dark:border-amber-900/40 shadow-amber-500/5" :
-          "border-slate-200/60 dark:border-slate-800/60"
+          "bg-card shadow-xs hover:shadow-sm rounded-lg overflow-hidden transition-all duration-200 border",
+          !isIguMet ? "border-destructive/30" :
+          isIguExcess ? "border-amber-500/30" :
+          "border-border"
         )}>
-          <CardHeader className="p-6 pb-2">
-            <div className="flex items-center justify-between">
-              <div className={cn(
-                "w-12 h-12 rounded-lg flex items-center justify-center shadow-sm text-white",
-                !isIguMet ? "bg-red-500" : 
-                isIguExcess ? "bg-orange-500" : "bg-emerald-500"
-              )}>
-                <HardHat className="w-6 h-6" />
+          <CardHeader className="p-4 pb-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={cn(
+                  "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border",
+                  !isIguMet
+                    ? "bg-destructive/10 text-destructive border-destructive/20"
+                    : isIguExcess
+                      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                      : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                )}>
+                  <HardHat className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <CardTitle className="text-sm font-semibold text-foreground truncate">İş Güvenliği Uzmanı</CardTitle>
+                  <p className="text-[11px] text-muted-foreground tabular-nums">
+                    Gereksinim:{" "}
+                    <span className={cn("font-semibold", !isIguMet ? "text-destructive" : isIguExcess ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400")}>
+                      {reqs.igu.totalMin} dk
+                    </span>
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Gereksinim</span>
-                <span className={cn("text-lg font-black", !isIguMet ? "text-destructive" : isIguExcess ? "text-amber-600" : "text-emerald-600")}>
-                  {reqs.igu.totalMin} <span className="text-[10px] font-bold">DK</span>
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-4">
-              <CardTitle className="text-base font-bold">İş Güvenliği Uzmanı</CardTitle>
-              <div className="flex gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="w-8 h-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+              <div className="flex gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-7 h-7 rounded-lg"
                   onClick={() => openAssignModal('IGU')}
                   title="Hızlı Atama Ekle"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5" />
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="w-8 h-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-7 h-7 rounded-lg"
                   onClick={() => openManageModal('IGU')}
                   title="Yönet"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  <Edit2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            <div className="bg-white/60 dark:bg-slate-900/60 p-4 rounded-lg border border-border space-y-3">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500 font-medium">Zorunlu Sınıf:</span>
-                <Badge className="bg-slate-900 text-white font-bold">{reqs.igu.firstTierClass}</Badge>
+          <CardContent className="p-4 pt-2 space-y-3">
+            <div className="bg-muted/30 p-3 rounded-lg border border-border space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground">Zorunlu Sınıf:</span>
+                <Badge variant="secondary" className="text-[10px] font-semibold h-5 px-2">{reqs.igu.firstTierClass}</Badge>
               </div>
-              <div className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
+              <div className="text-[11px] leading-relaxed text-muted-foreground space-y-1">
                 {reqs.igu.firstTierFT > 0 && (
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span>1 Tam Zamanlı ({reqs.igu.firstTierClass}) Uzman</span>
                   </div>
                 )}
                 {reqs.igu.otherTierFT > 0 && (
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span>{reqs.igu.otherTierFT} Tam Zamanlı ({reqs.igu.otherTierClass}) Uzman</span>
                   </div>
                 )}
                 {reqs.igu.firstTierPartialMin > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                     <span>{reqs.igu.firstTierPartialMin} Dakika Kısmi Süreli ({reqs.igu.firstTierClass}) Uzman</span>
                   </div>
                 )}
                 {reqs.igu.otherTierPartialMin > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                     <span>{reqs.igu.otherTierPartialMin} Dakika Kısmi Süreli ({reqs.igu.otherTierClass}) Uzman</span>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Atanmış Profesyoneller</span>
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Atanmış Profesyoneller</span>
               {activeAssignments.filter(a => a.type === 'IGU').map(as => (
-                <div 
-                  key={as.id} 
-                  className="flex items-center justify-between p-3 bg-card text-card-foreground rounded-xl border border-border shadow-sm group cursor-pointer hover:border-primary/50 transition-colors"
+                <div
+                  key={as.id}
+                  className="flex items-center justify-between p-2.5 bg-card text-card-foreground rounded-lg border border-border group cursor-pointer hover:border-primary/40 transition-colors"
                   onClick={() => as.professional ? navigate(`/panel/professionals/${as.professional.id}`) : openManageModal('IGU')}
                 >
-                  <div className="flex items-center gap-3">
-                    <UserCheck className="w-4 h-4 text-emerald-500" />
-                    <div>
-                      <p className="text-xs font-bold">{as.professional?.fullName}</p>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold truncate">{as.professional?.fullName}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <Badge variant="outline" className={cn(
-                          "text-[9px] px-1 py-0 border",
-                          as.professional?.employmentType === 'OSGB Kadrosu' ? "border-purple-200 text-purple-600 bg-purple-50" : "border-blue-200 text-blue-600 bg-blue-50"
+                          "text-[9px] px-1.5 py-0 h-4",
+                          (as.professional as any)?.employmentType === 'OSGB Kadrosu'
+                            ? "border-purple-500/20 text-purple-700 dark:text-purple-400 bg-purple-500/10"
+                            : "border-blue-500/20 text-blue-700 dark:text-blue-400 bg-blue-500/10"
                         )}>
-                          {as.professional?.employmentType === 'OSGB Kadrosu' ? 'OSGB' : 'Tesis'}
+                          {(as.professional as any)?.employmentType === 'OSGB Kadrosu' ? 'OSGB' : 'Tesis'}
                         </Badge>
-                        <span className="text-[9px] text-slate-400 font-medium uppercase">
-                          {as.durationMinutes === 11700 ? 'TAM ZAMANLI' : `KISMİ SÜRELİ (${as.durationMinutes} DK)`}
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
+                          {as.durationMinutes === 11700 ? 'Tam Zamanlı' : `${as.durationMinutes} dk`}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <Edit2 
-                    className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary" 
-                    onClick={(e) => { e.stopPropagation(); openManageModal('IGU'); }} 
+                  <Edit2
+                    className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary shrink-0"
+                    onClick={(e) => { e.stopPropagation(); openManageModal('IGU'); }}
                   />
                 </div>
               ))}
               {activeAssignments.filter(a => a.type === 'IGU').length === 0 && (
-                <div 
-                  className="flex items-center gap-3 p-3 bg-destructive/10 rounded-xl border border-dashed border-destructive/30 cursor-pointer hover:bg-destructive/20 transition-colors"
+                <div
+                  className="flex items-center gap-2.5 p-2.5 bg-destructive/10 rounded-lg border border-dashed border-destructive/30 cursor-pointer hover:bg-destructive/15 transition-colors"
                   onClick={() => openAssignModal('IGU')}
                 >
-                  <UserPlus className="w-4 h-4 text-destructive" />
-                  <span className="text-[11px] font-medium text-destructive">Atama Yap</span>
+                  <UserPlus className="w-3.5 h-3.5 text-destructive" />
+                  <span className="text-xs font-medium text-destructive">Atama Yap</span>
                 </div>
               )}
             </div>
 
-            <div className="pt-2">
-              <div className="flex items-center justify-between text-[10px] font-bold mb-1.5 px-1">
-                <span className="text-slate-400 uppercase">Karşılama Oranı</span>
-                <span className={!isIguMet ? "text-red-500" : isIguExcess ? "text-orange-500" : "text-emerald-500"}>
-                    {Math.round((assignedIguMin / (reqs.igu.totalMin || 1)) * 100)}%
+            <div className="pt-1">
+              <div className="flex items-center justify-between text-[11px] font-medium mb-1">
+                <span className="text-muted-foreground">Karşılama Oranı</span>
+                <span className={cn("font-semibold tabular-nums", !isIguMet ? "text-destructive" : isIguExcess ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400")}>
+                  %{Math.round((assignedIguMin / (reqs.igu.totalMin || 1)) * 100)}
                 </span>
               </div>
-              <div className="h-1.5 bg-muted text-muted-foreground rounded-full overflow-hidden">
-                <div 
-                  className={cn("h-full transition-all duration-1000", !isIguMet ? "bg-red-500" : isIguExcess ? "bg-orange-500" : "bg-emerald-500")}
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={cn("h-full transition-all duration-500", !isIguMet ? "bg-destructive" : isIguExcess ? "bg-amber-500" : "bg-emerald-500")}
                   style={{ width: `${Math.min(100, (assignedIguMin / (reqs.igu.totalMin || 1)) * 100)}%` }}
                 />
               </div>
               {!isIguMet && iguCountdown !== null && (
                 <div className={cn(
-                  "mt-3 p-2 rounded-lg flex items-center justify-between text-[10px] font-bold border",
-                  iguCountdown <= 7 ? "bg-red-50 border-red-200 text-red-600 animate-pulse" : "bg-orange-50 border-orange-200 text-orange-600"
+                  "mt-2.5 px-2.5 py-1.5 rounded-lg flex items-center justify-between text-[10px] font-semibold border tabular-nums",
+                  iguCountdown <= 7
+                    ? "bg-destructive/10 border-destructive/20 text-destructive"
+                    : "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400"
                 )}>
                   <div className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" />
+                    <Clock className="w-3 h-3" />
                     <span>YASAL ATAMA SÜRESİ</span>
                   </div>
                   <span>{iguCountdown} GÜN KALDI</span>
@@ -564,133 +580,142 @@ interface UpdateAssignmentData {
 
         {/* Workplace Doctor Requirement */}
         <Card className={cn(
-          "bg-card shadow-sm hover:shadow-md rounded-2xl overflow-hidden transition-all duration-300 border",
-          !isHekimMet ? "border-red-200/60 dark:border-red-900/40 shadow-red-500/5" : 
-          isHekimExcess ? "border-amber-200/60 dark:border-amber-900/40 shadow-amber-500/5" :
-          "border-slate-200/60 dark:border-slate-800/60"
+          "bg-card shadow-xs hover:shadow-sm rounded-lg overflow-hidden transition-all duration-200 border",
+          !isHekimMet ? "border-destructive/30" :
+          isHekimExcess ? "border-amber-500/30" :
+          "border-border"
         )}>
-          <CardHeader className="p-6 pb-2">
-            <div className="flex items-center justify-between">
-              <div className={cn(
-                "w-12 h-12 rounded-lg flex items-center justify-center shadow-sm text-white",
-                !isHekimMet ? "bg-red-500" : 
-                isHekimExcess ? "bg-orange-500" : "bg-emerald-500"
-              )}>
-                <Stethoscope className="w-6 h-6" />
+          <CardHeader className="p-4 pb-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={cn(
+                  "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border",
+                  !isHekimMet
+                    ? "bg-destructive/10 text-destructive border-destructive/20"
+                    : isHekimExcess
+                      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                      : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                )}>
+                  <Stethoscope className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <CardTitle className="text-sm font-semibold text-foreground truncate">İşyeri Hekimi</CardTitle>
+                  <p className="text-[11px] text-muted-foreground tabular-nums">
+                    Gereksinim:{" "}
+                    <span className={cn("font-semibold", !isHekimMet ? "text-destructive" : isHekimExcess ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400")}>
+                      {reqs.hekim.totalMin} dk
+                    </span>
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Gereksinim</span>
-                <span className={cn("text-lg font-black", !isHekimMet ? "text-destructive" : isHekimExcess ? "text-amber-600" : "text-emerald-600")}>
-                  {reqs.hekim.totalMin} <span className="text-[10px] font-bold">DK</span>
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between mt-4">
-              <CardTitle className="text-base font-bold">İşyeri Hekimi</CardTitle>
-              <div className="flex gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="w-8 h-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+              <div className="flex gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-7 h-7 rounded-lg"
                   onClick={() => openAssignModal('Hekim')}
                   title="Hızlı Atama Ekle"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5" />
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="w-8 h-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-7 h-7 rounded-lg"
                   onClick={() => openManageModal('Hekim')}
                   title="Yönet"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  <Edit2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            <div className="bg-white/60 dark:bg-slate-900/60 p-4 rounded-lg border border-border space-y-3">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500 font-medium">Birim Hesap:</span>
-                <span className="font-bold">{facility.employeeCount} x {facility.dangerClass === 'Az Tehlikeli' ? 5 : facility.dangerClass === 'Tehlikeli' ? 10 : 15} Dk</span>
+          <CardContent className="p-4 pt-2 space-y-3">
+            <div className="bg-muted/30 p-3 rounded-lg border border-border space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground">Birim Hesap:</span>
+                <span className="font-semibold tabular-nums">{facility.employeeCount} x {facility.dangerClass === 'Az Tehlikeli' ? 5 : facility.dangerClass === 'Tehlikeli' ? 10 : 15} dk</span>
               </div>
-              <div className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
+              <div className="text-[11px] leading-relaxed text-muted-foreground space-y-1">
                 {reqs.hekim.fullTimeRequired > 0 && (
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span>{reqs.hekim.fullTimeRequired} Tam Zamanlı Hekim</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                   <span>{reqs.hekim.remainingMin} Dakika Kısmi Süreli Hekim</span>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Atanmış Profesyoneller</span>
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Atanmış Profesyoneller</span>
               {activeAssignments.filter(a => a.type === 'Hekim').map(as => (
-                <div 
-                  key={as.id} 
-                  className="flex items-center justify-between p-3 bg-card text-card-foreground rounded-xl border border-border shadow-sm cursor-pointer hover:border-primary/50 group transition-colors"
+                <div
+                  key={as.id}
+                  className="flex items-center justify-between p-2.5 bg-card text-card-foreground rounded-lg border border-border cursor-pointer hover:border-primary/40 group transition-colors"
                   onClick={() => as.professional ? navigate(`/panel/professionals/${as.professional.id}`) : openManageModal('Hekim')}
                 >
-                  <div className="flex items-center gap-3">
-                    <UserCheck className="w-4 h-4 text-emerald-500" />
-                    <div>
-                      <p className="text-xs font-bold">{as.professional?.fullName}</p>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold truncate">{as.professional?.fullName}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <Badge variant="outline" className={cn(
-                          "text-[9px] px-1 py-0 border",
-                          as.professional?.employmentType === 'OSGB Kadrosu' ? "border-purple-200 text-purple-600 bg-purple-50" : "border-blue-200 text-blue-600 bg-blue-50"
+                          "text-[9px] px-1.5 py-0 h-4",
+                          (as.professional as any)?.employmentType === 'OSGB Kadrosu'
+                            ? "border-purple-500/20 text-purple-700 dark:text-purple-400 bg-purple-500/10"
+                            : "border-blue-500/20 text-blue-700 dark:text-blue-400 bg-blue-500/10"
                         )}>
-                          {as.professional?.employmentType === 'OSGB Kadrosu' ? 'OSGB' : 'Tesis'}
+                          {(as.professional as any)?.employmentType === 'OSGB Kadrosu' ? 'OSGB' : 'Tesis'}
                         </Badge>
-                        <span className="text-[9px] text-slate-400 font-medium uppercase">
-                          {as.durationMinutes === 11700 ? 'TAM ZAMANLI' : `KISMİ SÜRELİ (${as.durationMinutes} DK)`}
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
+                          {as.durationMinutes === 11700 ? 'Tam Zamanlı' : `${as.durationMinutes} dk`}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <Edit2 
-                    className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary" 
-                    onClick={(e) => { e.stopPropagation(); openManageModal('Hekim'); }} 
+                  <Edit2
+                    className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary shrink-0"
+                    onClick={(e) => { e.stopPropagation(); openManageModal('Hekim'); }}
                   />
                 </div>
               ))}
               {activeAssignments.filter(a => a.type === 'Hekim').length === 0 && (
-                <div 
-                  className="flex items-center gap-3 p-3 bg-destructive/10 rounded-xl border border-dashed border-destructive/30 cursor-pointer hover:bg-destructive/20 transition-colors"
+                <div
+                  className="flex items-center gap-2.5 p-2.5 bg-destructive/10 rounded-lg border border-dashed border-destructive/30 cursor-pointer hover:bg-destructive/15 transition-colors"
                   onClick={() => openAssignModal('Hekim')}
                 >
-                  <UserPlus className="w-4 h-4 text-destructive" />
-                  <span className="text-[11px] font-medium text-destructive">Atama Yap</span>
+                  <UserPlus className="w-3.5 h-3.5 text-destructive" />
+                  <span className="text-xs font-medium text-destructive">Atama Yap</span>
                 </div>
               )}
             </div>
 
-            <div className="pt-2">
-              <div className="flex items-center justify-between text-[10px] font-bold mb-1.5 px-1">
-                <span className="text-slate-400 uppercase">Karşılama Oranı</span>
-                <span className={!isHekimMet ? "text-red-500" : isHekimExcess ? "text-orange-500" : "text-emerald-500"}>
-                    {Math.round((assignedHekimMin / (reqs.hekim.totalMin || 1)) * 100)}%
+            <div className="pt-1">
+              <div className="flex items-center justify-between text-[11px] font-medium mb-1">
+                <span className="text-muted-foreground">Karşılama Oranı</span>
+                <span className={cn("font-semibold tabular-nums", !isHekimMet ? "text-destructive" : isHekimExcess ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400")}>
+                  %{Math.round((assignedHekimMin / (reqs.hekim.totalMin || 1)) * 100)}
                 </span>
               </div>
-              <div className="h-1.5 bg-muted text-muted-foreground rounded-full overflow-hidden">
-                <div 
-                  className={cn("h-full transition-all duration-1000", !isHekimMet ? "bg-red-500" : isHekimExcess ? "bg-orange-500" : "bg-emerald-500")}
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={cn("h-full transition-all duration-500", !isHekimMet ? "bg-destructive" : isHekimExcess ? "bg-amber-500" : "bg-emerald-500")}
                   style={{ width: `${Math.min(100, (assignedHekimMin / (reqs.hekim.totalMin || 1)) * 100)}%` }}
                 />
               </div>
               {!isHekimMet && hekimCountdown !== null && (
                 <div className={cn(
-                  "mt-3 p-2 rounded-lg flex items-center justify-between text-[10px] font-bold border",
-                  hekimCountdown <= 7 ? "bg-red-50 border-red-200 text-red-600 animate-pulse" : "bg-orange-50 border-orange-200 text-orange-600"
+                  "mt-2.5 px-2.5 py-1.5 rounded-lg flex items-center justify-between text-[10px] font-semibold border tabular-nums",
+                  hekimCountdown <= 7
+                    ? "bg-destructive/10 border-destructive/20 text-destructive"
+                    : "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400"
                 )}>
                   <div className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" />
+                    <Clock className="w-3 h-3" />
                     <span>YASAL ATAMA SÜRESİ</span>
                   </div>
                   <span>{hekimCountdown} GÜN KALDI</span>
@@ -702,147 +727,159 @@ interface UpdateAssignmentData {
 
         {/* DSP Requirement */}
         <Card className={cn(
-          "bg-card shadow-sm hover:shadow-md rounded-2xl overflow-hidden transition-all duration-300 border",
-          !reqs.dsp.required ? "border-slate-200/60 dark:border-slate-800/60 opacity-80" :
-          !isDspMet ? "border-red-200/60 dark:border-red-900/40 shadow-red-500/5" : 
-          isDspExcess ? "border-amber-200/60 dark:border-amber-900/40 shadow-amber-500/5" :
-          "border-slate-200/60 dark:border-slate-800/60"
+          "bg-card shadow-xs hover:shadow-sm rounded-lg overflow-hidden transition-all duration-200 border",
+          !reqs.dsp.required ? "border-border opacity-85" :
+          !isDspMet ? "border-destructive/30" :
+          isDspExcess ? "border-amber-500/30" :
+          "border-border"
         )}>
-          <CardHeader className="p-6 pb-2">
-            <div className="flex items-center justify-between">
-              <div className={cn(
-                "w-12 h-12 rounded-lg flex items-center justify-center shadow-sm text-white",
-                isDspWaived ? "bg-slate-400" :
-                !isDspMet && reqs.dsp.required ? "bg-red-500" : 
-                isDspExcess ? "bg-orange-500" : "bg-emerald-500"
-              )}>
-                <HeartPulse className="w-6 h-6" />
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Gereksinim</span>
-                <span className={cn(
-                  "text-lg font-black",
-                  isDspWaived ? "text-slate-500" :
-                  !isDspMet && reqs.dsp.required ? "text-destructive" : 
-                  isDspExcess ? "text-amber-600" : "text-emerald-600"
+          <CardHeader className="p-4 pb-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={cn(
+                  "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border",
+                  isDspWaived
+                    ? "bg-muted text-muted-foreground border-border"
+                    : !isDspMet && reqs.dsp.required
+                      ? "bg-destructive/10 text-destructive border-destructive/20"
+                      : isDspExcess
+                        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                 )}>
-                  {isDspWaived ? "MUAF" : <>{reqs.dsp.totalMin} <span className="text-[10px] font-bold">DK</span></>}
-                </span>
+                  <HeartPulse className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <CardTitle className="text-sm font-semibold text-foreground truncate">Diğer Sağlık Personeli</CardTitle>
+                  <p className="text-[11px] text-muted-foreground tabular-nums">
+                    Gereksinim:{" "}
+                    <span className={cn(
+                      "font-semibold",
+                      isDspWaived ? "text-muted-foreground" :
+                      !isDspMet && reqs.dsp.required ? "text-destructive" :
+                      isDspExcess ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
+                    )}>
+                      {isDspWaived ? "MUAF" : `${reqs.dsp.totalMin} dk`}
+                    </span>
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center justify-between mt-4">
-              <CardTitle className="text-base font-bold">Diğer Sağlık Personeli</CardTitle>
-              <div className="flex gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="w-8 h-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+              <div className="flex gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-7 h-7 rounded-lg"
                   onClick={() => openAssignModal('DSP')}
                   title="Hızlı Atama Ekle"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5" />
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="w-8 h-8 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-7 h-7 rounded-lg"
                   onClick={() => openManageModal('DSP')}
                   title="Yönet"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  <Edit2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            <div className="bg-white/60 dark:bg-slate-900/60 p-4 rounded-lg border border-border space-y-3">
-              <div className="flex justify-between text-xs">
-                <span className="text-slate-500 font-medium">DSP Zorunluluğu:</span>
-                <span className="font-bold">{isDspWaived ? 'MUAF' : reqs.dsp.required ? 'VAR' : 'YOK'}</span>
+          <CardContent className="p-4 pt-2 space-y-3">
+            <div className="bg-muted/30 p-3 rounded-lg border border-border space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground">DSP Zorunluluğu:</span>
+                <Badge variant="secondary" className="text-[10px] font-semibold h-5 px-2">
+                  {isDspWaived ? 'MUAF' : reqs.dsp.required ? 'VAR' : 'YOK'}
+                </Badge>
               </div>
-              <div className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
+              <div className="text-[11px] leading-relaxed text-muted-foreground">
                 {isDspWaived ? (
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                     <span>Tam zamanlı İşyeri Hekimi atandığı için DSP atama zorunluluğu muaf tutulmuştur.</span>
                   </div>
                 ) : reqs.dsp.required ? (
-                  <div className="flex items-center gap-2">
-                    <Info className="w-3.5 h-3.5 text-primary" />
+                  <div className="flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span>Hekim tam zamanlı değilse atanması zorunludur.</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 text-emerald-500">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                     <span>Bu tesis sınıfı/sayısı için DSP zorunlu değildir.</span>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Atanmış Profesyoneller</span>
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Atanmış Profesyoneller</span>
               {activeAssignments.filter(a => a.type === 'DSP').map(as => (
-                <div 
-                  key={as.id} 
-                  className="flex items-center justify-between p-3 bg-card text-card-foreground rounded-xl border border-border shadow-sm cursor-pointer hover:border-primary/50 group transition-colors"
+                <div
+                  key={as.id}
+                  className="flex items-center justify-between p-2.5 bg-card text-card-foreground rounded-lg border border-border cursor-pointer hover:border-primary/40 group transition-colors"
                   onClick={() => as.professional ? navigate(`/panel/professionals/${as.professional.id}`) : openManageModal('DSP')}
                 >
-                  <div className="flex items-center gap-3">
-                    <UserCheck className="w-4 h-4 text-emerald-500" />
-                    <div>
-                      <p className="text-xs font-bold">{as.professional?.fullName}</p>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold truncate">{as.professional?.fullName}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <Badge variant="outline" className={cn(
-                          "text-[9px] px-1 py-0 border",
-                          as.professional?.employmentType === 'OSGB Kadrosu' ? "border-purple-200 text-purple-600 bg-purple-50" : "border-blue-200 text-blue-600 bg-blue-50"
+                          "text-[9px] px-1.5 py-0 h-4",
+                          (as.professional as any)?.employmentType === 'OSGB Kadrosu'
+                            ? "border-purple-500/20 text-purple-700 dark:text-purple-400 bg-purple-500/10"
+                            : "border-blue-500/20 text-blue-700 dark:text-blue-400 bg-blue-500/10"
                         )}>
-                          {as.professional?.employmentType === 'OSGB Kadrosu' ? 'OSGB' : 'Tesis'}
+                          {(as.professional as any)?.employmentType === 'OSGB Kadrosu' ? 'OSGB' : 'Tesis'}
                         </Badge>
-                        <span className="text-[9px] text-slate-400 font-medium uppercase">
-                          {as.durationMinutes === 11700 ? 'TAM ZAMANLI' : `KISMİ SÜRELİ (${as.durationMinutes} DK)`}
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
+                          {as.durationMinutes === 11700 ? 'Tam Zamanlı' : `${as.durationMinutes} dk`}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <Edit2 
-                    className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary" 
-                    onClick={(e) => { e.stopPropagation(); openManageModal('DSP'); }} 
+                  <Edit2
+                    className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary shrink-0"
+                    onClick={(e) => { e.stopPropagation(); openManageModal('DSP'); }}
                   />
                 </div>
               ))}
               {reqs.dsp.required && activeAssignments.filter(a => a.type === 'DSP').length === 0 && (
-                <div 
-                  className="flex items-center gap-3 p-3 bg-destructive/10 rounded-xl border border-dashed border-destructive/30 cursor-pointer hover:bg-destructive/20 transition-colors"
+                <div
+                  className="flex items-center gap-2.5 p-2.5 bg-destructive/10 rounded-lg border border-dashed border-destructive/30 cursor-pointer hover:bg-destructive/15 transition-colors"
                   onClick={() => openAssignModal('DSP')}
                 >
-                  <UserPlus className="w-4 h-4 text-destructive" />
-                  <span className="text-[11px] font-medium text-destructive">Atama Yap</span>
+                  <UserPlus className="w-3.5 h-3.5 text-destructive" />
+                  <span className="text-xs font-medium text-destructive">Atama Yap</span>
                 </div>
               )}
             </div>
 
             {reqs.dsp.required && (
-              <div className="pt-2">
-                <div className="flex items-center justify-between text-[10px] font-bold mb-1.5 px-1">
-                  <span className="text-slate-400 uppercase">Karşılama Oranı</span>
-                  <span className={!isDspMet ? "text-red-500" : isDspExcess ? "text-orange-500" : "text-emerald-500"}>
-                    {Math.round((assignedDspMin / (reqs.dsp.totalMin || 1)) * 100)}%
+              <div className="pt-1">
+                <div className="flex items-center justify-between text-[11px] font-medium mb-1">
+                  <span className="text-muted-foreground">Karşılama Oranı</span>
+                  <span className={cn("font-semibold tabular-nums", !isDspMet ? "text-destructive" : isDspExcess ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400")}>
+                    %{Math.round((assignedDspMin / (reqs.dsp.totalMin || 1)) * 100)}
                   </span>
                 </div>
-                <div className="h-1.5 bg-muted text-muted-foreground rounded-full overflow-hidden">
-                  <div 
-                    className={cn("h-full transition-all duration-1000", !isDspMet ? "bg-red-500" : isDspExcess ? "bg-orange-500" : "bg-emerald-500")}
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={cn("h-full transition-all duration-500", !isDspMet ? "bg-destructive" : isDspExcess ? "bg-amber-500" : "bg-emerald-500")}
                     style={{ width: `${Math.min(100, (assignedDspMin / (reqs.dsp.totalMin || 1)) * 100)}%` }}
                   />
                 </div>
                 {!isDspMet && dspCountdown !== null && (
                   <div className={cn(
-                    "mt-3 p-2 rounded-lg flex items-center justify-between text-[10px] font-bold border",
-                    dspCountdown <= 7 ? "bg-red-50 border-red-200 text-red-600 animate-pulse" : "bg-orange-50 border-orange-200 text-orange-600"
+                    "mt-2.5 px-2.5 py-1.5 rounded-lg flex items-center justify-between text-[10px] font-semibold border tabular-nums",
+                    dspCountdown <= 7
+                      ? "bg-destructive/10 border-destructive/20 text-destructive"
+                      : "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400"
                   )}>
                     <div className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
+                      <Clock className="w-3 h-3" />
                       <span>YASAL ATAMA SÜRESİ</span>
                     </div>
                     <span>{dspCountdown} GÜN KALDI</span>
@@ -852,179 +889,198 @@ interface UpdateAssignmentData {
             )}
           </CardContent>
         </Card>
-
       </div>
 
-      <div className="w-full">
-        {/* İşveren Vekili Requirement */}
-        <Card className="bg-card shadow-sm hover:shadow-md rounded-2xl overflow-hidden transition-all duration-300 border border-slate-200/60 dark:border-slate-800/60 flex flex-col md:flex-row items-center justify-between p-4 md:p-6 gap-6">
-          
-          <div className="flex items-center gap-4 w-full md:w-auto shrink-0 md:pr-6 md:border-r border-border">
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center shadow-sm text-white bg-slate-500 shrink-0">
-              <Shield className="w-6 h-6" />
-            </div>
-            <div>
-              <CardTitle className="text-base font-bold">İşveren Vekili</CardTitle>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mt-0.5">Durum: <span className="text-slate-600 dark:text-slate-300 font-black">İHTİYARİ</span></span>
-            </div>
+      {/* İşveren Vekili Requirement */}
+      <Card className="bg-card shadow-xs rounded-lg overflow-hidden border border-border flex flex-col md:flex-row items-center justify-between p-4 gap-4">
+        <div className="flex items-center gap-3 w-full md:w-auto shrink-0 md:pr-5 md:border-r border-border">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-muted text-muted-foreground border border-border shrink-0">
+            <Shield className="w-4 h-4" />
           </div>
+          <div>
+            <CardTitle className="text-sm font-semibold text-foreground">İşveren Vekili</CardTitle>
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">Durum: İhtiyari</span>
+          </div>
+        </div>
 
-          <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {activeAssignments.filter(a => a.type === 'Vekil').map(as => (
-              <div 
-                key={as.id} 
-                className="flex items-center justify-between p-3 bg-background text-foreground rounded-xl border border-border shadow-sm cursor-pointer hover:border-primary/50 group transition-colors"
-              >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <UserCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <div className="overflow-hidden">
-                    <p className="text-xs font-bold truncate">{as.employerRep?.fullName}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <Badge variant="outline" className="text-[9px] px-1 py-0 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800">
-                        VEKİL
+        <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+          {activeAssignments.filter(a => a.type === 'Vekil').map(as => (
+            <div
+              key={as.id}
+              className="flex items-center justify-between p-2.5 bg-background text-foreground rounded-lg border border-border cursor-pointer hover:border-primary/40 group transition-colors"
+            >
+              <div className="flex items-center gap-2.5 overflow-hidden">
+                <UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <div className="overflow-hidden">
+                  <p className="text-xs font-semibold truncate">{as.employerRep?.fullName}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-border text-muted-foreground bg-muted/50">
+                      VEKİL
+                    </Badge>
+                    {as.documents && as.documents.length > 0 && (
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-emerald-500/20 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 tabular-nums">
+                        {as.documents.length} DOKÜMAN
                       </Badge>
-                      {as.documents && as.documents.length > 0 && (
-                        <Badge variant="outline" className="text-[9px] px-1 py-0 border-emerald-200 text-emerald-600 bg-emerald-50">
-                          {as.documents.length} DOKÜMAN
-                        </Badge>
-                      )}
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                <FileText
+                  className={cn("w-3.5 h-3.5 transition-opacity hover:text-primary", as.documents && as.documents.length > 0 ? "text-primary opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-100")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedAssignmentId(as.id);
+                    setSelectedAssignmentName(as.employerRep?.fullName || '');
+                    setDocumentModalOpen(true);
+                  }}
+                />
+                <Edit2
+                  className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary"
+                  onClick={(e) => { e.stopPropagation(); openManageModal('Vekil'); }}
+                />
+              </div>
+            </div>
+          ))}
+          {activeAssignments.filter(a => a.type === 'Vekil').length === 0 && (
+            <div
+              className="flex items-center gap-2.5 p-2.5 bg-muted/30 rounded-lg border border-dashed border-border cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => openAssignModal('Vekil')}
+            >
+              <UserPlus className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground">Vekil Ata</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 w-full md:w-auto shrink-0 justify-end md:pl-5 md:border-l border-border">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 rounded-lg text-xs font-medium gap-1.5"
+            onClick={() => openAssignModal('Vekil')}
+          >
+            <Plus className="w-3.5 h-3.5" /> Ekle
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 rounded-lg text-xs font-medium gap-1.5"
+            onClick={() => openManageModal('Vekil')}
+          >
+            <Edit2 className="w-3.5 h-3.5" /> Yönet
+          </Button>
+        </div>
+      </Card>
+
+      {/* Activity Logs & History Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Activity Logs */}
+        <Card className="border border-border shadow-xs rounded-lg bg-card text-card-foreground overflow-hidden">
+          <CardHeader className="py-3 px-4 border-b border-border bg-muted/30">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <Activity className="w-3.5 h-3.5 text-primary" />
+              Aktivite Geçmişi & Loglar
+            </CardTitle>
+          </CardHeader>
+          <div className="max-h-[420px] overflow-y-auto">
+            <div className="p-2">
+              {facility.activityLogs?.length > 0 ? facility.activityLogs.map((log: ActivityLog, idx: number) => (
+                <div key={idx} className="flex gap-3 p-3 hover:bg-muted/40 transition-colors rounded-lg">
+                  <div className="relative shrink-0">
+                    <div className="w-6 h-6 rounded-full bg-muted border border-border flex items-center justify-center z-10 relative">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    </div>
+                    {idx < facility.activityLogs.length - 1 && (
+                      <div className="absolute top-6 left-3 w-px h-full bg-border -z-0" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <span className="text-xs font-semibold text-foreground truncate">{log.action}</span>
+                      <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">{new Date(log.createdAt).toLocaleString('tr-TR')}</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed mb-1">{log.details}</p>
+                    <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
+                      <UserCheck className="w-3 h-3" />
+                      {log.username}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center">
-                  <FileText 
-                    className={cn("w-4 h-4 shrink-0 ml-2 transition-opacity hover:text-blue-500", as.documents && as.documents.length > 0 ? "text-blue-500 opacity-100" : "text-slate-300 opacity-0 group-hover:opacity-100")}
-
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      setSelectedAssignmentId(as.id);
-                      setSelectedAssignmentName(as.employerRep?.fullName || '');
-                      setDocumentModalOpen(true);
-                    }} 
-                    title="Dokümanlar"
-                  />
-                  <Edit2 
-                    className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary shrink-0 ml-2" 
-                    onClick={(e) => { e.stopPropagation(); openManageModal('Vekil'); }} 
-                    title="Yönet"
-                  />
+              )) : (
+                <div className="py-14 text-center">
+                  <History className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">Henüz bir aktivite kaydı bulunmuyor.</p>
                 </div>
-              </div>
-            ))}
-            {activeAssignments.filter(a => a.type === 'Vekil').length === 0 && (
-              <div 
-                className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl border border-dashed border-muted-foreground/30 cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => openAssignModal('Vekil')}
-              >
-                <UserPlus className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="text-[11px] font-medium text-muted-foreground">Vekil Ata</span>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+        </Card>
 
-          <div className="flex gap-2 w-full md:w-auto shrink-0 justify-end md:pl-6 md:border-l border-border">
-            <Button 
-              variant="outline" 
-              className="h-9 px-4 rounded-xl text-xs font-bold gap-2"
-              onClick={() => openAssignModal('Vekil')}
-              title="Hızlı Atama Ekle"
-            >
-              <Plus className="w-3.5 h-3.5" /> Ekle
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-9 px-4 rounded-xl text-xs font-bold gap-2"
-              onClick={() => openManageModal('Vekil')}
-              title="Yönet"
-            >
-              <Edit2 className="w-3.5 h-3.5" /> Yönet
-            </Button>
+        {/* Employee History List */}
+        <Card className="border border-border shadow-xs rounded-lg bg-card text-card-foreground overflow-hidden">
+          <CardHeader className="py-3 px-4 border-b border-border bg-muted/30">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="w-3.5 h-3.5 text-primary" />
+              Çalışan Sayısı Geçmişi
+            </CardTitle>
+          </CardHeader>
+          <div className="p-4">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="pb-2.5 text-[11px] font-semibold text-muted-foreground">Dönem</th>
+                  <th className="pb-2.5 text-[11px] font-semibold text-muted-foreground text-center">Çalışan</th>
+                  <th className="pb-2.5 text-[11px] font-semibold text-muted-foreground text-right">Değişim</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {facility.employeeCountHistory?.length > 0 ? facility.employeeCountHistory.map((h: EmployeeCountHistory, idx: number) => {
+                  const prev = facility.employeeCountHistory[idx + 1];
+                  const delta = prev && prev.count > 0 ? Math.round(((h.count - prev.count) / prev.count) * 100) : null;
+                  return (
+                    <tr key={idx} className="hover:bg-muted/30 transition-colors">
+                      <td className="py-2.5 text-xs font-medium text-muted-foreground tabular-nums">
+                        {new Date(h.effectiveDate).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      </td>
+                      <td className="py-2.5 text-center">
+                        <span className="text-xs font-semibold text-foreground tabular-nums">{h.count}</span>
+                      </td>
+                      <td className="py-2.5 text-right">
+                        {delta === null ? (
+                          <span className="text-[11px] text-muted-foreground">—</span>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] font-semibold h-5 px-1.5 tabular-nums",
+                              delta > 0
+                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20"
+                                : delta < 0
+                                  ? "bg-destructive/10 text-destructive border-destructive/20"
+                                  : "bg-muted text-muted-foreground border-border"
+                            )}
+                          >
+                            {delta > 0 ? `+${delta}%` : `${delta}%`}
+                          </Badge>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                }) : (
+                  <tr>
+                    <td colSpan={3} className="py-10 text-center text-xs text-muted-foreground">
+                      Kayıtlı geçmiş verisi bulunmuyor.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </Card>
       </div>
 
-      {/* Activity Logs & History Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Activity Logs */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold tracking-tight flex items-center gap-2 px-2">
-            <Activity className="w-5 h-5 text-primary" />
-            Aktivite Geçmişi & Loglar
-          </h2>
-          <Card className="border-none shadow-sm rounded-xl bg-card text-card-foreground overflow-hidden">
-            <div className="max-h-[500px] overflow-y-auto scrollbar-thin">
-              <div className="p-2">
-                {facility.activityLogs?.length > 0 ? facility.activityLogs.map((log: ActivityLog, idx: number) => (
-                  <div key={idx} className="flex gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors rounded-lg group">
-                    <div className="relative">
-                      <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center z-10 relative">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                      </div>
-                      {idx < facility.activityLogs.length - 1 && (
-                        <div className="absolute top-8 left-4 w-px h-full bg-muted text-muted-foreground -z-0" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-foreground">{log.action}</span>
-                        <span className="text-[10px] font-medium text-slate-400">{new Date(log.createdAt).toLocaleString('tr-TR')}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 leading-relaxed mb-2">{log.details}</p>
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                        <UserCheck className="w-3 h-3" />
-                        {log.username}
-                      </div>
-                    </div>
-                  </div>
-                )) : (
-                  <div className="py-20 text-center">
-                    <History className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                    <p className="text-sm text-slate-400 font-medium">Henüz bir aktivite kaydı bulunmuyor.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Employee History Chart/List */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold tracking-tight flex items-center gap-2 px-2">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            Çalışan Sayısı Trendi
-          </h2>
-          <Card className="border-none shadow-sm rounded-xl bg-card text-card-foreground overflow-hidden">
-            <div className="p-6">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="pb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dönem</th>
-                    <th className="pb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Sayı</th>
-                    <th className="pb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Etki</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                  {facility.employeeCountHistory?.map((h: EmployeeCountHistory, idx: number) => (
-                    <tr key={idx} className="group">
-                      <td className="py-4 text-xs font-semibold text-slate-600 dark:text-slate-400">
-                        {new Date(h.effectiveDate).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                      </td>
-                      <td className="py-4 text-center">
-                        <span className="text-sm font-black text-slate-900 dark:text-slate-100">{h.count}</span>
-                      </td>
-                      <td className="py-4 text-right">
-                        <Badge variant="ghost" className="text-[10px] font-bold text-emerald-500">+12%</Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      <QuickAssignModal 
+      <QuickAssignModal
         open={assignModalOpen}
         onOpenChange={setAssignModalOpen}
         facility={facility}
@@ -1040,64 +1096,77 @@ interface UpdateAssignmentData {
 
       {/* Manage Assignments Modal */}
       <Dialog open={manageModalOpen} onOpenChange={setManageModalOpen}>
-        <DialogContent className="sm:max-w-[1000px] w-[95vw] h-[85vh] p-0 overflow-hidden border-none shadow-lg rounded-xl flex flex-col">
-          <DialogHeader className="px-8 py-6 bg-slate-900 text-white flex flex-row items-center justify-between shrink-0">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                <History className="w-5 h-5 text-white/70" />
+        <DialogContent className="sm:max-w-3xl w-[95vw] max-h-[86vh] p-0 overflow-hidden rounded-lg border border-border bg-card shadow-lg flex flex-col gap-0">
+          <DialogHeader className="px-5 py-3.5 bg-muted/30 border-b border-border shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pr-8">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
+                  <History className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
+                    Atama Yönetimi
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground truncate mt-0.5">
+                    {facility.name} — {assignType} Aktif Atamaları
+                  </DialogDescription>
+                </div>
               </div>
-              <div>
-                <DialogTitle className="text-lg font-bold tracking-tight">Atama Yönetimi</DialogTitle>
-                <DialogDescription className="text-white/40 text-[10px] uppercase tracking-widest mt-1 font-bold">
-                  {facility.name} • {assignType} Aktif Atamaları
-                </DialogDescription>
-              </div>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setManageModalOpen(false);
+                  openAssignModal(assignType);
+                }}
+                className="h-8 px-3 rounded-lg text-xs font-semibold gap-1.5 w-fit shrink-0"
+              >
+                <UserPlus className="w-3.5 h-3.5" /> Yeni Atama Ekle
+              </Button>
             </div>
-            <Button 
-              onClick={() => {
-                setManageModalOpen(false);
-                openAssignModal(assignType);
-              }}
-              className="bg-white hover:bg-slate-100 text-slate-900 rounded-xl h-10 px-6 text-[11px] font-bold shadow-lg transition-all active:scale-95"
-            >
-              <UserPlus className="w-4 h-4 mr-2" /> Yeni Atama Ekle
-            </Button>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto p-8 bg-background custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-5 bg-background space-y-4">
             {facility.assignments?.filter(a => a.status === 'Aktif' && a.type === assignType).length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-32 opacity-20">
-                <Shield className="w-16 h-16 mb-4" />
-                <p className="text-sm font-bold tracking-widest">AKTİF ATAMA BULUNAMADI</p>
+              <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-border rounded-lg bg-muted/20">
+                <Shield className="w-8 h-8 text-muted-foreground/40 mb-2" />
+                <p className="text-sm font-semibold text-foreground">Aktif Atama Bulunamadı</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Bu rol için yeni bir atama eklemek üzere sağ üstteki butonu kullanabilirsiniz.
+                </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {facility.assignments?.filter(a => a.status === 'Aktif' && a.type === assignType).map(a => (
-                  <div key={a.id} className="p-6 rounded-lg border border-border bg-card text-card-foreground shadow-sm flex items-center justify-between group hover:border-primary/20 transition-all duration-300">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-muted border border-slate-100 dark:border-slate-700 flex items-center justify-center font-bold text-primary shadow-inner">
+                  <div key={a.id} className="p-3.5 rounded-lg border border-border bg-card text-card-foreground shadow-xs flex items-center justify-between gap-3 hover:border-primary/40 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center text-xs font-bold text-primary shrink-0">
                         {(a.professional?.fullName || a.employerRep?.fullName || '?')[0]}
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-foreground">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">
                           {a.professional?.fullName || a.employerRep?.fullName}
                         </p>
-                        <div className="flex flex-wrap items-center gap-3 mt-2">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5" /> {a.durationMinutes} DK
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-muted-foreground tabular-nums">
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {a.durationMinutes} dk
                           </span>
-                          {a.isFullTime && <Badge className="bg-primary/10 text-primary border-none text-[8px] font-black h-4 px-2 uppercase tracking-tighter">TAM ZAMANLI</Badge>}
-                          <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 border-l pl-3">
-                            <Calendar className="w-3.5 h-3.5" /> {new Date(a.startDate).toLocaleDateString('tr-TR')}
+                          {a.isFullTime && (
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[9px] font-semibold h-4 px-1.5">
+                              Tam Zamanlı
+                            </Badge>
+                          )}
+                          <span className="inline-flex items-center gap-1 border-l border-border pl-2">
+                            <Calendar className="w-3 h-3" /> {new Date(a.startDate).toLocaleDateString('tr-TR')}
                           </span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-primary transition-all"
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-8 h-8 rounded-lg text-muted-foreground hover:text-primary"
+                        title="Düzenle"
                         onClick={() => {
                           setEditingAssignment(a);
                           setFormData({
@@ -1112,15 +1181,16 @@ interface UpdateAssignmentData {
                           });
                         }}
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-3.5 h-3.5" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="w-10 h-10 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-900/10 text-slate-400 hover:text-destructive transition-all"
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-8 h-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        title="Sonlandır"
                         onClick={() => setTerminatingAssignmentId(a.id)}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   </div>
@@ -1129,99 +1199,108 @@ interface UpdateAssignmentData {
             )}
 
             {editingAssignment && (
-              <div className="mt-8 p-8 rounded-lg border-2 border-primary/10 bg-primary/[0.02] dark:bg-primary/[0.01] space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-primary flex items-center gap-2 uppercase tracking-widest">
-                    <Edit2 className="w-4 h-4" /> Atama Güncelleme
+              <div className="p-4 rounded-lg border border-primary/20 bg-muted/20 space-y-4">
+                <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-border">
+                  <h4 className="text-xs font-semibold text-primary flex items-center gap-1.5 uppercase tracking-wider">
+                    <Edit2 className="w-3.5 h-3.5" /> Atama Güncelleme
                   </h4>
-                  <Badge variant="outline" className="bg-card text-card-foreground border-primary/20 text-primary font-bold">
+                  <Badge variant="outline" className="bg-card text-foreground border-border text-xs font-medium">
                     {editingAssignment.professional?.fullName || editingAssignment.employerRep?.fullName}
                   </Badge>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Süre (Dk/Ay)</label>
-                    <Input 
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-foreground">Süre (Dk/Ay)</label>
+                    <Input
                       type="number"
                       value={formData.durationMinutes}
-                      onChange={(e) => setFormData({...formData, durationMinutes: e.target.value})}
-                      className="h-11 rounded-xl bg-card text-card-foreground border-border shadow-sm"
+                      onChange={(e) => setFormData({ ...formData, durationMinutes: e.target.value })}
+                      className="h-9 rounded-lg bg-background border-border text-xs tabular-nums"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Başlangıç Tarihi</label>
-                    <Input 
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-foreground">Başlangıç Tarihi</label>
+                    <Input
                       type="date"
                       value={formData.startDate}
-                      onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                      className="h-11 rounded-xl bg-card text-card-foreground border-border shadow-sm"
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      className="h-9 rounded-lg bg-background border-border text-xs tabular-nums"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Bitiş Tarihi</label>
-                    <Input 
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-foreground">Bitiş Tarihi</label>
+                    <Input
                       type="date"
                       value={formData.endDate ? formData.endDate : ''}
-                      onChange={(e) => setFormData({...formData, endDate: e.target.value || null})}
-                      className="h-11 rounded-xl bg-card text-card-foreground border-border shadow-sm"
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value || null })}
+                      className="h-9 rounded-lg bg-background border-border text-xs tabular-nums"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Maliyet ve Birim Fiyat</label>
-                    <div className="flex gap-3">
-                      <Select value={formData.costType} onValueChange={(v) => setFormData({...formData, costType: v})}>
-                        <SelectTrigger className="h-11 rounded-xl bg-card text-card-foreground border-border flex-1 shadow-sm">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-foreground">Maliyet ve Birim Fiyat</label>
+                    <div className="flex gap-2">
+                      <Select value={formData.costType} onValueChange={(v) => setFormData({ ...formData, costType: v })}>
+                        <SelectTrigger className="w-full h-9 rounded-lg bg-background border-border text-xs flex-1">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                          <SelectItem value="Aylık Sabit" className="text-xs font-medium">Sabit</SelectItem>
-                          <SelectItem value="Saatlik" className="text-xs font-medium">Saatlik</SelectItem>
+                        <SelectContent className="rounded-lg">
+                          <SelectItem value="Aylık Sabit" className="text-xs">Aylık Sabit</SelectItem>
+                          <SelectItem value="Saatlik" className="text-xs">Saatlik</SelectItem>
                         </SelectContent>
                       </Select>
-                      <div className="relative w-32">
-                        <Input 
+                      <div className="relative w-28 shrink-0">
+                        <Input
                           type="number"
                           value={formData.unitPrice}
-                          onChange={(e) => setFormData({...formData, unitPrice: e.target.value})}
-                          className="h-11 rounded-xl bg-card text-card-foreground border-border pl-7 shadow-sm"
+                          onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
+                          className="h-9 rounded-lg bg-background border-border pl-6 text-xs tabular-nums"
                           placeholder="0"
                         />
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">₺</span>
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-medium text-muted-foreground">₺</span>
                       </div>
                     </div>
                   </div>
-                  <div className="md:col-span-2 flex items-center justify-between p-5 bg-card text-card-foreground rounded-lg border border-primary/10 shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className={cn("w-10 h-5 rounded-full relative cursor-pointer transition-colors shadow-inner", formData.isFullTime ? "bg-primary" : "bg-slate-200 dark:bg-slate-800")}
+                  <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-card rounded-lg border border-border">
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        className={cn(
+                          "w-9 h-5 rounded-full relative cursor-pointer transition-colors",
+                          formData.isFullTime ? "bg-primary" : "bg-muted-foreground/30"
+                        )}
                         onClick={() => {
                           const newFT = !formData.isFullTime;
-                          setFormData({...formData, isFullTime: newFT, durationMinutes: newFT ? '11700' : formData.durationMinutes});
+                          setFormData({ ...formData, isFullTime: newFT, durationMinutes: newFT ? '11700' : formData.durationMinutes });
                         }}
                       >
-                        <div className={cn("absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow-sm", formData.isFullTime ? "left-5.5" : "left-0.5")} />
-                      </div>
-                      <span className="text-[11px] font-bold text-foreground uppercase tracking-wide">TAM ZAMANLI DURUMU</span>
+                        <span className={cn("absolute top-0.5 w-4 h-4 bg-background rounded-full transition-all shadow-xs", formData.isFullTime ? "left-4.5" : "left-0.5")} />
+                      </button>
+                      <span className="text-xs font-medium text-foreground">Tam Zamanlı Atama</span>
                     </div>
-                    <div className="flex gap-3">
-                      <Button variant="ghost" className="h-10 px-6 rounded-xl text-[11px] font-bold text-slate-400 hover:text-slate-600" onClick={() => setEditingAssignment(null)}>İptal</Button>
-                      <Button 
-                        className="h-10 px-8 rounded-xl text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-xl transition-all active:scale-95"
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="outline" size="sm" className="h-8 rounded-lg text-xs" onClick={() => setEditingAssignment(null)}>
+                        İptal
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-8 px-4 rounded-lg text-xs font-semibold"
+                        disabled={updateMutation.isPending}
                         onClick={() => {
                           updateMutation.mutate({
                             id: editingAssignment.id,
-                                data: {
-                                  durationMinutes: parseInt(formData.durationMinutes),
-                                  isFullTime: formData.isFullTime,
-                                  costType: formData.costType,
-                                  unitPrice: formData.unitPrice === '' ? null : parseFloat(formData.unitPrice),
-                                  startDate: formData.startDate,
-                                  endDate: formData.endDate || null,
-                                }
+                            data: {
+                              durationMinutes: parseInt(formData.durationMinutes),
+                              isFullTime: formData.isFullTime,
+                              costType: formData.costType,
+                              unitPrice: formData.unitPrice === '' ? null : parseFloat(formData.unitPrice),
+                              startDate: formData.startDate,
+                              endDate: formData.endDate || null,
+                            }
                           });
                         }}
                       >
+                        {updateMutation.isPending && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
                         Değişiklikleri Kaydet
                       </Button>
                     </div>
@@ -1230,60 +1309,72 @@ interface UpdateAssignmentData {
               </div>
             )}
           </div>
-          <DialogFooter className="px-8 py-4 bg-muted/50 border-t border-border shrink-0">
-            <p className="text-[10px] text-slate-400 font-medium italic">Atama detaylarını düzenlemek için ilgili kaydın yanındaki düzenle butonunu kullanın.</p>
+          <DialogFooter className="mx-0 mb-0 rounded-none px-5 py-3 bg-muted/30 border-t border-border shrink-0 sm:justify-between items-center">
+            <p className="text-[11px] text-muted-foreground">
+              Atama detaylarını düzenlemek için ilgili kaydın yanındaki düzenle butonunu kullanın.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => setManageModalOpen(false)} className="h-8 rounded-lg text-xs">
+              Kapat
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Termination Dialog */}
       <Dialog open={terminatingAssignmentId !== null} onOpenChange={(v) => !v && setTerminatingAssignmentId(null)}>
-        <DialogContent className="sm:max-w-[450px] w-[95vw] p-0 overflow-hidden border-none shadow-lg rounded-xl flex flex-col">
-          <DialogHeader className="px-8 py-6 bg-rose-600 text-white shrink-0">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                <XCircle className="w-5 h-5 text-white/70" />
+        <DialogContent className="sm:max-w-md w-[95vw] p-0 overflow-hidden rounded-lg border border-border bg-card shadow-lg flex flex-col gap-0">
+          <DialogHeader className="px-5 py-3.5 bg-muted/30 border-b border-border shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive border border-destructive/20 flex items-center justify-center shrink-0">
+                <XCircle className="w-4 h-4" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold tracking-tight">Atamayı Sonlandır</DialogTitle>
-                <DialogDescription className="text-white/60 text-xs mt-1 font-medium">
+                <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
+                  Atamayı Sonlandır
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                   Bu işlem geri alınamaz. Lütfen bitiş tarihini seçin.
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
-          <div className="p-8 space-y-6 bg-card text-card-foreground flex-1 overflow-y-auto">
-            <div className="space-y-3">
-              <label className="text-[10px] font-bold text-slate-400 tracking-wide ml-1 uppercase">Bitiş Tarihi *</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input 
-                  type="date" 
-                  value={terminationDate} 
-                  onChange={(e) => setTerminationDate(e.target.value)}
-                  required
-                  className="pl-10 rounded-xl border-border h-11 text-sm font-medium focus-visible:ring-primary/10 shadow-sm"
-                />
-              </div>
+          <div className="p-5 space-y-4 bg-card text-card-foreground">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">Bitiş Tarihi *</label>
+              <Input
+                type="date"
+                value={terminationDate}
+                onChange={(e) => setTerminationDate(e.target.value)}
+                required
+                className="h-9 rounded-lg border-border text-xs tabular-nums"
+              />
             </div>
-            
-            <div className="p-4 bg-destructive/5 border border-destructive/20 rounded-lg flex items-start gap-3">
+
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-              <p className="text-[11px] text-rose-700 dark:text-destructive font-medium leading-relaxed">
+              <p className="text-[11px] text-destructive leading-relaxed">
                 Atama sonlandırıldığında ilgili profesyonelin bu tesisteki kapasitesi serbest kalacaktır.
               </p>
             </div>
           </div>
-          <DialogFooter className="px-8 py-6 bg-muted/50 border-t border-border shrink-0 gap-3">
-            <Button variant="ghost" onClick={() => setTerminatingAssignmentId(null)} className="rounded-xl h-11 px-6 font-bold text-xs text-slate-400 hover:text-slate-600">Vazgeç</Button>
-            <Button 
+          <DialogFooter className="mx-0 mb-0 rounded-none px-5 py-3.5 bg-muted/30 border-t border-border shrink-0 gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTerminatingAssignmentId(null)}
+              className="h-8 rounded-lg text-xs"
+            >
+              Vazgeç
+            </Button>
+            <Button
               variant="destructive"
-              className="rounded-xl h-11 px-8 font-bold text-xs shadow-lg transition-all active:scale-95"
+              size="sm"
+              className="h-8 px-4 rounded-lg text-xs font-semibold gap-1.5"
               onClick={() => terminatingAssignmentId && terminateMutation.mutate({ id: terminatingAssignmentId, endDate: terminationDate })}
               disabled={terminateMutation.isPending}
             >
-              {terminateMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XCircle className="w-4 h-4 mr-2" />}
-              Atamayı Kalıcı Olarak Sonlandır
+              {terminateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+              Atamayı Sonlandır
             </Button>
           </DialogFooter>
         </DialogContent>

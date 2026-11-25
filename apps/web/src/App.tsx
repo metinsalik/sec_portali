@@ -374,7 +374,7 @@ function App() {
                     <Route path="items/:itemId" element={<IsgDefterItemDetail />} />
                     <Route path="settings" element={<IsgDefterSettings />} />
                   </Route>
-                  
+
                   <Route
                     path="/safety-management/elevator-tracking"
                     element={
@@ -736,7 +736,7 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
-                  
+
                   <Route
                     path="/build-management/project/:id/handover"
                     element={
@@ -889,21 +889,21 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
-                  <Route 
-                    path="/workflow/plans" 
+                  <Route
+                    path="/workflow/plans"
                     element={
                       <ProtectedRoute moduleName="İş Takibi (Workflow)">
                         <AppLayout><WorkflowPlansPage /></AppLayout>
                       </ProtectedRoute>
-                    } 
+                    }
                   />
-                  <Route 
-                    path="/workflow/plans/:id" 
+                  <Route
+                    path="/workflow/plans/:id"
                     element={
                       <ProtectedRoute moduleName="İş Takibi (Workflow)">
                         <AppLayout><WorkflowPlanDetailsPage /></AppLayout>
                       </ProtectedRoute>
-                    } 
+                    }
                   />
                   <Route
                     path="/workflow/calendar"
@@ -1478,16 +1478,16 @@ function App() {
                   <Route path="/bina-turu/ayarlar" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AyarlarIndex /></AppLayout></ProtectedRoute>} />
 
                   {/* İSG Kontrol Listeleri */}
-                  <Route path="/checklists" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><ChecklistDashboardPage /></AppLayout></ProtectedRoute>} />
-                  <Route path="/checklists/templates" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><TemplateListPage /></AppLayout></ProtectedRoute>} />
-                  <Route path="/checklists/templates/new" element={<ProtectedRoute allowedRoles={['admin','specialist']}><AppLayout><TemplateBuilderPage /></AppLayout></ProtectedRoute>} />
-                  <Route path="/checklists/templates/:id" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><TemplateViewPage /></AppLayout></ProtectedRoute>} />
-                  <Route path="/checklists/templates/:id/preview" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><TemplatePreviewPage /></AppLayout></ProtectedRoute>} />
-                  <Route path="/checklists/templates/:id/edit" element={<ProtectedRoute allowedRoles={['admin','specialist']}><AppLayout><TemplateBuilderPage /></AppLayout></ProtectedRoute>} />
-                  <Route path="/checklists/submissions" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><SubmissionListPage /></AppLayout></ProtectedRoute>} />
-                  <Route path="/checklists/submissions/new" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><SubmissionFormPage /></AppLayout></ProtectedRoute>} />
-                  <Route path="/checklists/submissions/:id" element={<ProtectedRoute allowedRoles={['admin','management','specialist']}><AppLayout><SubmissionFormPage /></AppLayout></ProtectedRoute>} />
-                  <Route path="/checklists/reports" element={<ProtectedRoute allowedRoles={['admin','management']}><AppLayout><ReportsPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists" element={<ProtectedRoute allowedRoles={['admin', 'management', 'specialist']}><AppLayout><ChecklistDashboardPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/templates" element={<ProtectedRoute allowedRoles={['admin', 'management', 'specialist']}><AppLayout><TemplateListPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/templates/new" element={<ProtectedRoute allowedRoles={['admin', 'specialist']}><AppLayout><TemplateBuilderPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/templates/:id" element={<ProtectedRoute allowedRoles={['admin', 'management', 'specialist']}><AppLayout><TemplateViewPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/templates/:id/preview" element={<ProtectedRoute allowedRoles={['admin', 'management', 'specialist']}><AppLayout><TemplatePreviewPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/templates/:id/edit" element={<ProtectedRoute allowedRoles={['admin', 'specialist']}><AppLayout><TemplateBuilderPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/submissions" element={<ProtectedRoute allowedRoles={['admin', 'management', 'specialist']}><AppLayout><SubmissionListPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/submissions/new" element={<ProtectedRoute allowedRoles={['admin', 'management', 'specialist']}><AppLayout><SubmissionFormPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/submissions/:id" element={<ProtectedRoute allowedRoles={['admin', 'management', 'specialist']}><AppLayout><SubmissionFormPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/reports" element={<ProtectedRoute allowedRoles={['admin', 'management']}><AppLayout><ReportsPage /></AppLayout></ProtectedRoute>} />
                   {/* ── YANGIN GÜVENLİĞİ KONTROL SİSTEMİ ──────────── */}
                   <Route path="/fire-safety-control" element={<ProtectedRoute><AppLayout><FireSafetyDashboard /></AppLayout></ProtectedRoute>} />
                   <Route path="/fire-safety-control/executive-summary" element={<ProtectedRoute><AppLayout><FireSafetyExecutiveSummary /></AppLayout></ProtectedRoute>} />
@@ -1514,7 +1514,14 @@ function App() {
           </ChatProvider>
         </AuthProvider>
       </ThemeProvider>
-      <Toaster />
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        toastOptions={{
+          className: 'rounded-lg border border-border shadow-md text-xs font-medium',
+        }}
+      />
     </QueryClientProvider>
   );
 }

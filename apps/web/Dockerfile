@@ -11,8 +11,8 @@ COPY apps/web/package.json apps/web/
 COPY packages/ packages/
 
 # Install all dependencies for the monorepo
-RUN npm ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
-RUN npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.0-rc.15 lightningcss-linux-x64-gnu@1.32.0 @tailwindcss/oxide-linux-x64-gnu@4.2.2
+RUN node --no-maglev /usr/local/lib/node_modules/npm/bin/npm-cli.js ci --legacy-peer-deps --ignore-scripts --no-audit --no-fund
+RUN node --no-maglev /usr/local/lib/node_modules/npm/bin/npm-cli.js install --no-save --no-package-lock --legacy-peer-deps --ignore-scripts --no-audit --no-fund @rolldown/binding-linux-x64-gnu@1.0.0-rc.15 lightningcss-linux-x64-gnu@1.32.0 @tailwindcss/oxide-linux-x64-gnu@4.2.2
 
 # Copy source
 COPY packages/ packages/

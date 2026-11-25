@@ -5,13 +5,11 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ChevronLeft, Phone, Mail, 
+import {
+  ChevronLeft, Phone, Mail,
   MapPin, Briefcase, Building2,
-  Users, Activity, User, ExternalLink,
-  Edit, Globe
+  Users, Activity, User, ExternalLink
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface Professional {
   id: number;
@@ -49,39 +47,44 @@ const PanelOSGBLifeCardPage = () => {
 
   if (isLoading) {
     return (
-      <div className="p-8 space-y-6 animate-pulse">
-        <div className="h-20 bg-muted text-muted-foreground rounded-lg" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-1 h-64 bg-muted text-muted-foreground rounded-lg" />
-          <div className="md:col-span-2 h-64 bg-muted text-muted-foreground rounded-lg" />
+      <div className="space-y-4 animate-pulse">
+        <div className="h-20 bg-muted rounded-lg" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-1 h-64 bg-muted rounded-lg" />
+          <div className="md:col-span-2 h-64 bg-muted rounded-lg" />
         </div>
       </div>
     );
   }
 
-  if (!osgb) return <div className="p-8 text-center text-slate-400 font-semibold tracking-wide text-xs">OSGB bulunamadı.</div>;
+  if (!osgb) {
+    return (
+      <div className="py-12 text-center text-sm text-muted-foreground">
+        OSGB bulunamadı.
+      </div>
+    );
+  }
 
-  const igus = osgb.professionals.filter(p => p.titleClass.toLowerCase().includes('igu'));
-  const hekimler = osgb.professionals.filter(p => p.titleClass.toLowerCase().includes('hekim'));
-  const dspler = osgb.professionals.filter(p => p.titleClass.toLowerCase().includes('dsp'));
+  const igus = osgb.professionals.filter(p => p.titleClass.toLocaleLowerCase('tr-TR').includes('igu'));
+  const hekimler = osgb.professionals.filter(p => p.titleClass.toLocaleLowerCase('tr-TR').includes('hekim'));
+  const dspler = osgb.professionals.filter(p => p.titleClass.toLocaleLowerCase('tr-TR').includes('dsp'));
 
   const renderPrice = (p: Professional) => {
     if (!p.unitPrice) return '—';
     if (p.employmentType === 'Tam Zamanlı' || p.employmentType === 'Tesis Kadrosu') {
       return `₺${p.unitPrice.toLocaleString('tr-TR')} / Ay`;
-    } else {
-      return `₺${p.unitPrice.toLocaleString('tr-TR')} / Saat`;
     }
+    return `₺${p.unitPrice.toLocaleString('tr-TR')} / Saat`;
   };
 
-  const ProfessionalTable = ({ title, professionals, count }: { title: string, professionals: Professional[], count: number }) => (
-    <Card className="border-none shadow-sm rounded-lg bg-card text-card-foreground overflow-hidden">
-      <CardHeader className="px-6 py-5 border-b border-slate-50 dark:border-slate-800 flex flex-row items-center justify-between">
-        <CardTitle className="text-[11px] font-bold tracking-wide text-slate-400 flex items-center gap-2">
-          <Users className="w-4 h-4" />
+  const ProfessionalTable = ({ title, professionals, count }: { title: string; professionals: Professional[]; count: number }) => (
+    <Card className="border border-border shadow-xs rounded-lg bg-card text-card-foreground overflow-hidden">
+      <CardHeader className="py-3 px-4 border-b border-border bg-muted/30 flex flex-row items-center justify-between">
+        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+          <Users className="w-3.5 h-3.5 text-primary" />
           {title}
         </CardTitle>
-        <Badge variant="secondary" className="bg-slate-50 text-slate-400 text-[10px] font-bold tracking-wide rounded-lg px-2">
+        <Badge variant="outline" className="text-[10px] font-semibold h-5 px-2 bg-background border-border tabular-nums">
           {count} Kişi
         </Badge>
       </CardHeader>
@@ -89,64 +92,64 @@ const PanelOSGBLifeCardPage = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-border">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 tracking-wide">Profesyonel Bilgisi</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 tracking-wide">Sınıf / Ücret</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 tracking-wide">Atanan Tesisler</th>
-                <th className="px-6 py-4 text-right"></th>
+              <tr className="bg-muted/20 border-b border-border">
+                <th className="px-4 py-2.5 text-[11px] font-semibold text-muted-foreground">Profesyonel</th>
+                <th className="px-4 py-2.5 text-[11px] font-semibold text-muted-foreground">Sınıf / Ücret</th>
+                <th className="px-4 py-2.5 text-[11px] font-semibold text-muted-foreground">Atanan Tesisler</th>
+                <th className="px-4 py-2.5 text-right"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+            <tbody className="divide-y divide-border/50">
               {professionals.length > 0 ? professionals.map((p) => (
-                <tr key={p.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-muted text-slate-500 rounded-lg flex items-center justify-center text-xs font-bold border border-border group-hover:bg-primary group-hover:text-white transition-all">
+                <tr key={p.id} className="hover:bg-muted/30 transition-colors group">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 bg-muted text-muted-foreground rounded-lg flex items-center justify-center text-xs font-bold border border-border group-hover:bg-primary/10 group-hover:text-primary transition-colors shrink-0">
                         {p.fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
                       </div>
-                      <span className="font-semibold text-foreground text-sm">{p.fullName}</span>
+                      <span className="font-semibold text-foreground text-xs">{p.fullName}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-1">
-                      <Badge variant="outline" className="text-[10px] font-bold px-2 py-0.5 border-slate-200 w-fit">
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-0.5">
+                      <Badge variant="outline" className="text-[10px] font-medium px-1.5 h-5 border-border w-fit">
                         {p.titleClass}
                       </Badge>
-                      <span className="text-[10px] font-bold text-primary">{renderPrice(p)}</span>
+                      <span className="text-[11px] font-semibold text-primary tabular-nums">{renderPrice(p)}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1.5 max-w-[300px]">
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1 max-w-[300px]">
                       {p.assignments && p.assignments.length > 0 ? p.assignments.map((as: any) => (
-                        <Badge 
-                          key={as.id} 
-                          variant="secondary" 
-                          className="bg-slate-100 text-slate-600 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1"
+                        <Badge
+                          key={as.id}
+                          variant="secondary"
+                          className="hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer text-[10px] font-medium px-2 h-5 rounded-md flex items-center gap-1"
                           onClick={() => navigate(`/panel/facilities/${as.facilityId}`)}
                         >
                           <Building2 className="w-2.5 h-2.5" />
                           {as.facility.name}
                         </Badge>
                       )) : (
-                        <span className="text-[10px] font-medium text-slate-400">Atama yok</span>
+                        <span className="text-[11px] text-muted-foreground">Atama yok</span>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/5"
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-lg text-muted-foreground hover:text-primary"
                       onClick={() => navigate(`/panel/professionals/${p.id}`)}
                     >
-                      <ExternalLink className="w-4 h-4" />
+                      <ExternalLink className="w-3.5 h-3.5" />
                     </Button>
                   </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center">
-                    <p className="text-[10px] font-bold text-slate-300 tracking-wide">Bu kategoride profesyonel bulunmuyor.</p>
+                  <td colSpan={4} className="py-8 text-center">
+                    <p className="text-xs text-muted-foreground">Bu kategoride profesyonel bulunmuyor.</p>
                   </td>
                 </tr>
               )}
@@ -158,99 +161,101 @@ const PanelOSGBLifeCardPage = () => {
   );
 
   return (
-    <div className="p-8 max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-4 pb-10 animate-in fade-in duration-300">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between bg-card text-card-foreground p-6 rounded-lg shadow-sm border border-border gap-6">
-        <div className="flex items-center gap-6">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+      <div className="flex flex-col md:flex-row md:items-center justify-between bg-card text-card-foreground p-4 rounded-lg shadow-xs border border-border gap-4">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => navigate('/panel/osgb')}
-            className="w-10 h-10 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shrink-0"
+            className="w-8 h-8 rounded-lg hover:bg-muted shrink-0"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
           </Button>
-          <div className="w-px h-8 bg-muted text-muted-foreground hidden md:block" />
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 bg-muted text-primary rounded-xl flex items-center justify-center border border-border shadow-sm">
-              <Briefcase className="w-7 h-7" />
+          <div className="w-px h-8 bg-border hidden md:block shrink-0" />
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-11 h-11 bg-primary/10 text-primary rounded-lg flex items-center justify-center border border-primary/20 shrink-0">
+              <Briefcase className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-xl font-bold tracking-tight text-foreground">{osgb.name}</h1>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg font-semibold tracking-tight text-foreground truncate">{osgb.name}</h1>
                 {!osgb.isActive && (
-                <Badge variant="secondary" className="bg-slate-50 text-slate-400 text-[10px] font-bold tracking-wide">Pasif</Badge>
+                  <Badge variant="secondary" className="text-[10px] font-semibold h-5 px-2">Pasif</Badge>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-4 text-[11px] font-semibold text-slate-400 tracking-wide">
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-primary/70" />
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-0.5">
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-primary/80" />
                   {osgb.city || '—'} / {osgb.district || '—'}
                 </div>
-                <div className="w-1 h-1 rounded-full bg-slate-200" />
-                <div className="flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-primary/70" />
+                <span className="text-border">•</span>
+                <div className="flex items-center gap-1 tabular-nums">
+                  <Users className="w-3.5 h-3.5 text-primary/80" />
                   {osgb.professionals.length} Profesyonel
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 self-end md:self-center">
-          <Button variant="outline" className="rounded-xl h-10 px-4 font-bold text-xs border-slate-200 hover:bg-slate-50">
-            <Globe className="w-4 h-4 mr-2 text-primary/70" /> Web Sitesi
-          </Button>
-          <Button className="rounded-xl h-10 px-5 font-bold text-xs bg-slate-900 hover:bg-slate-800 shadow-sm gap-2">
-            <Edit className="w-4 h-4" /> Düzenle
+        <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/panel/osgb')}
+            className="h-8 px-3 rounded-lg text-xs"
+          >
+            Listeye Dön
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left Column - Contact Info */}
-        <div className="space-y-6">
-          <Card className="border-none shadow-sm rounded-lg bg-card text-card-foreground overflow-hidden">
-            <CardHeader className="px-6 py-5 border-b border-slate-50 dark:border-slate-800">
-              <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                <User className="w-4 h-4" />
+        <div className="space-y-4">
+          <Card className="border border-border shadow-xs rounded-lg bg-card text-card-foreground overflow-hidden">
+            <CardHeader className="py-3 px-4 border-b border-border bg-muted/30">
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <User className="w-3.5 h-3.5 text-primary" />
                 İletişim & Yetkili
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 space-y-5">
-              <div className="flex items-center gap-4 group">
-                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors">
-                  <User className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-[9px] font-bold text-slate-400 tracking-wide">Yetkili Kişi</p>
-                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{osgb.contact || '—'}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 group">
-                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors">
-                  <Phone className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-[9px] font-bold text-slate-400 tracking-wide">Telefon</p>
-                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{osgb.phone || '—'}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 group">
-                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors">
-                  <Mail className="w-4 h-4" />
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-3 group">
+                <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors shrink-0">
+                  <User className="w-3.5 h-3.5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[9px] font-bold text-slate-400 tracking-wide">E-Posta</p>
-                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{osgb.email || '—'}</p>
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Yetkili Kişi</p>
+                  <p className="text-xs font-semibold text-foreground truncate">{osgb.contact || '—'}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 group">
-                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center text-slate-400 group-hover:bg-primary/5 group-hover:text-primary transition-colors">
-                  <MapPin className="w-4 h-4" />
+              <div className="flex items-center gap-3 group">
+                <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors shrink-0">
+                  <Phone className="w-3.5 h-3.5" />
                 </div>
-                <div>
-                  <p className="text-[9px] font-bold text-slate-400 tracking-wide">Adres</p>
-                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Telefon</p>
+                  <p className="text-xs font-semibold text-foreground tabular-nums">{osgb.phone || '—'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 group">
+                <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors shrink-0">
+                  <Mail className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">E-Posta</p>
+                  <p className="text-xs font-semibold text-foreground truncate">{osgb.email || '—'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 group">
+                <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors shrink-0">
+                  <MapPin className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Adres</p>
+                  <p className="text-xs font-semibold text-foreground">
                     {osgb.city ? `${osgb.city} / ${osgb.district}` : '—'}
                   </p>
                 </div>
@@ -259,22 +264,22 @@ const PanelOSGBLifeCardPage = () => {
           </Card>
 
           {/* Stats Card */}
-          <Card className="border-none shadow-sm rounded-lg bg-card text-card-foreground overflow-hidden">
-            <CardHeader className="px-6 py-5 border-b border-slate-50 dark:border-slate-800">
-              <CardTitle className="text-[11px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                <Activity className="w-4 h-4" />
+          <Card className="border border-border shadow-xs rounded-lg bg-card text-card-foreground overflow-hidden">
+            <CardHeader className="py-3 px-4 border-b border-border bg-muted/30">
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <Activity className="w-3.5 h-3.5 text-primary" />
                 Genel İstatistikler
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-border text-center">
-                  <p className="text-[9px] font-bold text-slate-400 tracking-wide mb-1">Profesyoneller</p>
-                  <p className="text-xl font-bold text-foreground">{osgb.professionals.length}</p>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-muted/20 rounded-lg border border-border text-center">
+                  <p className="text-[10px] font-medium text-muted-foreground mb-1">Profesyoneller</p>
+                  <p className="text-lg font-bold text-foreground tabular-nums">{osgb.professionals.length}</p>
                 </div>
-                <div className="p-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-border text-center">
-                  <p className="text-[9px] font-bold text-slate-400 tracking-wide mb-1">Aktif Atamalar</p>
-                  <p className="text-xl font-bold text-primary">
+                <div className="p-3 bg-muted/20 rounded-lg border border-border text-center">
+                  <p className="text-[10px] font-medium text-muted-foreground mb-1">Aktif Atamalar</p>
+                  <p className="text-lg font-bold text-primary tabular-nums">
                     {osgb.professionals.reduce((acc, p) => acc + (p.assignments?.length || 0), 0)}
                   </p>
                 </div>
@@ -284,7 +289,7 @@ const PanelOSGBLifeCardPage = () => {
         </div>
 
         {/* Right Column - Professionals & Assignments */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           <ProfessionalTable title="İş Güvenliği Uzmanları (İGU)" professionals={igus} count={igus.length} />
           <ProfessionalTable title="İşyeri Hekimleri" professionals={hekimler} count={hekimler.length} />
           <ProfessionalTable title="Diğer Sağlık Personeli (DSP)" professionals={dspler} count={dspler.length} />

@@ -454,12 +454,24 @@ router.post('/osgb', async (req: AuthRequest, res: Response) => {
 
 router.put('/osgb/:id', async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'Geçersiz OSGB ID.' });
   const { name, contact, phone, email, city, district, isActive } = req.body;
   try {
+    const existing = await prisma.oSGBCompany.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'OSGB firması bulunamadı.' });
+
     const company = await prisma.oSGBCompany.update({
       where: { id },
       data: { name, contact, phone, email, city, district, isActive },
     });
+
+    if (name && existing.name && name.trim() !== existing.name.trim()) {
+      await prisma.professional.updateMany({
+        where: { osgbName: existing.name },
+        data: { osgbName: name.trim() },
+      });
+    }
+
     res.json(company);
   } catch {
     res.status(500).json({ error: 'OSGB firması güncellenemedi.' });
@@ -469,6 +481,7 @@ router.put('/osgb/:id', async (req: AuthRequest, res: Response) => {
 // OSGB Detay (Yaşam Kartı)
 router.get('/osgb/:id', async (req: AuthRequest, res: Response) => {
   const id = parseInt(String(req.params.id));
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'Geçersiz OSGB ID.' });
   try {
     const company = await prisma.oSGBCompany.findUnique({
       where: { id },
@@ -476,10 +489,9 @@ router.get('/osgb/:id', async (req: AuthRequest, res: Response) => {
 
     if (!company) return res.status(404).json({ error: 'OSGB firması bulunamadı.' });
 
-    // Bu OSGB'ye bağlı profesyonelleri bul
-    // osgbName üzerinden eşleştiriyoruz (schema'da string olarak tutulduğu için)
+    // Bu OSGB'ye bağlı aktif profesyonelleri bul
     const professionals = await prisma.professional.findMany({
-      where: { osgbName: company.name },
+      where: { osgbName: company.name, isActive: true },
       include: {
         assignments: {
           where: { status: 'Aktif' },
@@ -1161,7 +1173,8 @@ router.post('/reconciliation/sync', async (req: AuthRequest, res: Response) => {
 // Otomatik tüm ayları senkronize et
 router.post('/reconciliation/auto-sync', async (req: AuthRequest, res: Response) => {
   try {
-    await autoSyncAllMonths(2026);
+    const targetYear = req.body?.year ? parseInt(String(req.body.year), 10) : new Date().getFullYear();
+    await autoSyncAllMonths(Number.isNaN(targetYear) ? new Date().getFullYear() : targetYear);
     res.json({ success: true });
   } catch (error) {
     console.error(error);
@@ -1209,16 +1222,29 @@ router.post('/reconciliation', async (req: AuthRequest, res: Response) => {
 });
 
 router.put('/reconciliation/:id', async (req: AuthRequest, res: Response) => {
-  const id = parseInt(String(req.params.id)); // Cast to string
-  const { invoiceAmount, status, note, amount } = req.body;
+  const id = parseInt(String(req.params.id));
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'Geçersiz kayıt ID.' });
+  const { invoiceAmount, status, note, amount, calculationDetails } = req.body;
 
   try {
     const existing = await prisma.reconciliation.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Kayıt bulunamadı.' });
 
     const calcAmount = existing.calculatedAmount || 0;
-    const invAmount = invoiceAmount !== undefined ? parseFloat(invoiceAmount) : (existing.invoiceAmount || 0);
+    const parsedInv =
+      invoiceAmount === '' || invoiceAmount === null
+        ? 0
+        : invoiceAmount !== undefined
+          ? parseFloat(String(invoiceAmount))
+          : (existing.invoiceAmount || 0);
+    const invAmount = Number.isNaN(parsedInv) ? (existing.invoiceAmount || 0) : parsedInv;
     const diff = calcAmount - invAmount;
+    const parsedAmount =
+      amount === '' || amount === null
+        ? null
+        : amount !== undefined
+          ? parseFloat(String(amount))
+          : existing.amount;
 
     const item = await prisma.reconciliation.update({
       where: { id },
@@ -1227,7 +1253,8 @@ router.put('/reconciliation/:id', async (req: AuthRequest, res: Response) => {
         difference: diff,
         status: status || existing.status,
         note: note !== undefined ? note : existing.note,
-        amount: amount !== undefined ? parseFloat(amount) : existing.amount
+        amount: parsedAmount !== null && Number.isNaN(parsedAmount) ? existing.amount : parsedAmount,
+        ...(calculationDetails !== undefined ? { calculationDetails } : {}),
       },
       include: { osgbCompany: true, facility: true }
     });
