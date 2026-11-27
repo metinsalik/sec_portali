@@ -71,6 +71,9 @@ export default function DefinitionsPage() {
     sourceIds: [],
   });
   const [mergeTargetId, setMergeTargetId] = useState<string>('');
+  const [mergeTargetSearch, setMergeTargetSearch] = useState<string>('');
+  const [newTargetName, setNewTargetName] = useState<string>('');
+  const [createNewTargetMode, setCreateNewTargetMode] = useState<boolean>(false);
 
   // ── Safe Delete modal state ──────────────────────────────────
   const [deleteModal, setDeleteModal] = useState<{
@@ -251,6 +254,9 @@ export default function DefinitionsPage() {
 
   const openMergeModal = (sourceIds: number[]) => {
     setMergeTargetId('');
+    setMergeTargetSearch('');
+    setNewTargetName('');
+    setCreateNewTargetMode(false);
     setMergeModal({ open: true, sourceIds });
   };
 
@@ -285,10 +291,43 @@ export default function DefinitionsPage() {
     [departments, mergeModal.sourceIds]
   );
 
-  const mergeTargetCandidates = useMemo(
-    () => departments.filter((d) => !mergeModal.sourceIds.includes(d.id)),
-    [departments, mergeModal.sourceIds]
-  );
+  const mergeTargetCandidates = useMemo(() => {
+    const base = departments.filter((d) => !mergeModal.sourceIds.includes(d.id));
+    const q = mergeTargetSearch.trim().toLocaleLowerCase('tr-TR');
+    if (!q) return base;
+    return base.filter((d) => d.name.toLocaleLowerCase('tr-TR').includes(q));
+  }, [departments, mergeModal.sourceIds, mergeTargetSearch]);
+
+  const handleConfirmMerge = async () => {
+    if (createNewTargetMode) {
+      const cleanName = newTargetName.trim();
+      if (!cleanName) {
+        toast.error('Lütfen yeni hedef departman adını girin.');
+        return;
+      }
+      try {
+        const res = await api.post('/settings/definitions/departments', { name: cleanName });
+        if (!res.ok) {
+          const e = await res.json().catch(() => ({}));
+          throw new Error(e.error || 'Hedef departman oluşturulamadı.');
+        }
+        const created = await res.json();
+        mergeDeptsMutation.mutate({
+          sourceIds: mergeModal.sourceIds,
+          targetId: created.id,
+        });
+      } catch (err: any) {
+        toast.error(err.message || 'Hedef departman oluşturulamadı.');
+      }
+      return;
+    }
+
+    if (!mergeTargetId) return;
+    mergeDeptsMutation.mutate({
+      sourceIds: mergeModal.sourceIds,
+      targetId: parseInt(mergeTargetId, 10),
+    });
+  };
 
   return (
     <div className="space-y-6 w-full animate-in fade-in duration-200 pb-12">
@@ -544,8 +583,8 @@ export default function DefinitionsPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
                 value={deptSearch}
@@ -554,6 +593,43 @@ export default function DefinitionsPage() {
                 className="h-8 pl-8 text-xs"
               />
             </div>
+            {filteredDepartments.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const visibleIds = filteredDepartments.map((d) => d.id);
+                  const allSelected = visibleIds.every((id) => selectedDeptIds.includes(id));
+                  if (allSelected) {
+                    setSelectedDeptIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+                  } else {
+                    setSelectedDeptIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+                  }
+                }}
+                className="h-8 text-xs"
+              >
+                {filteredDepartments.every((d) => selectedDeptIds.includes(d.id))
+                  ? `Görünenlerin Seçimini Kaldır (${filteredDepartments.length})`
+                  : `Görünenleri Seç (${filteredDepartments.length})`}
+              </Button>
+            )}
+            {departments.some((d) => (d.usageCount || 0) === 0) && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const zeroIds = filteredDepartments
+                    .filter((d) => (d.usageCount || 0) === 0)
+                    .map((d) => d.id);
+                  setSelectedDeptIds((prev) => Array.from(new Set([...prev, ...zeroIds])));
+                }}
+                className="h-8 text-xs text-muted-foreground"
+              >
+                0 Kayıtlıları Seç ({filteredDepartments.filter((d) => (d.usageCount || 0) === 0).length})
+              </Button>
+            )}
             {selectedDeptIds.length > 0 && (
               <Button
                 type="button"
@@ -562,7 +638,7 @@ export default function DefinitionsPage() {
                 onClick={() => setSelectedDeptIds([])}
                 className="h-8 text-xs text-muted-foreground"
               >
-                Seçimi Temizle
+                Seçimi Temizle ({selectedDeptIds.length})
               </Button>
             )}
           </div>
@@ -778,29 +854,30 @@ export default function DefinitionsPage() {
         open={mergeModal.open}
         onOpenChange={(open) => !open && setMergeModal({ open: false, sourceIds: [] })}
       >
-        <DialogContent className="sm:max-w-[500px] rounded-lg">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[540px] w-[95vw] max-h-[85vh] flex flex-col overflow-hidden p-0 rounded-lg gap-0">
+          <DialogHeader className="px-5 py-3.5 bg-muted/30 border-b border-border shrink-0">
             <DialogTitle className="text-base font-semibold flex items-center gap-2">
               <GitMerge className="w-4 h-4 text-primary" />
-              Departman Birleştir (Merge)
+              Departman Birleştir ve Aktar
             </DialogTitle>
             <DialogDescription className="text-xs">
               Seçili kaynak departman(lar)daki tüm kayıtlar hedef departmana aktarılır ve kaynak departman(lar) listeden kaldırılır.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 pt-2">
-            {/* Kaynak kutusu */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
+            {/* Kaynak kutusu (İçten kaydırmalı — yüzlerce seçilse bile modal taşmaz) */}
             <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/60 dark:bg-red-950/20 p-3 space-y-2">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-red-700 dark:text-red-400">
                 Kaynak (Birleştirilip Kaldırılacak — {mergeSources.length})
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
                 {mergeSources.map((s) => (
                   <Badge
                     key={s.id}
                     variant="outline"
-                    className="bg-background border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs"
+                    className="bg-background border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-[11px] max-w-full truncate"
+                    title={s.name}
                   >
                     {s.name} ({s.usageCount || 0})
                   </Badge>
@@ -812,21 +889,57 @@ export default function DefinitionsPage() {
               <ArrowRight className="w-4 h-4 text-muted-foreground rotate-90" />
             </div>
 
-            {/* Hedef seçimi */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Hedef Departman (Kalıcı Olacak) *</Label>
-              <select
-                value={mergeTargetId}
-                onChange={(e) => setMergeTargetId(e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">-- Hedef Departman Seçin --</option>
-                {mergeTargetCandidates.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name} ({d.usageCount || 0} kayıt)
-                  </option>
-                ))}
-              </select>
+            {/* Hedef seçimi veya yeni hedef oluşturma */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs font-medium">Hedef Departman (Kalıcı Olacak) *</Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateNewTargetMode((v) => !v);
+                    setMergeTargetId('');
+                  }}
+                  className="text-[11px] font-semibold text-primary hover:underline cursor-pointer"
+                >
+                  {createNewTargetMode ? 'Mevcut Listeden Seç' : '+ Yeni Hedef Departman Oluştur'}
+                </button>
+              </div>
+
+              {createNewTargetMode ? (
+                <Input
+                  value={newTargetName}
+                  onChange={(e) => setNewTargetName(e.target.value)}
+                  placeholder="Yeni hedef departman adı (Örn: Teknik Hizmetler Müdürlüğü)"
+                  className="h-9 text-xs"
+                  autoFocus
+                />
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <Input
+                      value={mergeTargetSearch}
+                      onChange={(e) => setMergeTargetSearch(e.target.value)}
+                      placeholder="Hedef departman içinde ara..."
+                      className="h-8 pl-8 text-xs"
+                    />
+                  </div>
+                  <select
+                    value={mergeTargetId}
+                    onChange={(e) => setMergeTargetId(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">
+                      -- Hedef Departman Seçin ({mergeTargetCandidates.length} aday) --
+                    </option>
+                    {mergeTargetCandidates.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.usageCount || 0} kayıt)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Güvenli aktarım bilgi kutusu */}
@@ -847,7 +960,7 @@ export default function DefinitionsPage() {
             )}
           </div>
 
-          <DialogFooter className="mt-4">
+          <DialogFooter className="mx-0 mb-0 rounded-none px-5 py-3 bg-muted/20 border-t border-border shrink-0">
             <Button
               type="button"
               variant="outline"
@@ -858,13 +971,11 @@ export default function DefinitionsPage() {
             </Button>
             <Button
               type="button"
-              disabled={!mergeTargetId || mergeDeptsMutation.isPending}
-              onClick={() =>
-                mergeDeptsMutation.mutate({
-                  sourceIds: mergeModal.sourceIds,
-                  targetId: parseInt(mergeTargetId, 10),
-                })
+              disabled={
+                (createNewTargetMode ? !newTargetName.trim() : !mergeTargetId) ||
+                mergeDeptsMutation.isPending
               }
+              onClick={handleConfirmMerge}
               className="h-8 text-xs rounded-md gap-1.5"
             >
               {mergeDeptsMutation.isPending ? (
@@ -872,7 +983,7 @@ export default function DefinitionsPage() {
               ) : (
                 <GitMerge className="w-3.5 h-3.5" />
               )}
-              Birleştir ve Aktar
+              Birleştir ve Aktar ({mergeSources.length})
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,5 +1,6 @@
 import React, { forwardRef, useLayoutEffect, useRef, useState } from 'react';
 import { Flame, Droplets, Phone, Glasses } from 'lucide-react';
+import { hydrateGbfFromMaterial, type GbfSubData } from './gbf/gbfSchema';
 
 interface MaterialPrintCardProps {
   material: any;
@@ -253,6 +254,7 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
     const targetHeight = Math.round(DESIGN_WIDTH * (printableH / printableW));
 
     const rootRef = useRef<HTMLDivElement | null>(null);
+    const page1Ref = useRef<HTMLDivElement | null>(null);
     const bodyRef = useRef<HTMLDivElement | null>(null);
     const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
     const isMeasuringRef = useRef(false);
@@ -282,43 +284,127 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
     // ─────────────────────────────────────────────────────────────────────────
     // VERİ NORMALİZASYONU VE PARSE İŞLEMLERİ
     // ─────────────────────────────────────────────────────────────────────────
-    const hazardNorm = normalizeText(material?.hazardDescription, ['Zararlılık İfadeleri']);
+    const gbfDoc = hydrateGbfFromMaterial(material || {});
+
+    const collectSubBlocks = (sub?: GbfSubData): { label?: string; text: string }[] => {
+      if (!sub) return [];
+      const blocks: { label?: string; text: string }[] = [];
+      if (sub.rows && sub.rows.length > 0) {
+        for (const r of sub.rows) {
+          const val = (r.value || '').trim();
+          if (val) {
+            blocks.push({ label: (r.label || '').trim() || undefined, text: val });
+          }
+        }
+      }
+      if (sub.textBoxes && sub.textBoxes.length > 0) {
+        for (const tb of sub.textBoxes) {
+          const val = (tb.text || '').trim();
+          if (val) {
+            blocks.push({ label: (tb.title || '').trim() || undefined, text: val });
+          }
+        }
+      }
+      if (sub.headings && sub.headings.length > 0) {
+        for (const h of sub.headings) {
+          const parts: string[] = [];
+          if (h.text?.trim()) parts.push(h.text.trim());
+          if (h.rows?.length) {
+            h.rows.forEach((r) => {
+              if (r.value?.trim()) {
+                parts.push(r.label?.trim() ? `${r.label.trim()}: ${r.value.trim()}` : r.value.trim());
+              }
+            });
+          }
+          if (h.textBoxes?.length) {
+            h.textBoxes.forEach((tb) => {
+              if (tb.text?.trim()) {
+                parts.push(tb.title?.trim() ? `${tb.title.trim()}: ${tb.text.trim()}` : tb.text.trim());
+              }
+            });
+          }
+          if (parts.length > 0) {
+            blocks.push({ label: h.title?.trim() || undefined, text: parts.join(' ') });
+          }
+        }
+      }
+      if (sub.text && sub.text.trim()) {
+        blocks.push({ text: sub.text.trim() });
+      }
+      return blocks;
+    };
+
+    // 1.2 Belirlenmiş ve tavsiye edilmeyen kullanımlar -> Belirlenmiş kullanım
+    const resolveDesignatedUsage = (): string => {
+      const sub12 = gbfDoc.sections[1]?.sub?.['1.2'];
+      if (sub12) {
+        const rowMatch = (sub12.rows || []).find(
+          (r) =>
+            r.label?.toLocaleLowerCase('tr-TR').includes('belirlenmiş kullanım') &&
+            r.value?.trim()
+        );
+        if (rowMatch?.value?.trim()) return rowMatch.value.trim();
+
+        const tbMatch = (sub12.textBoxes || []).find(
+          (tb) =>
+            tb.title?.toLocaleLowerCase('tr-TR').includes('belirlenmiş') &&
+            tb.text?.trim()
+        );
+        if (tbMatch?.text?.trim()) return tbMatch.text.trim();
+
+        if (sub12.text?.trim()) {
+          const lines = sub12.text.split(/[\r\n]+/).map((l) => l.trim()).filter(Boolean);
+          const idx = lines.findIndex((l) =>
+            l.toLocaleLowerCase('tr-TR').includes('belirlenmiş kullanım')
+          );
+          if (idx !== -1) {
+            const cleaned = lines[idx].replace(/^.*?belirlenmiş kullanım(?:lar)?\s*[:\-–]?\s*/i, '').trim();
+            if (cleaned) return cleaned;
+            if (lines[idx + 1]) return lines[idx + 1];
+          }
+          return sub12.text.trim();
+        }
+      }
+      return material?.usageMethod || material?.description || '-';
+    };
+
+    const usageDisplay = resolveDesignatedUsage();
+
     const firstAidNorm = normalizeText(material?.firstAid, ['İlk Yardım']);
     const fireNorm = normalizeText(material?.fireFightingMeasures, ['Yangın']);
     const spillNorm = normalizeText(material?.accidentalReleaseMeasures, ['Kaza Sonucu']);
 
-    const parseHazardDescription = (raw?: string | null): HazardItem[] => {
-      if (!raw || typeof raw !== 'string') return [];
+    // Sadece listeden seçilmiş standart H / EUH / P kodlu ifadeleri al
+    const parseSelectedHazardStatements = (): HazardItem[] => {
+      const sources: string[] = [];
+      const sub22 = gbfDoc.sections[2]?.sub?.['2.2'];
+      if (sub22?.text) sources.push(sub22.text);
+      (sub22?.rows || []).forEach((r) => {
+        if (r.value) sources.push(r.value);
+      });
+      if (material?.hazardDescription) sources.push(material.hazardDescription);
 
-      const lines = raw
-        .split(/[\r\n]+/)
-        .map(l => normalizeText(l, ['Zararlılık İfadeleri', 'Tehlike Tanımı']))
-        .filter(r => r.hasData)
-        .map(r => r.text);
-
+      const seen = new Set<string>();
       const items: HazardItem[] = [];
 
-      for (const line of lines) {
-        const hMatch = line.match(
-          /^(H\d{3}[a-zA-Z*]?(?:\s*\+\s*H\d{3}[a-zA-Z*]?)*|EUH\d{3}[a-zA-Z*]?|P\d{3}[a-zA-Z*]?)\s*[:\-\.]?\s*(.*)$/i
-        );
-        if (hMatch) {
-          items.push({
-            code: hMatch[1].replace(/\s+/g, '').toUpperCase(),
-            text: capitalizeFirst(hMatch[2] ? hMatch[2] : hMatch[1]),
-          });
-        } else {
-          const commaSplit = line.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
-          for (const part of commaSplit) {
-            const lower = part.toLocaleLowerCase('tr-TR');
-            let inferredCode = 'TEHLİKE';
-            if (lower.includes('yanıcı') || lower.includes('alev')) inferredCode = 'H225';
-            else if (lower.includes('tahriş')) inferredCode = 'H319';
-            else if (lower.includes('korozif') || lower.includes('aşındırıcı')) inferredCode = 'H314';
-            else if (lower.includes('toksik') || lower.includes('zehir')) inferredCode = 'H301';
-            else if (lower.includes('oksit')) inferredCode = 'H272';
-            else if (lower.includes('çevre')) inferredCode = 'H410';
-            items.push({ code: inferredCode, text: capitalizeFirst(part) });
+      for (const raw of sources) {
+        const lines = raw
+          .split(/[\r\n]+/)
+          .map((l) => l.trim())
+          .filter(Boolean);
+
+        for (const line of lines) {
+          const hMatch = line.match(
+            /^(H\d{3}[a-zA-Z*]?(?:\s*\+\s*H\d{3}[a-zA-Z*]?)*|EUH\d{3}[a-zA-Z*]?|P\d{3}[a-zA-Z*]?(?:\s*\+\s*P\d{3}[a-zA-Z*]?)*)\s*[:\-\.]?\s*(.*)$/i
+          );
+          if (hMatch) {
+            const code = hMatch[1].replace(/\s+/g, '').toUpperCase();
+            if (seen.has(code)) continue;
+            seen.add(code);
+            items.push({
+              code,
+              text: capitalizeFirst(hMatch[2] ? hMatch[2] : code),
+            });
           }
         }
       }
@@ -378,23 +464,50 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
       return sections;
     };
 
-    const hazardItems = parseHazardDescription(material?.hazardDescription);
+    const hazardItems = parseSelectedHazardStatements();
+    const firstAidBlocks = collectSubBlocks(gbfDoc.sections[4]?.sub?.['4.1']);
     const firstAidData = parseFirstAid(firstAidNorm.text, firstAidNorm.hasData);
     const hasStructuredSubsections = Boolean(
       firstAidData.goz || firstAidData.deri || firstAidData.yutma || firstAidData.solunum
     );
 
-    // Gövde satırlarının flex ağırlıkları (satırdaki en uzun gerçek metnin karakter sayısı, min 40)
-    const weightRow1 = Math.max(40, hazardNorm.hasData ? hazardNorm.text.length : 0);
-    const weightRow2 = Math.max(40, firstAidNorm.hasData ? firstAidNorm.text.length : 0);
-    const weightRow3 = Math.max(
-      40,
-      Math.max(
-        fireNorm.hasData ? fireNorm.text.length : 0,
-        spillNorm.hasData ? spillNorm.text.length : 0
-      )
-    );
-    const weightRow4 = Math.max(40, SAFE_USAGE_WEIGHT);
+    const fireSubSections = [
+      { code: '5.1', title: 'Yangın söndürücüler', blocks: collectSubBlocks(gbfDoc.sections[5]?.sub?.['5.1']) },
+      { code: '5.2', title: 'Madde/karışımdan kaynaklanan özel zararlar', blocks: collectSubBlocks(gbfDoc.sections[5]?.sub?.['5.2']) },
+      { code: '5.3', title: 'Yangın söndürme ekipleri için tavsiyeler', blocks: collectSubBlocks(gbfDoc.sections[5]?.sub?.['5.3']) },
+    ].filter((s) => s.blocks.length > 0);
+
+    const spillSubSections = [
+      { code: '6.1', title: 'Kişisel önlemler, donanım ve acil durum', blocks: collectSubBlocks(gbfDoc.sections[6]?.sub?.['6.1']) },
+      { code: '6.2', title: 'Çevresel önlemler', blocks: collectSubBlocks(gbfDoc.sections[6]?.sub?.['6.2']) },
+      { code: '6.3', title: 'Muhafaza ve temizleme yöntemleri', blocks: collectSubBlocks(gbfDoc.sections[6]?.sub?.['6.3']) },
+    ].filter((s) => s.blocks.length > 0);
+
+    const hazardTotalChars = hazardItems.reduce((sum, it) => sum + it.code.length + it.text.length + 4, 0);
+    const firstAidChars =
+      firstAidBlocks.length > 0
+        ? firstAidBlocks.reduce((sum, b) => sum + (b.label?.length || 0) + b.text.length, 0)
+        : (firstAidNorm.hasData ? firstAidNorm.text.length : 0);
+    const fireChars =
+      fireSubSections.length > 0
+        ? fireSubSections.reduce(
+            (sum, s) => sum + s.title.length + s.blocks.reduce((bs, b) => bs + (b.label?.length || 0) + b.text.length, 0),
+            0
+          )
+        : (fireNorm.hasData ? fireNorm.text.length : 0);
+    const spillChars =
+      spillSubSections.length > 0
+        ? spillSubSections.reduce(
+            (sum, s) => sum + s.title.length + s.blocks.reduce((bs, b) => bs + (b.label?.length || 0) + b.text.length, 0),
+            0
+          )
+        : (spillNorm.hasData ? spillNorm.text.length : 0);
+
+    // Gövde satırlarının flex ağırlıkları
+    const weightRow1 = Math.max(40, hazardTotalChars);
+    const weightRow2 = Math.max(40, firstAidChars);
+    const weightRow3 = Math.max(40, fireChars);
+    const weightRow4 = Math.max(40, spillChars);
 
     // ─────────────────────────────────────────────────────────────────────────
     // BİNARY SEARCH İLE TEK ORTAK FONT-SIZE, LINE-HEIGHT VE PADDING/GAP HESABI
@@ -429,7 +542,7 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
 
       const runFit = () => {
         if (!active) return;
-        const rootEl = rootRef.current;
+        const rootEl = page1Ref.current;
         const bodyEl = bodyRef.current;
         if (!rootEl || !bodyEl) return;
 
@@ -624,23 +737,28 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
     const cardPaddingStyle = `${currentPadY}px ${currentPadX}px`;
 
     return (
-      <div
-        ref={setMergedRootRef}
-        style={{
-          width: `${DESIGN_WIDTH}px`,
-          height: metrics.overflowFallback ? 'auto' : `${targetHeight}px`,
-          minHeight: `${targetHeight}px`,
-          padding: '18px 20px',
-          backgroundColor: '#ffffff',
-          color: '#1e293b',
-          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-          boxSizing: 'border-box',
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-        }}
-      >
+      <div ref={setMergedRootRef} style={{ width: `${DESIGN_WIDTH}px`, backgroundColor: '#ffffff' }}>
+        {/* =================================================================== */}
+        {/* SAYFA 1: GÜVENLİK BİLGİ KARTI                                       */}
+        {/* =================================================================== */}
+        <div
+          ref={page1Ref}
+          className="hazmat-card-page-break"
+          style={{
+            width: `${DESIGN_WIDTH}px`,
+            height: metrics.overflowFallback ? 'auto' : `${targetHeight}px`,
+            minHeight: `${targetHeight}px`,
+            padding: '18px 20px',
+            backgroundColor: '#ffffff',
+            color: '#1e293b',
+            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+            boxSizing: 'border-box',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+          }}
+        >
         {/* ─────────────────────────────────────────────────────────────────── */}
         {/* ÜST BÖLÜM: BAŞLIK + ÜRÜN BİLGİSİ + ZARARLILIK İŞARETLERİ + KKD/114 */}
         {/* ─────────────────────────────────────────────────────────────────── */}
@@ -692,67 +810,65 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'center',
-                  gap: '7px',
+                  gap: '6px',
                 }}
               >
-                <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: '12px', alignItems: 'start' }}>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: '9.5px',
-                        fontWeight: 700,
-                        color: '#67e8f9',
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      ÜRÜN ADI
-                    </div>
-                    <div
-                      style={{
-                        fontSize: prodNameFs,
-                        fontWeight: 800,
-                        color: '#ffffff',
-                        lineHeight: 1.2,
-                        marginTop: '2px',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {prodName}
-                    </div>
+                <div>
+                  <div
+                    style={{
+                      fontSize: '9px',
+                      fontWeight: 700,
+                      color: '#67e8f9',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    ÜRÜN ADI
                   </div>
-
-                  <div>
-                    <div
-                      style={{
-                        fontSize: '9.5px',
-                        fontWeight: 700,
-                        color: '#67e8f9',
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      FİRMA
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '15.5px',
-                        fontWeight: 800,
-                        color: '#ffffff',
-                        lineHeight: 1.2,
-                        marginTop: '2px',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {material?.brandName || material?.supplier || material?.manufacturer || '-'}
-                    </div>
+                  <div
+                    style={{
+                      fontSize: prodNameFs,
+                      fontWeight: 800,
+                      color: '#ffffff',
+                      lineHeight: 1.2,
+                      marginTop: '1px',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {prodName}
                   </div>
                 </div>
 
                 <div>
                   <div
                     style={{
-                      fontSize: '9.5px',
+                      fontSize: '9px',
+                      fontWeight: 700,
+                      color: '#67e8f9',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    FİRMA
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '13.5px',
+                      fontWeight: 700,
+                      color: '#ffffff',
+                      lineHeight: 1.2,
+                      marginTop: '1px',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {material?.brandName || material?.supplier || material?.manufacturer || '-'}
+                  </div>
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      fontSize: '9px',
                       fontWeight: 700,
                       color: '#67e8f9',
                       letterSpacing: '0.06em',
@@ -763,14 +879,15 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                   </div>
                   <div
                     style={{
-                      fontSize: '13px',
+                      fontSize: '12px',
                       fontWeight: 600,
                       color: '#f8fafc',
                       lineHeight: 1.25,
-                      marginTop: '2px',
+                      marginTop: '1px',
+                      wordBreak: 'break-word',
                     }}
                   >
-                    {material?.usageMethod || material?.description || '-'}
+                    {usageDisplay}
                   </div>
                 </div>
               </div>
@@ -1215,7 +1332,22 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                 </h3>
               </div>
 
-              {!firstAidNorm.hasData ? (
+              {firstAidBlocks.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '0.45em 1.2em', width: '100%' }}>
+                  {firstAidBlocks.map((b, bIdx) => (
+                    <div key={`fa-blk-${bIdx}`}>
+                      {b.label && (
+                        <div style={{ fontSize: '1.05em', fontWeight: 800, color: '#0f172a', marginBottom: '0.1em' }}>
+                          {b.label}
+                        </div>
+                      )}
+                      <div style={{ fontSize: '1em', color: '#475569', overflowWrap: 'break-word' }}>
+                        {b.text}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : !firstAidNorm.hasData ? (
                 <div style={{ fontSize: '1em', color: '#94a3b8', fontStyle: 'italic' }}>
                   Bilgi bulunmamaktadır.
                 </div>
@@ -1289,20 +1421,12 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
             </div>
           </div>
 
-          {/* SATIR 3: YANGIN DURUMUNDA & KAZA SONUCU YAYILMA (AYNI YÜKSEKLİKTE 2 SÜTUN GRİD) */}
-          <div
-            style={{
-              flex: `${weightRow3} 1 0px`,
-              display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-              alignItems: 'stretch',
-              gap: '0.7em',
-            }}
-          >
-            {/* YANGIN DURUMUNDA */}
+          {/* SATIR 3: YANGINLA MÜCADELE ÖNLEMLERİ (YATAY TAM GENİŞLİK + 5.1 / 5.2 / 5.3) */}
+          <div style={{ flex: `${weightRow3} 1 0px`, display: 'flex', flexDirection: 'column', gap: '0.35em' }}>
             <div
               ref={registerCardRef(2)}
               style={{
+                flex: 1,
                 border: '1px solid #e2e8f0',
                 borderLeft: '0.32em solid #f59e0b',
                 borderRadius: '0.75em',
@@ -1332,26 +1456,48 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                   <Flame style={{ width: '0.85em', height: '0.85em', strokeWidth: 2.5 }} />
                 </div>
                 <h3 style={{ margin: 0, fontSize: '0.95em', fontWeight: 800, color: '#0f172a' }}>
-                  Yangın Durumunda
+                  Yangınla Mücadele Önlemleri
                 </h3>
               </div>
-              <div
-                style={{
-                  fontSize: '1em',
-                  color: fireNorm.hasData ? '#475569' : '#94a3b8',
-                  fontStyle: fireNorm.hasData ? 'normal' : 'italic',
-                  whiteSpace: 'pre-wrap',
-                  overflowWrap: 'break-word',
-                }}
-              >
-                {fireNorm.text}
-              </div>
-            </div>
 
-            {/* KAZA SONUCU YAYILMA */}
+              {fireSubSections.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(3, fireSubSections.length)}, minmax(0, 1fr))`, gap: '0.5em 1.1em', width: '100%' }}>
+                  {fireSubSections.map((subSec) => (
+                    <div key={`fire-${subSec.code}`} style={{ display: 'flex', flexDirection: 'column', gap: '0.2em' }}>
+                      <div style={{ fontSize: '1.05em', fontWeight: 800, color: '#0f172a', borderBottom: '1px solid #fef3c7', paddingBottom: '0.15em' }}>
+                        {subSec.code} {subSec.title}
+                      </div>
+                      {subSec.blocks.map((b, bi) => (
+                        <div key={`fire-b-${subSec.code}-${bi}`} style={{ fontSize: '1em', color: '#475569', overflowWrap: 'break-word' }}>
+                          {b.label && <strong style={{ color: '#0f172a' }}>{b.label}: </strong>}
+                          <span>{b.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    fontSize: '1em',
+                    color: fireNorm.hasData ? '#475569' : '#94a3b8',
+                    fontStyle: fireNorm.hasData ? 'normal' : 'italic',
+                    whiteSpace: 'pre-wrap',
+                    overflowWrap: 'break-word',
+                  }}
+                >
+                  {fireNorm.text}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* SATIR 4: KAZA SONUCU YAYILMAYA KARŞI ÖNLEMLER (YATAY TAM GENİŞLİK + 6.1 / 6.2 / 6.3) */}
+          <div style={{ flex: `${weightRow4} 1 0px`, display: 'flex', flexDirection: 'column', gap: '0.35em' }}>
             <div
               ref={registerCardRef(3)}
               style={{
+                flex: 1,
                 border: '1px solid #e2e8f0',
                 borderLeft: '0.32em solid #06b6d4',
                 borderRadius: '0.75em',
@@ -1381,126 +1527,52 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
                   <Droplets style={{ width: '0.85em', height: '0.85em', strokeWidth: 2.5 }} />
                 </div>
                 <h3 style={{ margin: 0, fontSize: '0.95em', fontWeight: 800, color: '#0f172a' }}>
-                  Kaza Sonucu Yayılma
+                  Kaza Sonucu Yayılmaya Karşı Önlemler
                 </h3>
               </div>
-              <div
-                style={{
-                  fontSize: '1em',
-                  color: spillNorm.hasData ? '#475569' : '#94a3b8',
-                  fontStyle: spillNorm.hasData ? 'normal' : 'italic',
-                  whiteSpace: 'pre-wrap',
-                  overflowWrap: 'break-word',
-                }}
-              >
-                {spillNorm.text}
-              </div>
-            </div>
-          </div>
 
-          {/* SATIR 4: GÜVENLİ KULLANIM TALİMATLARI (SABİT - İSG EMREDİCİ MAVİ ZEMİN / BEYAZ YAZI) */}
-          <div style={{ flex: `${weightRow4} 1 0px`, display: 'flex', flexDirection: 'column', gap: '0.35em' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4em', flexShrink: 0 }}>
-              <div style={{ width: '0.3em', height: '1.15em', backgroundColor: '#00a3db', borderRadius: '0.15em' }} />
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: '0.95em',
-                  fontWeight: 900,
-                  color: '#0f172a',
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                GÜVENLİ KULLANIM TALİMATLARI
-              </h2>
-            </div>
-
-            <div
-              ref={registerCardRef(4)}
-              style={{
-                flex: 1,
-                border: '1px solid #008ec0',
-                borderRadius: '0.75em',
-                backgroundColor: '#00a3db',
-                color: '#ffffff',
-                padding: cardPaddingStyle,
-                boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-              }}
-            >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 1fr) 1px minmax(0, 1fr)',
-                  gap: '1em',
-                  width: '100%',
-                  alignItems: 'stretch',
-                }}
-              >
-                {[SAFE_USAGE_INSTRUCTIONS.slice(0, 8), SAFE_USAGE_INSTRUCTIONS.slice(8)].map((colItems, colIdx) => (
-                  <React.Fragment key={`safe-usage-col-${colIdx}`}>
-                    {colIdx === 1 && (
-                      <div
-                        style={{
-                          width: '1px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.35)',
-                        }}
-                      />
-                    )}
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        gap: '0.28em',
-                      }}
-                    >
-                      {colItems.map((instruction, idx) => (
-                        <div
-                          key={`safe-usage-${colIdx}-${idx}`}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '0.4em',
-                            fontSize: '0.96em',
-                            color: '#ffffff',
-                            fontWeight: 500,
-                            overflowWrap: 'break-word',
-                          }}
-                        >
-                          <span
-                            style={{
-                              color: '#ffffff',
-                              fontWeight: 900,
-                              flexShrink: 0,
-                              lineHeight: 'inherit',
-                            }}
-                          >
-                            •
-                          </span>
-                          <span>{instruction}</span>
+              {spillSubSections.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(3, spillSubSections.length)}, minmax(0, 1fr))`, gap: '0.5em 1.1em', width: '100%' }}>
+                  {spillSubSections.map((subSec) => (
+                    <div key={`spill-${subSec.code}`} style={{ display: 'flex', flexDirection: 'column', gap: '0.2em' }}>
+                      <div style={{ fontSize: '1.05em', fontWeight: 800, color: '#0f172a', borderBottom: '1px solid #cffafe', paddingBottom: '0.15em' }}>
+                        {subSec.code} {subSec.title}
+                      </div>
+                      {subSec.blocks.map((b, bi) => (
+                        <div key={`spill-b-${subSec.code}-${bi}`} style={{ fontSize: '1em', color: '#475569', overflowWrap: 'break-word' }}>
+                          {b.label && <strong style={{ color: '#0f172a' }}>{b.label}: </strong>}
+                          <span>{b.text}</span>
                         </div>
                       ))}
                     </div>
-                  </React.Fragment>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    fontSize: '1em',
+                    color: spillNorm.hasData ? '#475569' : '#94a3b8',
+                    fontStyle: spillNorm.hasData ? 'normal' : 'italic',
+                    whiteSpace: 'pre-wrap',
+                    overflowWrap: 'break-word',
+                  }}
+                >
+                  {spillNorm.text}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* ─────────────────────────────────────────────────────────────────── */}
-        {/* ALT BİLGİ: FORM KODU                                               */}
+        {/* ALT BİLGİ: FORM KODU (SAYFA 1)                                      */}
         {/* ─────────────────────────────────────────────────────────────────── */}
         <div
           style={{
             paddingTop: '4px',
             borderTop: '1px solid #f1f5f9',
             display: 'flex',
-            justifyContent: 'flex-start',
+            justifyContent: 'space-between',
             alignItems: 'center',
             flexShrink: 0,
           }}
@@ -1515,6 +1587,149 @@ export const MaterialPrintCard = forwardRef<HTMLDivElement, MaterialPrintCardPro
           >
             İSG-YRD-47/00
           </span>
+          <span style={{ fontSize: '9px', fontWeight: 600, color: '#64748b' }}>
+            Sayfa 1 / 2
+          </span>
+        </div>
+        </div>
+
+        {/* =================================================================== */}
+        {/* SAYFA 2: GENEL GÜVENLİ KULLANIM TALİMATLARI                         */}
+        {/* =================================================================== */}
+        <div
+          style={{
+            width: `${DESIGN_WIDTH}px`,
+            minHeight: `${targetHeight}px`,
+            padding: '18px 20px',
+            backgroundColor: '#ffffff',
+            color: '#1e293b',
+            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+            boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            borderTop: '2px dashed #cbd5e1',
+          }}
+        >
+          {/* Üst Başlık Bandı */}
+          <div
+            style={{
+              backgroundColor: '#0f2744',
+              backgroundImage: 'linear-gradient(135deg, #0b2341 0%, #0f2744 50%, #16365c 100%)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexShrink: 0,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: '#67e8f9', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                GÜVENLİK BİLGİ KARTI — EK TALİMAT SAYFASI
+              </div>
+              <h2 style={{ margin: '2px 0 0 0', fontSize: '20px', fontWeight: 900, letterSpacing: '0.05em', color: '#ffffff', textTransform: 'uppercase' }}>
+                GENEL GÜVENLİ KULLANIM TALİMATLARI
+              </h2>
+            </div>
+            <div style={{ textAlign: 'right', maxWidth: '280px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: '#ffffff', lineHeight: 1.2 }}>
+                {prodName}
+              </div>
+              <div style={{ fontSize: '10px', color: '#cbd5e1', marginTop: '2px' }}>
+                {material?.brandName || material?.supplier || material?.manufacturer || ''}
+              </div>
+            </div>
+          </div>
+
+          {/* Talimatlar Kartı */}
+          <div
+            style={{
+              flex: 1,
+              border: '1px solid #008ec0',
+              borderRadius: '12px',
+              backgroundColor: '#00a3db',
+              color: '#ffffff',
+              padding: '18px 20px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              {SAFE_USAGE_INSTRUCTIONS.map((instruction, idx) => (
+                <div
+                  key={`safe-usage-p2-${idx}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    fontSize: '13.5px',
+                    lineHeight: 1.45,
+                    color: '#ffffff',
+                    fontWeight: 500,
+                    paddingBottom: idx < SAFE_USAGE_INSTRUCTIONS.length - 1 ? '8px' : 0,
+                    borderBottom: idx < SAFE_USAGE_INSTRUCTIONS.length - 1 ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      color: '#ffffff',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      marginTop: '1px',
+                    }}
+                  >
+                    {idx + 1}
+                  </span>
+                  <span>{instruction}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Alt Bilgi (Sayfa 2) */}
+          <div
+            style={{
+              paddingTop: '4px',
+              borderTop: '1px solid #f1f5f9',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <span
+              style={{
+                fontSize: '10px',
+                fontWeight: 900,
+                color: '#000000',
+                letterSpacing: '0.05em',
+              }}
+            >
+              İSG-YRD-47/00
+            </span>
+            <span style={{ fontSize: '9px', fontWeight: 600, color: '#64748b' }}>
+              Sayfa 2 / 2
+            </span>
+          </div>
         </div>
       </div>
     );
