@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/api';
+import api, { BASE_URL } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   Plus,
@@ -13,11 +13,14 @@ import {
   Loader2,
   ArrowUpDown,
   FileText,
+  Info,
   Sparkles,
   Clock,
   X,
   PackageOpen,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 import { HazmatExcelImportDialog } from '@/components/hazmat/HazmatExcelImportDialog';
@@ -31,17 +34,115 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from '@/components/ui/alert-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
+
+interface SearchableFilterPopoverProps {
+  value: string;
+  onChange: (val: string) => void;
+  options: string[];
+  allLabel: string;
+  searchPlaceholder: string;
+}
+
+function SearchableFilterPopover({
+  value,
+  onChange,
+  options,
+  allLabel,
+  searchPlaceholder,
+}: SearchableFilterPopoverProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLocaleLowerCase('tr');
+    if (!q) return options;
+    return options.filter((opt) => opt.toLocaleLowerCase('tr').includes(q));
+  }, [options, query]);
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setQuery('');
+      }}
+    >
+      <PopoverTrigger
+        type="button"
+        className="flex h-8 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-none transition-colors hover:bg-muted/30 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+      >
+        <span className="truncate text-left">
+          {value === 'ALL' ? allLabel : value}
+        </span>
+        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 p-1.5 gap-1.5">
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={searchPlaceholder}
+            className="h-7 pl-7 pr-6 text-xs bg-background"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+        <div className="max-h-56 overflow-y-auto space-y-0.5 pr-0.5">
+          <button
+            type="button"
+            onClick={() => {
+              onChange('ALL');
+              setOpen(false);
+            }}
+            className={`w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-md text-xs text-left transition-colors ${
+              value === 'ALL'
+                ? 'bg-primary/10 text-primary font-semibold'
+                : 'hover:bg-muted text-foreground'
+            }`}
+          >
+            <span className="truncate">{allLabel}</span>
+            {value === 'ALL' && <Check className="w-3.5 h-3.5 shrink-0" />}
+          </button>
+          {filtered.length === 0 ? (
+            <div className="px-2 py-3 text-center text-[11px] text-muted-foreground">
+              Eşleşen kayıt bulunamadı
+            </div>
+          ) : (
+            filtered.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => {
+                  onChange(opt);
+                  setOpen(false);
+                }}
+                className={`w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-md text-xs text-left transition-colors ${
+                  value === opt
+                    ? 'bg-primary/10 text-primary font-semibold'
+                    : 'hover:bg-muted text-foreground'
+                }`}
+              >
+                <span className="truncate">{opt}</span>
+                {value === opt && <Check className="w-3.5 h-3.5 shrink-0" />}
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function MaterialsListPage() {
   const navigate = useNavigate();
@@ -78,7 +179,6 @@ export default function MaterialsListPage() {
   }, [justUpdatedId]);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [globalDeleteId, setGlobalDeleteId] = useState<string | null>(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
   // Fetch all materials from central database
@@ -96,23 +196,6 @@ export default function MaterialsListPage() {
       }));
     },
     refetchOnMount: 'always',
-  });
-
-  // Delete single material from database
-  const globalDeleteMutation = useMutation({
-    mutationFn: async (materialId: string) => {
-      const res = await api.delete(`/hazmat/materials/${materialId}`);
-      if (!res.ok) throw new Error('Kalıcı silinemedi');
-      return res.json();
-    },
-    onSuccess: () => {
-      toast.success('Tehlikeli madde veritabanından kalıcı olarak silindi.');
-      setGlobalDeleteId(null);
-      setSelectedIds(prev => prev.filter(id => id !== globalDeleteId));
-      queryClient.invalidateQueries({ queryKey: ['global-materials-list'] });
-      queryClient.invalidateQueries({ queryKey: ['facility-materials'] });
-    },
-    onError: () => toast.error('Silme işlemi başarısız.')
   });
 
   // Bulk delete materials from database
@@ -173,17 +256,7 @@ export default function MaterialsListPage() {
     return { isInstant, hasEverBeenUpdated: true, type: 'OLD', label: null };
   };
 
-  // Resolved labels for SelectTriggers (so they NEVER show raw 'ALL' or 'all')
-  const categoryLabel = useMemo(() => {
-    if (filterCategory === 'ALL') return 'Tüm Kategoriler';
-    return filterCategory;
-  }, [filterCategory]);
-
-  const brandLabel = useMemo(() => {
-    if (filterBrand === 'ALL') return 'Tüm Markalar';
-    return filterBrand;
-  }, [filterBrand]);
-
+  // Resolved label for SelectTrigger (so it NEVER shows raw 'ALL' or 'all')
   const editStatusLabel = useMemo(() => {
     if (filterEditStatus === 'ALL') return 'Tüm Güncelleme Durumları';
     if (filterEditStatus === 'WITHIN_3H') return '⚡ Son 3 Saatte Düzenlenen';
@@ -244,19 +317,19 @@ export default function MaterialsListPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-12 font-sans antialiased">
+    <div className="max-w-7xl mx-auto space-y-3.5 pb-8 font-sans antialiased">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-3">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
               Tehlikeli Maddeler
             </h1>
-            <Badge variant="secondary" className="font-semibold text-xs px-2.5 py-0.5">
+            <Badge variant="secondary" className="font-semibold text-[11px] px-2 py-0 h-5">
               {items.length} Kayıt
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Tüm tesisler için tanımlı merkezi tehlikeli madde veritabanı.
           </p>
         </div>
@@ -265,32 +338,34 @@ export default function MaterialsListPage() {
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => setExcelImportOpen(true)}
-              className="gap-2 h-9 text-xs font-semibold"
+              className="gap-1.5 h-8 text-xs font-semibold"
             >
-              <FileSpreadsheet className="w-4 h-4 text-primary" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-primary" />
               Excel / CSV Şablon &amp; Yükle
             </Button>
           )}
           <Button
+            size="sm"
             onClick={() => navigate('/hazmat/materials/new')}
-            className="shadow-sm gap-2 h-9 text-xs font-semibold"
+            className="shadow-sm gap-1.5 h-8 text-xs font-semibold"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             Yeni Ekle
           </Button>
         </div>
       </div>
 
-      {/* Modern Filter Toolbar */}
-      <div className="bg-card border border-border/70 rounded-xl p-3.5 shadow-2xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Modern Compact Filter Toolbar */}
+      <div className="bg-card border border-border/70 rounded-lg p-2.5 shadow-2xs space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           {/* Search Input */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Ürün Adı veya Marka ara..."
-              className="pl-9 h-9 text-xs bg-background"
+              className="pl-8 h-8 text-xs bg-background"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -299,7 +374,7 @@ export default function MaterialsListPage() {
           {/* Edit Status Select */}
           <div>
             <Select value={filterEditStatus} onValueChange={(val: any) => setFilterEditStatus(val)}>
-              <SelectTrigger className="w-full h-9 bg-background text-xs">
+              <SelectTrigger className="w-full h-8 bg-background text-xs">
                 <SelectValue>{editStatusLabel}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -311,44 +386,32 @@ export default function MaterialsListPage() {
             </Select>
           </div>
 
-          {/* Category Select */}
+          {/* Category Select (Searchable) */}
           <div>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-full h-9 bg-background text-xs">
-                <SelectValue>{categoryLabel}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Tüm Kategoriler</SelectItem>
-                {uniqueCategories.map(cat => (
-                  <SelectItem key={cat as string} value={cat as string}>
-                    {cat as string}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableFilterPopover
+              value={filterCategory}
+              onChange={setFilterCategory}
+              options={uniqueCategories as string[]}
+              allLabel="Tüm Kategoriler"
+              searchPlaceholder="Kategori ara..."
+            />
           </div>
 
-          {/* Brand Select */}
+          {/* Brand Select (Searchable) */}
           <div>
-            <Select value={filterBrand} onValueChange={setFilterBrand}>
-              <SelectTrigger className="w-full h-9 bg-background text-xs">
-                <SelectValue>{brandLabel}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">Tüm Markalar</SelectItem>
-                {uniqueBrands.map(brand => (
-                  <SelectItem key={brand as string} value={brand as string}>
-                    {brand as string}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableFilterPopover
+              value={filterBrand}
+              onChange={setFilterBrand}
+              options={uniqueBrands as string[]}
+              allLabel="Tüm Markalar"
+              searchPlaceholder="Marka ara..."
+            />
           </div>
         </div>
 
         {/* Clear Filters bar if active */}
         {hasActiveFilters && (
-          <div className="flex items-center justify-between pt-1 border-t border-border/40 text-xs">
+          <div className="flex items-center justify-between pt-1.5 border-t border-border/40 text-xs">
             <span className="text-muted-foreground">
               Filtreler uygulandı: <strong className="text-foreground">{filteredItems.length}</strong> madde listeleniyor
             </span>
@@ -356,9 +419,9 @@ export default function MaterialsListPage() {
               variant="ghost"
               size="sm"
               onClick={resetFilters}
-              className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1 px-2"
+              className="h-6 text-[11px] text-muted-foreground hover:text-foreground gap-1 px-2"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3 h-3" />
               Filtreleri Temizle
             </Button>
           </div>
@@ -367,14 +430,14 @@ export default function MaterialsListPage() {
 
       {/* Bulk Delete Bar */}
       {selectedIds.length > 0 && isGlobalAdmin && (
-        <div className="bg-muted/40 p-3 rounded-xl flex items-center justify-between border border-border/80 shadow-2xs">
+        <div className="bg-muted/40 px-3 py-2 rounded-lg flex items-center justify-between border border-border/80 shadow-2xs">
           <span className="text-xs font-semibold text-foreground">
             {selectedIds.length} madde seçildi
           </span>
           <Button
             variant="destructive"
             size="sm"
-            className="gap-1.5 h-8 text-xs font-semibold"
+            className="gap-1.5 h-7 text-xs font-semibold"
             onClick={() => setBulkDeleteConfirm(true)}
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -384,7 +447,7 @@ export default function MaterialsListPage() {
       )}
 
       {/* Materials Table Card */}
-      <div className="bg-card border border-border/70 rounded-xl shadow-2xs overflow-hidden">
+      <div className="bg-card border border-border/70 rounded-lg shadow-2xs overflow-hidden">
         {isLoading ? (
           <div className="py-16 text-center text-muted-foreground flex flex-col items-center justify-center gap-2.5">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -419,10 +482,10 @@ export default function MaterialsListPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left border-collapse">
-              <thead className="bg-muted/40 text-muted-foreground font-semibold uppercase tracking-wider text-[11px] border-b border-border/60">
+              <thead className="bg-muted/40 text-muted-foreground font-semibold uppercase tracking-wider text-[10.5px] border-b border-border/60">
                 <tr>
                   {isGlobalAdmin && (
-                    <th className="px-4 py-3 w-10 text-center">
+                    <th className="px-3 py-2 w-9 text-center">
                       <input
                         type="checkbox"
                         className="rounded border-input text-primary focus:ring-primary cursor-pointer w-3.5 h-3.5"
@@ -435,7 +498,7 @@ export default function MaterialsListPage() {
                     </th>
                   )}
                   <th
-                    className="px-4 py-3 font-semibold cursor-pointer hover:text-foreground transition-colors select-none"
+                    className="px-3 py-2 font-semibold cursor-pointer hover:text-foreground transition-colors select-none"
                     onClick={() => {
                       if (sortField === 'name') {
                         setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -451,7 +514,7 @@ export default function MaterialsListPage() {
                     </div>
                   </th>
                   <th
-                    className="px-4 py-3 font-semibold cursor-pointer hover:text-foreground transition-colors select-none"
+                    className="px-3 py-2 font-semibold cursor-pointer hover:text-foreground transition-colors select-none"
                     onClick={() => {
                       if (sortField === 'category') {
                         setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -466,8 +529,8 @@ export default function MaterialsListPage() {
                       <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
                     </div>
                   </th>
-                  <th className="px-4 py-3 font-semibold">Tehlike Etiketleri</th>
-                  <th className="px-4 py-3 font-semibold text-right">İşlemler</th>
+                  <th className="px-3 py-2 font-semibold">Tehlike Etiketleri</th>
+                  <th className="px-3 py-2 font-semibold text-right">İşlemler</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60 font-sans">
@@ -483,7 +546,7 @@ export default function MaterialsListPage() {
                     >
                       {/* Checkbox */}
                       {isGlobalAdmin && (
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-3 py-2 text-center">
                           <input
                             type="checkbox"
                             className="rounded border-input text-primary focus:ring-primary cursor-pointer w-3.5 h-3.5"
@@ -497,10 +560,10 @@ export default function MaterialsListPage() {
                       )}
 
                       {/* Madde Adı & Marka */}
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         <div className="space-y-0.5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold text-sm text-foreground">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-semibold text-[13px] text-foreground leading-tight">
                               {item.productName}
                               {item.facilityAmount != null && Number(item.facilityAmount) > 0 && item.facilityUnit && (
                                 <span className="font-medium text-muted-foreground ml-1">
@@ -510,7 +573,7 @@ export default function MaterialsListPage() {
                             </span>
 
                             {updateStatus.isInstant && (
-                              <span className="inline-flex items-center gap-1 bg-emerald-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-full shadow-2xs animate-pulse">
+                              <span className="inline-flex items-center gap-1 bg-emerald-600 text-white font-bold text-[10px] px-1.5 py-0.5 rounded-full shadow-2xs animate-pulse">
                                 <Sparkles className="w-2.5 h-2.5" />
                                 Şimdi Düzenlendi
                               </span>
@@ -518,7 +581,7 @@ export default function MaterialsListPage() {
 
                             {!updateStatus.isInstant && updateStatus.type === '3H' && (
                               <span
-                                className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium"
+                                className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                                 title={item.updatedAt ? new Date(item.updatedAt).toLocaleString('tr-TR') : ''}
                               >
                                 <Clock className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
@@ -528,7 +591,7 @@ export default function MaterialsListPage() {
 
                             {!updateStatus.isInstant && updateStatus.type === '6H' && (
                               <span
-                                className="inline-flex items-center gap-1 bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 text-[10px] px-2 py-0.5 rounded-full font-medium"
+                                className="inline-flex items-center gap-1 bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 text-[10px] px-1.5 py-0.5 rounded-full font-medium"
                                 title={item.updatedAt ? new Date(item.updatedAt).toLocaleString('tr-TR') : ''}
                               >
                                 <Clock className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
@@ -536,29 +599,29 @@ export default function MaterialsListPage() {
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="text-[11px] text-muted-foreground leading-tight">
                             {item.brandName || <span className="italic">Marka Belirtilmemiş</span>}
                           </div>
                         </div>
                       </td>
 
                       {/* Kategori */}
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className="font-normal text-[11px] bg-background">
+                      <td className="px-3 py-2">
+                        <Badge variant="outline" className="font-normal text-[10.5px] bg-background">
                           {item.category?.name || '-'}
                         </Badge>
                       </td>
 
                       {/* Tehlike Etiketleri */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1 flex-wrap">
                           {item.hazardLabels && item.hazardLabels.length > 0 ? (
                             item.hazardLabels.slice(0, 4).map((hl: any) => (
                               <img
                                 key={hl.label?.id || hl.id}
                                 src={hl.label?.imageUrl}
                                 alt={hl.label?.name}
-                                className="w-7 h-7 rounded-md border border-border/80 object-contain bg-white shadow-2xs p-0.5"
+                                className="w-6 h-6 rounded border border-border/80 object-contain bg-white shadow-2xs p-0.5"
                                 title={hl.label?.name}
                               />
                             ))
@@ -573,47 +636,62 @@ export default function MaterialsListPage() {
                         </div>
                       </td>
 
-                      {/* İşlemler */}
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
-                            title="Bilgi Kartı Yazdır"
-                            onClick={() => setPrintMaterial(item)}
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                            title="Detay Görüntüle"
-                            onClick={() => navigate(`/hazmat/materials/view/${item.id}`)}
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                            title="Düzenle"
-                            onClick={() => navigate(`/hazmat/materials/edit/${item.id}`)}
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          {isGlobalAdmin && (
+                      {/* İşlemler (2 Satır: Üstte SDS + Yazdır, Altta Görüntüle + Düzenle) */}
+                      <td className="px-3 py-1.5 text-right">
+                        <div className="flex flex-col items-end gap-0.5">
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                              title="Veritabanından Sil"
-                              onClick={() => setGlobalDeleteId(item.id)}
+                              className={`h-6 w-6 p-0 border transition-colors ${
+                                item.sdsUrl
+                                  ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20'
+                                  : 'text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/30 hover:bg-red-500/20'
+                              }`}
+                              title={item.sdsUrl ? 'SDS Belgesini Görüntüle' : 'SDS henüz yüklenmemiştir'}
+                              onClick={() => {
+                                if (item.sdsUrl) {
+                                  const url = item.sdsUrl.startsWith('http')
+                                    ? item.sdsUrl
+                                    : `${BASE_URL}${item.sdsUrl}`;
+                                  window.open(url, '_blank', 'noopener,noreferrer');
+                                } else {
+                                  toast.warning('Bu madde için SDS henüz yüklenmemiştir.');
+                                }
+                              }}
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <FileText className="w-3.5 h-3.5" />
                             </Button>
-                          )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                              title="Bilgi Kartı Yazdır"
+                              onClick={() => setPrintMaterial(item)}
+                            >
+                              <Info className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                              title="Detay Görüntüle"
+                              onClick={() => navigate(`/hazmat/materials/view/${item.id}`)}
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                              title="Düzenle"
+                              onClick={() => navigate(`/hazmat/materials/edit/${item.id}`)}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -624,27 +702,6 @@ export default function MaterialsListPage() {
           </div>
         )}
       </div>
-
-      {/* Single Delete Confirmation */}
-      <AlertDialog open={!!globalDeleteId} onOpenChange={(open) => !open && setGlobalDeleteId(null)}>
-        <AlertDialogContent className="rounded-2xl border border-border shadow-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg font-bold">Tehlikeli Maddeyi Veritabanından Sil</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-muted-foreground">
-              Bu tehlikeli maddeyi merkezi veritabanından kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="text-xs h-8">İptal</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs h-8"
-              onClick={() => globalDeleteId && globalDeleteMutation.mutate(globalDeleteId)}
-            >
-              {globalDeleteMutation.isPending ? 'Siliniyor...' : 'Kalıcı Olarak Sil'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Bulk Delete Confirmation */}
       <BulkDeleteConfirmDialog

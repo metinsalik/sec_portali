@@ -5,6 +5,7 @@ import fs from 'fs';
 import multer from 'multer';
 import sharp from 'sharp';
 import { authMiddleware, AuthRequest } from '../../middleware/auth';
+import { syncImprovementHistoryToAuditFinding } from '../../services/auditImprovementSync';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -1075,6 +1076,13 @@ router.post('/records', async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ success: false, message: 'Hastane ve Tespit alanları zorunludur.' });
     }
 
+    if (sheetType === 'MERKEZI_DENETIMLER') {
+      return res.status(403).json({
+        success: false,
+        message: 'Merkezi Denetimler kayıtları Entegre Risk ve Güvenlik Denetimi modülünden yayınlandığında otomatik aktarılır; buradan manuel yeni kayıt açılamaz.',
+      });
+    }
+
     // Sıradaki rowNo değerini bul
     const lastRecord = await prisma.improvementRecord.findFirst({
       where: { facilityId, sheetType },
@@ -1374,6 +1382,15 @@ router.put('/records/:id', async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'Kayıt bulunamadı.' });
     }
 
+    if (existing.sourceModule === 'IRSC_AUDIT' || existing.sheetType === 'MERKEZI_DENETIMLER') {
+      return res.status(403).json({
+        success: false,
+        message: 'Merkezi Denetim modülünden aktarılan kayıtlar buradan silinemez.',
+      });
+    }
+
+    const isAuditSynced = existing.sourceModule === 'IRSC_AUDIT';
+
     const finalEquipNo = equipmentNo !== undefined ? (equipmentNo?.trim() || null) : existing.equipmentNo;
     const finalEquipName = equipmentName !== undefined ? (equipmentName?.trim() || null) : existing.equipmentName;
     let finalEquip = equipment !== undefined ? (equipment?.trim() || null) : existing.equipment;
@@ -1381,9 +1398,11 @@ router.put('/records/:id', async (req: AuthRequest, res: Response) => {
       finalEquip = [finalEquipNo, finalEquipName].filter(Boolean).join(' - ');
     }
 
-    const validPhotos = findingPhotos !== undefined
-      ? (Array.isArray(findingPhotos) ? findingPhotos.slice(0, 3) : [])
-      : ((existing.findingPhotos as any) ?? []);
+    const validPhotos = isAuditSynced
+      ? ((existing.findingPhotos as any) ?? [])
+      : (findingPhotos !== undefined
+        ? (Array.isArray(findingPhotos) ? findingPhotos.slice(0, 3) : [])
+        : ((existing.findingPhotos as any) ?? []));
     const validDocs = documents !== undefined
       ? (Array.isArray(documents) ? documents : [])
       : ((existing.documents as any) ?? []);
@@ -1397,23 +1416,34 @@ router.put('/records/:id', async (req: AuthRequest, res: Response) => {
       finalProgress = 0;
     }
 
+    // Merkezi Denetim (IRSC_AUDIT) kayıtlarında renovation-report'tan gelen temel bulgu alanları kilitlidir
+    const safeLocation = isAuditSynced ? existing.location : location;
+    const safeFinding = isAuditSynced ? existing.finding : finding;
+    const safeRiskScore = isAuditSynced ? existing.riskScore : riskScore;
+    const safeActionPlan = isAuditSynced ? existing.actionPlan : actionPlan;
+    const safeAuditName = isAuditSynced ? existing.auditName : auditName;
+    const safeCategory = isAuditSynced ? existing.category : category;
+    const safeRecordDate = isAuditSynced
+      ? existing.recordDate
+      : (recordDate ? new Date(recordDate) : null);
+
     const updated = await prisma.improvementRecord.update({
       where: { id },
       data: {
-        location,
+        location: safeLocation,
         equipment: finalEquip,
         equipmentNo: finalEquipNo,
         equipmentName: finalEquipName,
-        finding,
-        riskScore,
+        finding: safeFinding,
+        riskScore: safeRiskScore,
         assignedTo,
         status,
         progress: finalProgress,
-        actionPlan,
+        actionPlan: safeActionPlan,
         currentNote,
-        auditName,
-        category,
-        recordDate: recordDate ? new Date(recordDate) : null,
+        auditName: safeAuditName,
+        category: safeCategory,
+        recordDate: safeRecordDate,
         dueDate: dueDate ? new Date(dueDate) : null,
         applicationType,
         technicalManagerDesc: technicalManagerDesc !== undefined ? (technicalManagerDesc || null) : existing.technicalManagerDesc,
@@ -1498,6 +1528,8 @@ router.put('/records/:id', async (req: AuthRequest, res: Response) => {
       });
     }
 
+    await syncImprovementHistoryToAuditFinding(id);
+
     res.json({ success: true, data: updated });
   } catch (error: any) {
     console.error('Error updating improvement record:', error);
@@ -1562,6 +1594,8 @@ router.patch('/records/:id/status', async (req: AuthRequest, res: Response) => {
         }
       });
     }
+
+    await syncImprovementHistoryToAuditFinding(id);
 
     res.json({ success: true, data: updated });
   } catch (error: any) {
@@ -1767,6 +1801,8 @@ router.patch('/records/:id/action-note', async (req: AuthRequest, res: Response)
       }
     });
 
+    await syncImprovementHistoryToAuditFinding(id);
+
     res.json({ success: true, data: updated });
   } catch (error: any) {
     console.error('Error adding action note:', error);
@@ -1939,6 +1975,14 @@ router.post('/records/bulk-action-note', async (req: AuthRequest, res: Response)
       });
     }
 
+    // Merkezi Denetim (IRSC_AUDIT) kaynaklı kayıtların aksiyonlarını ilgili denetim bulgularına da yansıt
+    const auditLinkedRecords = existingRecords.filter(
+      (r) => r.sourceModule === 'IRSC_AUDIT' && r.sourceFindingId
+    );
+    for (const r of auditLinkedRecords) {
+      await syncImprovementHistoryToAuditFinding(r.id);
+    }
+
     res.json({
       success: true,
       updatedCount,
@@ -1965,6 +2009,13 @@ router.delete('/records/:id', async (req: AuthRequest, res: Response) => {
 
     if (!existing) {
       return res.status(404).json({ success: false, message: 'Kayıt bulunamadı.' });
+    }
+
+    if (existing.sourceModule === 'IRSC_AUDIT' || existing.sheetType === 'MERKEZI_DENETIMLER') {
+      return res.status(403).json({
+        success: false,
+        message: 'Merkezi Denetim modülünden aktarılan kayıtlar buradan silinemez.',
+      });
     }
 
     const { facilityId, sheetType, rowNo } = existing;
@@ -2020,7 +2071,11 @@ router.post('/records/bulk-delete', async (req: AuthRequest, res: Response) => {
 
     const deletedCount = await prisma.$transaction(async (tx) => {
       const toDelete = await tx.improvementRecord.findMany({
-        where: { id: { in: uniqueIds } },
+        where: {
+          id: { in: uniqueIds },
+          sheetType: { not: 'MERKEZI_DENETIMLER' },
+          OR: [{ sourceModule: null }, { sourceModule: { not: 'IRSC_AUDIT' } }],
+        },
         select: { id: true, facilityId: true, sheetType: true },
       });
 

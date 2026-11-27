@@ -1,18 +1,18 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { 
-  Search, ArrowUp, ArrowDown, Download, RefreshCw, X, Calendar, 
+import {
+  Search, ArrowUp, ArrowDown, Download, RefreshCw, X, Calendar,
   Tag, Shield, AlertTriangle, CheckCircle2, Building2, Filter, Plus, Check, Trash2, ListOrdered,
-  Camera, FileText, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Sparkles 
+  Camera, FileText, ExternalLink, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { type ImprovementRecord, type FacilityOption, type ImprovementFileAttachment, formatCurrency } from './types';
 import { ImprovementMediaLightbox } from './ImprovementMediaManager';
-import { 
-  InspectRecordDialog, EditRecordDialog, ActionNoteDialog, CreateRecordDialog 
+import {
+  InspectRecordDialog, EditRecordDialog, ActionNoteDialog, CreateRecordDialog
 } from './ImprovementRecordDialogs';
 import { useAuth } from '@/context/AuthContext';
 import { BulkDeleteConfirmDialog } from '@/components/shared/BulkDeleteConfirmDialog';
@@ -217,7 +217,7 @@ export const ImprovementTable: React.FC<Props> = ({
         const p = parseInt(saved, 10);
         if (p > 0) return p;
       }
-    } catch {}
+    } catch { }
     return 1;
   });
   const [pageSize, setPageSize] = useState<number>(() => {
@@ -227,7 +227,7 @@ export const ImprovementTable: React.FC<Props> = ({
         const ps = parseInt(saved, 10);
         if (ps > 0) return ps;
       }
-    } catch {}
+    } catch { }
     return 25;
   });
   const isFirstMount = useRef(true);
@@ -326,7 +326,7 @@ export const ImprovementTable: React.FC<Props> = ({
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
-        filterPopoverRef.current && 
+        filterPopoverRef.current &&
         !filterPopoverRef.current.contains(e.target as Node) &&
         !activeButtonElRef.current?.contains(e.target as Node)
       ) {
@@ -378,8 +378,8 @@ export const ImprovementTable: React.FC<Props> = ({
     // 2. facilities prop'undan eşleşen tesisin adını bul
     const targetId = record.facilityId || record.facility?.id;
     if (targetId && facilities && facilities.length > 0) {
-      const found = facilities.find(f => 
-        f.id === targetId || 
+      const found = facilities.find(f =>
+        f.id === targetId ||
         f.id.replace(/İ/g, 'I').replace(/İ/g, 'I') === targetId.replace(/İ/g, 'I').replace(/İ/g, 'I') ||
         (f.shortName && f.shortName.toUpperCase() === targetId.toUpperCase())
       );
@@ -531,8 +531,8 @@ export const ImprovementTable: React.FC<Props> = ({
     setPopoverSearch('');
     setPopoverTextFilter(currentFilter?.textSearch || '');
     setPopoverSelectedValues(
-      currentFilter?.selectedValues 
-        ? new Set(currentFilter.selectedValues) 
+      currentFilter?.selectedValues
+        ? new Set(currentFilter.selectedValues)
         : new Set(uniqueVals)
     );
   };
@@ -876,7 +876,7 @@ export const ImprovementTable: React.FC<Props> = ({
     return (
       <th className={`px-2 py-2 ${widthClass} select-none relative group`}>
         <div className={`flex items-center gap-1 ${alignCenter ? 'justify-center' : 'justify-between'}`}>
-          
+
           {/* Tıklanınca Sırala */}
           <button
             type="button"
@@ -899,11 +899,10 @@ export const ImprovementTable: React.FC<Props> = ({
             type="button"
             onClick={(e) => handleOpenFilter(colKey, e)}
             title={`${label} filtresi`}
-            className={`p-0.5 rounded transition-colors shrink-0 ${
-              isFiltered
+            className={`p-0.5 rounded transition-colors shrink-0 ${isFiltered
                 ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-muted-foreground/55 hover:text-foreground hover:bg-muted'
-            }`}
+              }`}
           >
             <Filter className={`w-2.5 h-2.5 ${isFiltered ? 'fill-current' : ''}`} />
           </button>
@@ -946,387 +945,396 @@ export const ImprovementTable: React.FC<Props> = ({
   return (
     <>
       <div className="bg-card text-card-foreground border border-border/80 rounded-2xl overflow-hidden shadow-xs font-sans">
-      
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 1. ÜST BAŞLIK ALANI (varsa headerContent)                           */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {headerContent && (
-        <div className="p-4 sm:p-5 border-b border-border/60 bg-muted/20">
-          {headerContent}
-        </div>
-      )}
 
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 2. CANLI METRİKLER VE ARAMA/EYLEM BARI (TEK SATIR KOMPAKT)          */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div className="px-3 py-2 bg-muted/10 border-b border-border/60 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-        
-        {/* Sol: Canlı İstatistikler & Metrik Barı */}
-        <div className="flex items-center gap-x-2 text-[11px] text-muted-foreground font-medium whitespace-nowrap shrink-0">
-          <span className="text-foreground" title="Gösterilen / Toplam kayıt">
-            <strong>{filteredRecords.length}</strong>/{totalRecordsCount ?? records.length} kayıt
-          </span>
-          <span className="text-border">|</span>
-          <span>Açık: <strong className="text-foreground">{metrics.open}</strong></span>
-          <span className="text-border">|</span>
-          <span>Kritik: <strong className="text-red-600 dark:text-red-400 font-bold">{metrics.critical}</strong></span>
-          <span className="text-border">|</span>
-          <span>Açık Kritik: <strong className="text-red-600 dark:text-red-400 font-bold">{metrics.openCritical}</strong></span>
-          <span className="text-border">|</span>
-          <span>Açık Yüksek: <strong className="text-orange-600 dark:text-orange-400 font-bold">{metrics.openHigh}</strong></span>
-          <span className="text-border">|</span>
-          <span>Tamam: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{metrics.completed}</strong></span>
-          <span className="text-border">|</span>
-          <span className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-bold" title="Ağırlıklı İlerleme Yüzdesi">
-            İlerleme: %{metrics.avgProgress}
-          </span>
-        </div>
-
-        {/* Sağ: Genel Arama & İkon Eylem Butonları */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          
-          {/* Genel Arama Input */}
-          <div className="relative w-36 xl:w-44">
-            <Search className="w-3 h-3 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tabloda ara..."
-              className="w-full h-7 pl-7 pr-6 rounded-md border bg-background text-foreground text-xs focus:ring-2 focus:ring-primary outline-none"
-            />
-            {searchTerm && (
-              <button 
-                onClick={() => setSearchTerm('')} 
-                title="Aramayı temizle"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
+        {/* ─────────────────────────────────────────────────────────────────── */}
+        {/* 1. ÜST BAŞLIK ALANI (varsa headerContent)                           */}
+        {/* ─────────────────────────────────────────────────────────────────── */}
+        {headerContent && (
+          <div className="p-4 sm:p-5 border-b border-border/60 bg-muted/20">
+            {headerContent}
           </div>
+        )}
 
-          {/* Filtreleri Temizle İkonu */}
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearAllFilters}
-              className="h-7 px-1.5 text-[11px] text-primary hover:bg-primary/10 shrink-0"
-              title="Tüm filtreleri temizle"
-            >
-              <X className="w-3.5 h-3.5" />
-            </Button>
-          )}
+        {/* ─────────────────────────────────────────────────────────────────── */}
+        {/* 2. CANLI METRİKLER VE ARAMA/EYLEM BARI (TEK SATIR KOMPAKT)          */}
+        {/* ─────────────────────────────────────────────────────────────────── */}
+        <div className="px-3 py-2 bg-muted/10 border-b border-border/60 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
 
-          {/* Yenile */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRefresh}
-            className="h-7 w-7 p-0 shrink-0"
-            title="Yenile"
-            aria-label="Yenile"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-
-          {/* Excel Export */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            disabled={filteredRecords.length === 0}
-            className="h-7 w-7 p-0 shrink-0"
-            title="Excel İndir"
-            aria-label="Excel İndir"
-          >
-            <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-          </Button>
-
-          {/* Numaraları Yeniden Diz (1, 2, 3...) */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRenumber}
-            disabled={isRenumbering || loading || records.length === 0}
-            className="h-7 w-7 p-0 shrink-0"
-            title="Numaraları Sırala (1, 2, 3...)"
-            aria-label="Numaraları Sırala"
-          >
-            <ListOrdered className={`w-3.5 h-3.5 text-blue-600 dark:text-blue-400 ${isRenumbering ? 'animate-spin' : ''}`} />
-          </Button>
-
-          {/* Yeni Kayıt Ekle (+) */}
-          {!hideCreateButton && sheetType !== 'EXECUTIVE' && (
-            <Button
-              size="sm"
-              onClick={() => setShowCreateModal(true)}
-              className="h-7 w-7 p-0 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
-              title="Yeni Kayıt Ekle"
-              aria-label="Yeni Kayıt Ekle"
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
-          )}
-
-        </div>
-
-      </div>
-
-      {/* Yöneticiler İçin Toplu İşlem Barı (Toplu Aksiyon Gir & Toplu Sil) */}
-      {hasAdminAccess && selectedRecordIds.size > 0 && (
-        <div className="px-4 py-2.5 bg-primary/5 border-b border-primary/20 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-foreground">
-            <span className="font-semibold">
-              {selectedRecordIds.size} kayıt seçildi
+          {/* Sol: Canlı İstatistikler & Metrik Barı */}
+          <div className="flex items-center gap-x-2 text-[11px] text-muted-foreground font-medium whitespace-nowrap shrink-0">
+            <span className="text-foreground" title="Gösterilen / Toplam kayıt">
+              <strong>{filteredRecords.length}</strong>/{totalRecordsCount ?? records.length} kayıt
             </span>
-            {filteredRecords.length > selectedRecordIds.size && (
-              <button
-                type="button"
-                onClick={selectAllFiltered}
-                className="text-primary hover:underline font-semibold ml-1 cursor-pointer"
-              >
-                Filtrelenen tüm {filteredRecords.length} kaydı seç
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setSelectedRecordIds(new Set())}
-              className="text-muted-foreground hover:text-foreground underline ml-1 cursor-pointer"
-            >
-              Seçimi Temizle
-            </button>
+            <span className="text-border">|</span>
+            <span>Açık: <strong className="text-foreground">{metrics.open}</strong></span>
+            <span className="text-border">|</span>
+            <span>Kritik: <strong className="text-red-600 dark:text-red-400 font-bold">{metrics.critical}</strong></span>
+            <span className="text-border">|</span>
+            <span>Açık Kritik: <strong className="text-red-600 dark:text-red-400 font-bold">{metrics.openCritical}</strong></span>
+            <span className="text-border">|</span>
+            <span>Açık Yüksek: <strong className="text-orange-600 dark:text-orange-400 font-bold">{metrics.openHigh}</strong></span>
+            <span className="text-border">|</span>
+            <span>Tamam: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{metrics.completed}</strong></span>
+            <span className="text-border">|</span>
+            <span className="bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-bold" title="Ağırlıklı İlerleme Yüzdesi">
+              İlerleme: %{metrics.avgProgress}
+            </span>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setBulkActionOpen(true)}
-              className="h-8 text-xs flex items-center gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Toplu Aksiyon Gir ({selectedRecordIds.size})
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={() => setBulkDeleteConfirmOpen(true)}
-              className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Seçilenleri Sil ({selectedRecordIds.size})
-            </Button>
-          </div>
-        </div>
-      )}
 
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* EXCEL FİLTRE POPOVER MENÜSÜ                                         */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {activeFilterCol && filterPos && (
-        <div 
-          ref={filterPopoverRef}
-          style={{
-            position: 'fixed',
-            top: `${filterPos.top}px`,
-            left: `${filterPos.left}px`,
-            zIndex: 9999,
-          }}
-          className="bg-card text-card-foreground border border-border/80 rounded-lg shadow-2xl w-80 p-3.5 flex flex-col max-h-[min(520px,calc(100vh-24px))] animate-in fade-in zoom-in-95 duration-150"
-        >
-          {/* Popover Header (Sabit - shrink-0) */}
-          <div className="flex items-center justify-between border-b pb-2 shrink-0">
-            <div className="flex items-center gap-1.5 min-w-0 pr-2">
-              <Filter className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="text-xs font-semibold text-foreground truncate">
-                {getColHeaderName(activeFilterCol)}
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-1 shrink-0">
-              {columnFilters[activeFilterCol] && (
+          {/* Sağ: Genel Arama & İkon Eylem Butonları */}
+          <div className="flex items-center gap-1.5 shrink-0">
+
+            {/* Genel Arama Input */}
+            <div className="relative w-36 xl:w-44">
+              <Search className="w-3 h-3 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tabloda ara..."
+                className="w-full h-7 pl-7 pr-6 rounded-md border bg-background text-foreground text-xs focus:ring-2 focus:ring-primary outline-none"
+              />
+              {searchTerm && (
                 <button
-                  type="button"
-                  onClick={() => handleClearColumnFilter(activeFilterCol)}
-                  title="Filtreyi Temizle"
-                  className="text-[11px] text-destructive hover:underline px-1.5 py-0.5 rounded font-medium"
+                  onClick={() => setSearchTerm('')}
+                  title="Aramayı temizle"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  Temizle
+                  <X className="w-3 h-3" />
                 </button>
               )}
-              <button 
-                type="button"
-                onClick={() => {
-                  setActiveFilterCol(null);
-                  setFilterPos(null);
-                }}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted"
-                title="Kapat"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
+
+            {/* Filtreleri Temizle İkonu */}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearAllFilters}
+                className="h-7 px-1.5 text-[11px] text-primary hover:bg-primary/10 shrink-0"
+                title="Tüm filtreleri temizle"
+              >
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            )}
+
+            {/* Yenile */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              className="h-7 w-7 p-0 shrink-0"
+              title="Yenile"
+              aria-label="Yenile"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+
+            {/* Excel Export */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={filteredRecords.length === 0}
+              className="h-7 w-7 p-0 shrink-0"
+              title="Excel İndir"
+              aria-label="Excel İndir"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            </Button>
+
+            {/* Numaraları Yeniden Diz (1, 2, 3...) */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRenumber}
+              disabled={isRenumbering || loading || records.length === 0}
+              className="h-7 w-7 p-0 shrink-0"
+              title="Numaraları Sırala (1, 2, 3...)"
+              aria-label="Numaraları Sırala"
+            >
+              <ListOrdered className={`w-3.5 h-3.5 text-blue-600 dark:text-blue-400 ${isRenumbering ? 'animate-spin' : ''}`} />
+            </Button>
+
+            {/* Yeni Kayıt Ekle (+) */}
+            {!hideCreateButton && sheetType !== 'EXECUTIVE' && sheetType !== 'MERKEZI_DENETIMLER' && (
+              <Button
+                size="sm"
+                onClick={() => setShowCreateModal(true)}
+                className="h-7 w-7 p-0 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+                title="Yeni Kayıt Ekle"
+                aria-label="Yeni Kayıt Ekle"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            )}
+
           </div>
 
-          {/* Popover Scrollable Body (flex-1 overflow-y-auto space-y-3 min-h-0 py-2 pr-1) */}
-          <div className="flex-1 overflow-y-auto space-y-3 min-h-0 py-1 pr-1">
-            {/* Sıralama Hızlı Seçenekleri */}
-            <div className="space-y-1 border-b pb-2 text-xs">
+        </div>
+
+        {/* Yöneticiler İçin Toplu İşlem Barı (Toplu Aksiyon Gir & Toplu Sil) */}
+        {hasAdminAccess && selectedRecordIds.size > 0 && (
+          <div className="px-4 py-2.5 bg-primary/5 border-b border-primary/20 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-foreground">
+              <span className="font-semibold">
+                {selectedRecordIds.size} kayıt seçildi
+              </span>
+              {filteredRecords.length > selectedRecordIds.size && (
+                <button
+                  type="button"
+                  onClick={selectAllFiltered}
+                  className="text-primary hover:underline font-semibold ml-1 cursor-pointer"
+                >
+                  Filtrelenen tüm {filteredRecords.length} kaydı seç
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => {
-                  setSortField(activeFilterCol);
-                  setSortOrder('asc');
-                  setActiveFilterCol(null);
-                  setFilterPos(null);
-                }}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted text-foreground text-left transition-colors font-medium"
+                onClick={() => setSelectedRecordIds(new Set())}
+                className="text-muted-foreground hover:text-foreground underline ml-1 cursor-pointer"
               >
-                <ArrowUp className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span>Artan sırala (A'dan Z'ye)</span>
+                Seçimi Temizle
               </button>
-              <button
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
                 type="button"
-                onClick={() => {
-                  setSortField(activeFilterCol);
-                  setSortOrder('desc');
-                  setActiveFilterCol(null);
-                  setFilterPos(null);
-                }}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted text-foreground text-left transition-colors font-medium"
+                size="sm"
+                onClick={() => setBulkActionOpen(true)}
+                className="h-8 text-xs flex items-center gap-1.5"
               >
-                <ArrowDown className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span>Azalan sırala (Z'den A'ya)</span>
-              </button>
-            </div>
-
-            {/* Metin İçerir Araması */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium text-muted-foreground block">
-                Metin içerir
-              </label>
-              <input
-                type="text"
-                value={popoverTextFilter}
-                onChange={(e) => setPopoverTextFilter(e.target.value)}
-                placeholder="Arama yapın..."
-                className="w-full h-8 px-2.5 rounded-md border border-input bg-background text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-
-            {/* Değerlerde Arama & Checkbox Listesi */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-medium text-muted-foreground block">
-                Seçenek filtresi
-              </label>
-              <input
-                type="text"
-                value={popoverSearch}
-                onChange={(e) => setPopoverSearch(e.target.value)}
-                placeholder="Seçenekleri filtrele..."
-                className="w-full h-8 px-2.5 rounded-md border border-input bg-background text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
-              />
-
-              {/* Değerler Listesi & Checkbox */}
+                <Sparkles className="w-3.5 h-3.5" />
+                Toplu Aksiyon Gir ({selectedRecordIds.size})
+              </Button>
               {(() => {
-                const allVals = getUniqueColumnValues(activeFilterCol);
-                const filteredVals = allVals.filter(v => 
-                  v.toLowerCase().includes(popoverSearch.toLowerCase())
-                );
-                const isAllSelected = filteredVals.length > 0 && filteredVals.every(v => popoverSelectedValues.has(v));
-
+                const deletableCount = Array.from(selectedRecordIds).filter((sid) => {
+                  const rec = records.find((r) => r.id === sid);
+                  return rec && rec.sourceModule !== 'IRSC_AUDIT' && rec.sheetType !== 'MERKEZI_DENETIMLER';
+                }).length;
+                if (deletableCount === 0) return null;
                 return (
-                  <div className="space-y-1 border rounded-md p-1.5 bg-muted/20">
-                    {/* Tümünü Seç Checkbox */}
-                    <label className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-muted/60 cursor-pointer text-xs font-semibold text-foreground border-b pb-1 select-none">
-                      <input
-                        type="checkbox"
-                        checked={isAllSelected}
-                        onChange={() => toggleSelectAll(filteredVals)}
-                        className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5"
-                      />
-                      <span>Tümünü Seç ({filteredVals.length})</span>
-                    </label>
-
-                    {/* Değer Elemanları */}
-                    <div className="max-h-36 overflow-y-auto space-y-0.5 pr-1">
-                      {filteredVals.length === 0 ? (
-                        <div className="p-2 text-center text-xs text-muted-foreground">
-                          Değer bulunamadı
-                        </div>
-                      ) : (
-                        filteredVals.map(val => {
-                          const isChecked = popoverSelectedValues.has(val);
-                          return (
-                            <label
-                              key={val}
-                              className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-muted cursor-pointer text-xs text-foreground truncate select-none"
-                              title={val}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => toggleValueSelect(val)}
-                                className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5 shrink-0"
-                              />
-                              <span className="truncate">{val}</span>
-                            </label>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setBulkDeleteConfirmOpen(true)}
+                    className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Seçilenleri Sil ({deletableCount})
+                  </Button>
                 );
               })()}
             </div>
           </div>
+        )}
 
-          {/* Popover Butonları (Sabit - shrink-0) */}
-          <div className="flex items-center justify-between pt-2.5 border-t shrink-0 mt-auto">
-            {columnFilters[activeFilterCol] ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleClearColumnFilter(activeFilterCol)}
-                className="h-8 text-xs text-destructive hover:bg-destructive/10 p-1.5 rounded-md"
-              >
-                Filtreyi Kaldır
-              </Button>
-            ) : <div />}
+        {/* ─────────────────────────────────────────────────────────────────── */}
+        {/* EXCEL FİLTRE POPOVER MENÜSÜ                                         */}
+        {/* ─────────────────────────────────────────────────────────────────── */}
+        {activeFilterCol && filterPos && (
+          <div
+            ref={filterPopoverRef}
+            style={{
+              position: 'fixed',
+              top: `${filterPos.top}px`,
+              left: `${filterPos.left}px`,
+              zIndex: 9999,
+            }}
+            className="bg-card text-card-foreground border border-border/80 rounded-lg shadow-2xl w-80 p-3.5 flex flex-col max-h-[min(520px,calc(100vh-24px))] animate-in fade-in zoom-in-95 duration-150"
+          >
+            {/* Popover Header (Sabit - shrink-0) */}
+            <div className="flex items-center justify-between border-b pb-2 shrink-0">
+              <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                <Filter className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span className="text-xs font-semibold text-foreground truncate">
+                  {getColHeaderName(activeFilterCol)}
+                </span>
+              </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setActiveFilterCol(null);
-                  setFilterPos(null);
-                }}
-                className="h-8 text-xs rounded-md"
-              >
-                Vazgeç
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleApplyFilter}
-                className="h-8 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Uygula
-              </Button>
+              <div className="flex items-center gap-1 shrink-0">
+                {columnFilters[activeFilterCol] && (
+                  <button
+                    type="button"
+                    onClick={() => handleClearColumnFilter(activeFilterCol)}
+                    title="Filtreyi Temizle"
+                    className="text-[11px] text-destructive hover:underline px-1.5 py-0.5 rounded font-medium"
+                  >
+                    Temizle
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveFilterCol(null);
+                    setFilterPos(null);
+                  }}
+                  className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted"
+                  title="Kapat"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+
+            {/* Popover Scrollable Body (flex-1 overflow-y-auto space-y-3 min-h-0 py-2 pr-1) */}
+            <div className="flex-1 overflow-y-auto space-y-3 min-h-0 py-1 pr-1">
+              {/* Sıralama Hızlı Seçenekleri */}
+              <div className="space-y-1 border-b pb-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSortField(activeFilterCol);
+                    setSortOrder('asc');
+                    setActiveFilterCol(null);
+                    setFilterPos(null);
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted text-foreground text-left transition-colors font-medium"
+                >
+                  <ArrowUp className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span>Artan sırala (A'dan Z'ye)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSortField(activeFilterCol);
+                    setSortOrder('desc');
+                    setActiveFilterCol(null);
+                    setFilterPos(null);
+                  }}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted text-foreground text-left transition-colors font-medium"
+                >
+                  <ArrowDown className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span>Azalan sırala (Z'den A'ya)</span>
+                </button>
+              </div>
+
+              {/* Metin İçerir Araması */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground block">
+                  Metin içerir
+                </label>
+                <input
+                  type="text"
+                  value={popoverTextFilter}
+                  onChange={(e) => setPopoverTextFilter(e.target.value)}
+                  placeholder="Arama yapın..."
+                  className="w-full h-8 px-2.5 rounded-md border border-input bg-background text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              {/* Değerlerde Arama & Checkbox Listesi */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium text-muted-foreground block">
+                  Seçenek filtresi
+                </label>
+                <input
+                  type="text"
+                  value={popoverSearch}
+                  onChange={(e) => setPopoverSearch(e.target.value)}
+                  placeholder="Seçenekleri filtrele..."
+                  className="w-full h-8 px-2.5 rounded-md border border-input bg-background text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
+                />
+
+                {/* Değerler Listesi & Checkbox */}
+                {(() => {
+                  const allVals = getUniqueColumnValues(activeFilterCol);
+                  const filteredVals = allVals.filter(v =>
+                    v.toLowerCase().includes(popoverSearch.toLowerCase())
+                  );
+                  const isAllSelected = filteredVals.length > 0 && filteredVals.every(v => popoverSelectedValues.has(v));
+
+                  return (
+                    <div className="space-y-1 border rounded-md p-1.5 bg-muted/20">
+                      {/* Tümünü Seç Checkbox */}
+                      <label className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-muted/60 cursor-pointer text-xs font-semibold text-foreground border-b pb-1 select-none">
+                        <input
+                          type="checkbox"
+                          checked={isAllSelected}
+                          onChange={() => toggleSelectAll(filteredVals)}
+                          className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5"
+                        />
+                        <span>Tümünü Seç ({filteredVals.length})</span>
+                      </label>
+
+                      {/* Değer Elemanları */}
+                      <div className="max-h-36 overflow-y-auto space-y-0.5 pr-1">
+                        {filteredVals.length === 0 ? (
+                          <div className="p-2 text-center text-xs text-muted-foreground">
+                            Değer bulunamadı
+                          </div>
+                        ) : (
+                          filteredVals.map(val => {
+                            const isChecked = popoverSelectedValues.has(val);
+                            return (
+                              <label
+                                key={val}
+                                className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-muted cursor-pointer text-xs text-foreground truncate select-none"
+                                title={val}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => toggleValueSelect(val)}
+                                  className="rounded border-border text-primary focus:ring-primary w-3.5 h-3.5 shrink-0"
+                                />
+                                <span className="truncate">{val}</span>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Popover Butonları (Sabit - shrink-0) */}
+            <div className="flex items-center justify-between pt-2.5 border-t shrink-0 mt-auto">
+              {columnFilters[activeFilterCol] ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleClearColumnFilter(activeFilterCol)}
+                  className="h-8 text-xs text-destructive hover:bg-destructive/10 p-1.5 rounded-md"
+                >
+                  Filtreyi Kaldır
+                </Button>
+              ) : <div />}
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setActiveFilterCol(null);
+                    setFilterPos(null);
+                  }}
+                  className="h-8 text-xs rounded-md"
+                >
+                  Vazgeç
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleApplyFilter}
+                  className="h-8 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Uygula
+                </Button>
+              </div>
+            </div>
+
           </div>
+        )}
 
-        </div>
-      )}
+        {/* ─────────────────────────────────────────────────────────────────── */}
+        {/* TABLO ALANI (Görsel 1 Standartlarında Sticky Başlıklar)             */}
+        {/* ─────────────────────────────────────────────────────────────────── */}
+        <div ref={tableContainerRef} className="overflow-x-auto">
+          <table className="w-full border-collapse text-xs text-left">
 
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* TABLO ALANI (Görsel 1 Standartlarında Sticky Başlıklar)             */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <div ref={tableContainerRef} className="overflow-x-auto">
-        <table className="w-full border-collapse text-xs text-left">
-            
             {/* Tablo Başlıkları (Sticky) */}
             <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm border-b text-muted-foreground uppercase tracking-wider text-[10px] font-semibold">
               <tr>
@@ -1383,7 +1391,7 @@ export const ImprovementTable: React.FC<Props> = ({
                   const isSelected = selectedRecordIds.has(record.id);
 
                   return (
-                    <tr 
+                    <tr
                       key={record.id}
                       id={`record-row-${record.id}`}
                       className={`hover:bg-muted/40 transition-colors group ${isSelected ? 'bg-red-50/50 dark:bg-red-950/20' : ''}`}
@@ -1468,7 +1476,7 @@ export const ImprovementTable: React.FC<Props> = ({
                             </span>
                             <div className="flex items-center justify-center gap-1.5 w-full">
                               <div className="w-12 bg-muted rounded-full h-1.5 overflow-hidden shrink-0">
-                                <div 
+                                <div
                                   className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
                                   style={{ width: `${Math.min(100, Math.max(0, record.progress ?? 0))}%` }}
                                   title={`İlerleme: %${record.progress ?? 0}`}
@@ -1519,47 +1527,47 @@ export const ImprovementTable: React.FC<Props> = ({
 
                       {/* Tespitler */}
                       <td className="p-2 text-foreground">
-                        <div 
+                        <div
                           onClick={() => handleNavigateToDetail(record)}
-                          className="line-clamp-3 leading-[16px] max-h-[50px] overflow-hidden whitespace-pre-wrap cursor-pointer hover:text-primary transition-colors font-medium text-xs" 
+                          className="line-clamp-3 leading-[16px] max-h-[50px] overflow-hidden whitespace-pre-wrap cursor-pointer hover:text-primary transition-colors font-medium text-xs"
                           title="Detaylı sayfaya gitmek için tıklayın"
                         >
                           {record.finding}
                         </div>
                         {((Array.isArray(record.findingPhotos) && record.findingPhotos.length > 0) ||
                           (Array.isArray(record.documents) && record.documents.length > 0)) && (
-                          <div className="flex items-center gap-1.5 mt-1 pt-1 border-t border-border/40">
-                            {Array.isArray(record.findingPhotos) && record.findingPhotos.length > 0 && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setLightboxData({
-                                    photos: record.findingPhotos,
-                                    initialIndex: 0,
-                                    title: `${getFacilityDisplayName(record)} - #${record.rowNo || ''} Tespit Fotoğrafları`
-                                  });
-                                }}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-medium border border-blue-200 dark:border-blue-800 transition-colors"
-                                title="Fotoğrafları önizle (Lightbox)"
-                              >
-                                <Camera className="w-3 h-3" />
-                                <span>{record.findingPhotos.length} Foto</span>
-                              </button>
-                            )}
-                            {Array.isArray(record.documents) && record.documents.length > 0 && (
-                              <button
-                                type="button"
-                                onClick={(e) => handleOpenDocument(e, record)}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-medium border border-amber-200 dark:border-amber-800 transition-colors"
-                                title={record.documents.length === 1 ? 'Belgeyi yeni sekmede aç' : `${record.documents.length} belgeyi görüntüle ve aç`}
-                              >
-                                <FileText className="w-3 h-3" />
-                                <span>{record.documents.length} Belge</span>
-                              </button>
-                            )}
-                          </div>
-                        )}
+                            <div className="flex items-center gap-1.5 mt-1 pt-1 border-t border-border/40">
+                              {Array.isArray(record.findingPhotos) && record.findingPhotos.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setLightboxData({
+                                      photos: record.findingPhotos,
+                                      initialIndex: 0,
+                                      title: `${getFacilityDisplayName(record)} - #${record.rowNo || ''} Tespit Fotoğrafları`
+                                    });
+                                  }}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-medium border border-blue-200 dark:border-blue-800 transition-colors"
+                                  title="Fotoğrafları önizle (Lightbox)"
+                                >
+                                  <Camera className="w-3 h-3" />
+                                  <span>{record.findingPhotos.length} Foto</span>
+                                </button>
+                              )}
+                              {Array.isArray(record.documents) && record.documents.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenDocument(e, record)}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px] font-medium border border-amber-200 dark:border-amber-800 transition-colors"
+                                  title={record.documents.length === 1 ? 'Belgeyi yeni sekmede aç' : `${record.documents.length} belgeyi görüntüle ve aç`}
+                                >
+                                  <FileText className="w-3 h-3" />
+                                  <span>{record.documents.length} Belge</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
                       </td>
 
                       {/* Kategori (2 satıra sığabilir) */}
@@ -1571,15 +1579,14 @@ export const ImprovementTable: React.FC<Props> = ({
 
                       {/* Risk Skoru */}
                       <td className="p-2 text-center whitespace-nowrap">
-                        <span 
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
-                            isCrit ? 'bg-red-500/15 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50' :
-                            isHigh ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-900/50' :
-                            record.riskScore === 'Önemli' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50' :
-                            record.riskScore === 'Olası' ? 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-900/50' :
-                            record.riskScore === 'Önemsiz' ? 'bg-slate-500/15 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800' :
-                            'bg-muted text-muted-foreground border'
-                          }`}
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${isCrit ? 'bg-red-500/15 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50' :
+                              isHigh ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-900/50' :
+                                record.riskScore === 'Önemli' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50' :
+                                  record.riskScore === 'Olası' ? 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-900/50' :
+                                    record.riskScore === 'Önemsiz' ? 'bg-slate-500/15 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-800' :
+                                      'bg-muted text-muted-foreground border'
+                            }`}
                         >
                           {record.riskScore || '-'}
                         </span>
@@ -1614,16 +1621,18 @@ export const ImprovementTable: React.FC<Props> = ({
                           >
                             Aksiyon Gir
                           </button>
-                          {hasAdminAccess && (
-                            <button
-                              onClick={() => setDeleteConfirmRecord(record)}
-                              className="w-20 py-0.5 rounded border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-[11px] font-semibold text-red-600 dark:text-red-400 transition-colors shadow-2xs flex items-center justify-center gap-1"
-                              title="Bu kaydı sil"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              Sil
-                            </button>
-                          )}
+                          {hasAdminAccess &&
+                            record.sourceModule !== 'IRSC_AUDIT' &&
+                            record.sheetType !== 'MERKEZI_DENETIMLER' && (
+                              <button
+                                onClick={() => setDeleteConfirmRecord(record)}
+                                className="w-20 py-0.5 rounded border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-[11px] font-semibold text-red-600 dark:text-red-400 transition-colors shadow-2xs flex items-center justify-center gap-1"
+                                title="Bu kaydı sil"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Sil
+                              </button>
+                            )}
                         </div>
                       </td>
 
@@ -1723,11 +1732,10 @@ export const ImprovementTable: React.FC<Props> = ({
                         variant={isCurrent ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => handlePageChange(pageNum)}
-                        className={`h-7 min-w-7 px-2 text-xs ${
-                          isCurrent
+                        className={`h-7 min-w-7 px-2 text-xs ${isCurrent
                             ? 'bg-primary text-primary-foreground font-bold hover:bg-primary/90'
                             : 'hover:bg-muted text-foreground'
-                        }`}
+                          }`}
                       >
                         {pageNum}
                       </Button>
@@ -1821,11 +1829,11 @@ export const ImprovementTable: React.FC<Props> = ({
 
       {/* Birden Fazla Belge Seçim ve Açma Modalı */}
       {docSelectRecord && (
-        <div 
+        <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
           onClick={() => setDocSelectRecord(null)}
         >
-          <div 
+          <div
             className="bg-card text-card-foreground border rounded-2xl w-full max-w-md shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1836,7 +1844,7 @@ export const ImprovementTable: React.FC<Props> = ({
                   Ekli Belgeler ({docSelectRecord.documents?.length || 0})
                 </h3>
               </div>
-              <button 
+              <button
                 onClick={() => setDocSelectRecord(null)}
                 className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted"
                 title="Kapat"

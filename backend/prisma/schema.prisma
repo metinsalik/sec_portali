@@ -2100,6 +2100,14 @@ model IntegratedFinding {
   auditId String
   audit   IntegratedAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
 
+  rootFindingId    String?
+  originReportNo   String?
+  originReportDate DateTime?
+  isCarryover      Boolean   @default(false)
+  progress         Int       @default(0)
+  closedInReportNo String?
+  closedAt         DateTime?
+
   no             String
   area           String
   subarea        String?
@@ -2119,19 +2127,28 @@ model IntegratedFinding {
 
   actions IntegratedAction[]
   files   IntegratedFile[]
+
+  @@index([rootFindingId])
 }
 
 model IntegratedAction {
-  id          String            @id @default(cuid())
-  findingId   String
-  finding     IntegratedFinding @relation(fields: [findingId], references: [id], onDelete: Cascade)
-  department  String
-  order       Int
-  status      String
-  actionDate  DateTime?
-  title       String?
-  explanation String?
-  completedAt DateTime?
+  id               String            @id @default(cuid())
+  findingId        String
+  finding          IntegratedFinding @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  department       String
+  order            Int
+  status           String
+  actionDate       DateTime?
+  title            String?
+  explanation      String?
+  completedAt      DateTime?
+  stepType         String?
+  progress         Int?
+  progressAdded    Int?
+  performedBy      String?
+  performedByName  String?
+  performedByTitle String?
+  sourceHistoryId  String?           @unique
 
   files IntegratedFile[]
 }
@@ -3308,6 +3325,9 @@ model ImprovementRecord {
   standardNoteCode     String?   // "Not-1" .. "Not-11"
 
   sourceFileName  String?   // Kaynak Excel dosyasının adı
+  sourceModule    String?   // Otomatik entegrasyon kaynağı (örn: "IRSC_AUDIT")
+  sourceFindingId String?   @unique // Bağlı kök bulgu kimliği (rootFindingId)
+  sourceReportNo  String?   // İlk tespit edildiği rapor no
   isArchived      Boolean   @default(false)
 
   // 4. Adım: Doğrulama & Kapanış Kontrolü Özeti

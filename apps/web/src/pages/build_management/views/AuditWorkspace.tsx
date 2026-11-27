@@ -25,6 +25,7 @@ import { PoolTemplateDialog } from './FindingPoolPage';
 import { FindingPoolPicker } from './FindingPoolPicker';
 import { AuditMediaUploader } from '../components/AuditMediaUploader';
 import { AuditFindingsList } from '../components/AuditFindingsList';
+import { AuditActionStepDialog } from '../components/AuditActionStepDialog';
 import { saveAudit, uploadAuditFiles } from '../services/auditApi';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -97,12 +98,6 @@ export default function AuditWorkspace({
   const currentAudit = audits.find(a => a.id === activeAuditId);
   const isPublished = currentAudit?.status === 'PUBLISHED';
 
-  const printRef = useRef<HTMLDivElement>(null);
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: 'Tesis_Saha_Denetim_Raporu'
-  });
-
   // Local state for the new audit being created
   const [auditMeta, setAuditMeta] = useState<any>({
     locationId: '',
@@ -114,6 +109,26 @@ export default function AuditWorkspace({
     team: [],
     participants: [],
     criteria: []
+  });
+
+  const activeFacilityName =
+    facilities.find((f) => f.id === (selectedFacility || auditMeta.locationId))?.name || '';
+  const sanitizePdfPart = (val: string) =>
+    val
+      .trim()
+      .replace(/[\\/:*?"<>|]+/g, '')
+      .replace(/\s+/g, '_');
+  const pdfFileName = [
+    sanitizePdfPart(auditMeta.reportNo || ''),
+    sanitizePdfPart(activeFacilityName),
+  ]
+    .filter(Boolean)
+    .join('_') || 'IRSC_Denetim_Raporu';
+
+  const printRef = useRef<HTMLDivElement>(null);
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: pdfFileName,
   });
 
   const [findings, setFindings] = useState<Finding[]>([]);
@@ -263,15 +278,11 @@ export default function AuditWorkspace({
 
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
 
-  const [activeActionFormId, setActiveActionFormId] = useState<string | null>(null);
-  const [newAction, setNewAction] = useState<Partial<ActionStep>>({
-    department: '',
-    title: '',
-    explanation: '',
-    status: 'Başlamadı',
-    actionDate: '',
-    files: []
-  });
+  const [actionModalState, setActionModalState] = useState<{
+    findingId: string;
+    defaultTemplateId?: string;
+  } | null>(null);
+  const [savingActionModal, setSavingActionModal] = useState(false);
   const riskLevels: RiskLevel[] = RISK_LEVELS;
 
   const getRiskColor = (risk: RiskLevel) => getRiskSolidClass(risk);
@@ -291,8 +302,10 @@ export default function AuditWorkspace({
     return date.toISOString().split('T')[0];
   };
 
-  const carryoverFindings = findings.filter((f) => Boolean(f.history && f.history.includes('Devreden Bulgu')));
-  const newSessionFindings = findings.filter((f) => !f.history || !f.history.includes('Devreden Bulgu'));
+  const isCarryoverItem = (f: Finding) =>
+    Boolean(f.isCarryover || (f.history && f.history.includes('Devreden Bulgu')));
+  const carryoverFindings = findings.filter(isCarryoverItem);
+  const newSessionFindings = findings.filter((f) => !isCarryoverItem(f));
 
   const tabs = [
     { id: 'INFO', title: 'Hazırlık', sub: 'Tesis, tarih ve ekip' },
@@ -302,28 +315,66 @@ export default function AuditWorkspace({
     { id: 'REPORT', title: 'Rapor & PDF', sub: 'Önizleme ve yayınla' }
   ] as const;
 
-  // Handle Facility Selection & Carry-over
+  // Handle Facility Selection & Carry-over (Yalnızca yeni denetimde ve en son PUBLISHED rapordan!)
+  const carryoverLoadedFacilityRef = useRef<string | null>(null);
   useEffect(() => {
-    if (auditMeta.locationId) {
-      const facId = auditMeta.locationId;
-      setSelectedFacility(facId);
+    if (!auditMeta.locationId) return;
+    const facId = auditMeta.locationId;
+    setSelectedFacility(facId);
 
-      // Simulate Carry-over logic: Find open findings from previous audits of this facility
-      const previousAudits = audits.filter(a => a.meta.locationId === facId);
-      const openFindings: Finding[] = [];
-      previousAudits.forEach(a => {
-        a.findings.forEach(f => {
-          if (f.status !== 'Tamamlanan') {
-            openFindings.push({ ...f, history: `${f.history}\nDevreden Bulgu (Önceki Rapor: ${a.meta.reportNo})` });
-          }
-        });
+    // Mevcut kayıtlı denetimi açıyorsak üzerine devreden yazma
+    if (activeAuditId) return;
+    if (carryoverLoadedFacilityRef.current === facId) return;
+
+    const publishedForFacility = audits
+      .filter((a) => a.meta?.locationId === facId && a.status === 'PUBLISHED')
+      .sort((a, b) => {
+        const dA = new Date(a.meta?.reportDate || a.meta?.start || 0).getTime();
+        const dB = new Date(b.meta?.reportDate || b.meta?.start || 0).getTime();
+        return dB - dA;
       });
-      // In a real app, we would merge these or prompt the user. For mock, we just set them.
-      if (openFindings.length > 0 && findings.length === 0) {
-        setFindings(openFindings);
-      }
+
+    carryoverLoadedFacilityRef.current = facId;
+
+    const latestPublished = publishedForFacility[0];
+    if (!latestPublished) {
+      setFindings([]);
+      return;
     }
-  }, [auditMeta.locationId, audits]);
+
+    // Önceki denetimde zaten "Tamamlanan" olarak kapanmış olanlar bir daha gösterilmez;
+    // halen açık olanlar ve İyileştirme Modülü'nde işlem görmüş (sahada kontrol bekleyen) bulgular devreder.
+    const carried: Finding[] = (latestPublished.findings || [])
+      .filter((f) => f.status !== 'Tamamlanan')
+      .map((f) => {
+        const hasSteps = Boolean(f.steps && f.steps.length > 0);
+        const carryStatus: ImprovementStatus = hasSteps
+          ? 'Kısmen İyileştirilen'
+          : 'İyileştirilmeyen';
+        const prevHistory = (f.history || '').trim();
+        const carryTag = `Devreden Bulgu (Önceki Rapor: ${latestPublished.meta?.reportNo || '—'})`;
+        return {
+          ...f,
+          id: generateUUID(),
+          rootFindingId: f.rootFindingId || f.id,
+          originReportNo: f.originReportNo || latestPublished.meta?.reportNo || '',
+          originReportDate: f.originReportDate || latestPublished.meta?.reportDate || '',
+          isCarryover: true,
+          status: carryStatus,
+          progress: f.progress || 0,
+          steps: (f.steps || []).map((s) => ({
+            ...s,
+            id: generateUUID(),
+            sourceHistoryId: null,
+          })),
+          history: prevHistory.includes('Devreden Bulgu')
+            ? prevHistory
+            : [prevHistory, carryTag].filter(Boolean).join('\n'),
+        };
+      });
+
+    setFindings(carried);
+  }, [auditMeta.locationId, activeAuditId, audits]);
 
   const [alertMsg, setAlertMsg] = useState('');
   const [confirmDialog, setConfirmDialog] = useState<{ msg: string; onConfirm: () => void } | null>(null);
@@ -402,11 +453,32 @@ export default function AuditWorkspace({
       });
       setFindings(updatedFindings);
     } else {
-      const fCount = findings.length + 1;
-      const fNo = auditMeta.reportNo ? `${auditMeta.reportNo}-${String(fCount).padStart(3, '0')}` : `BULGU-${fCount}`;
+      // Tesisin tüm geçmiş ve mevcut bulgularındaki en büyük sıra numarasından devam et (zincir kırılmaz)
+      const facilityAllFindings = [
+        ...audits
+          .filter((a) => a.meta?.locationId === auditMeta.locationId)
+          .flatMap((a) => a.findings || []),
+        ...findings,
+      ];
+      let maxSeq = 0;
+      facilityAllFindings.forEach((ef) => {
+        const m = String(ef.no || '').match(/-(\d{1,4})$/);
+        if (m) {
+          const num = parseInt(m[1], 10);
+          if (!Number.isNaN(num) && num > maxSeq) maxSeq = num;
+        }
+      });
+      const fCount = Math.max(maxSeq + 1, newSessionFindings.length + 1);
+      const fNo = auditMeta.reportNo ? `${auditMeta.reportNo}-${String(fCount).padStart(3, '0')}` : `BULGU-${String(fCount).padStart(3, '0')}`;
+      const newGeneratedId = generateUUID();
 
       const completeFinding: Finding = {
-        id: generateUUID(),
+        id: newGeneratedId,
+        rootFindingId: newGeneratedId,
+        originReportNo: auditMeta.reportNo || '',
+        originReportDate: auditMeta.reportDate || new Date().toISOString().split('T')[0],
+        isCarryover: false,
+        progress: 0,
         no: fNo,
         locationId: resolvedLocationId,
         building: locBlock || locBuildingName || '',
@@ -513,47 +585,69 @@ export default function AuditWorkspace({
     }
   };
 
-  const handleAddAction = (findingId: string) => {
-    if (!newAction.department || !newAction.explanation) {
-      setAlertMsg("Lütfen zorunlu alanları (Sorumlu ve Açıklama) doldurun.");
-      return;
-    }
-
-    setFindings(findings.map(f => {
-      if (f.id === findingId) {
-        const step: ActionStep = {
-          id: `step_${Date.now()}`,
-          department: newAction.department!,
-          title: newAction.title || '',
-          order: (f.steps?.length || 0) + 1,
-          status: (newAction.status as StepStatus) || 'Başlamadı',
-          actionDate: newAction.actionDate || '',
-          files: newAction.files || [],
-          explanation: newAction.explanation || ''
-        };
-
-        const newFStatus = newAction.status === 'Tamamlandı' ? 'Tamamlanan' :
-          newAction.status === 'Devam Ediyor' ? 'Kısmen İyileştirilen' :
-            f.status;
-
+  const handleSaveActionFromModal = async (
+    findingId: string,
+    step: ActionStep,
+    nextFindingStatus: ImprovementStatus,
+    nextProgress: number
+  ) => {
+    setSavingActionModal(true);
+    try {
+      const updatedFindings = findings.map((f) => {
+        if (f.id !== findingId) return f;
+        const nextSteps = [...(f.steps || []), step];
+        const hasRealAction = nextSteps.some(
+          (s) => s.stepType !== 'YERINDE_KONTROL_YOK'
+        );
         return {
           ...f,
-          status: newFStatus as ImprovementStatus,
-          steps: [...(f.steps || []), step]
+          status: nextFindingStatus,
+          progress: nextProgress,
+          isStarted: nextProgress > 0 || hasRealAction,
+          closedInReportNo:
+            nextFindingStatus === 'Tamamlanan'
+              ? auditMeta.reportNo || f.closedInReportNo || null
+              : null,
+          closedAt:
+            nextFindingStatus === 'Tamamlanan'
+              ? step.actionDate || new Date().toISOString().split('T')[0]
+              : null,
+          steps: nextSteps,
         };
-      }
-      return f;
-    }));
+      });
 
-    setActiveActionFormId(null);
-    setNewAction({
-      department: '',
-      title: '',
-      explanation: '',
-      status: 'Başlamadı',
-      actionDate: '',
-      files: []
-    });
+      setFindings(updatedFindings);
+
+      if (auditMeta.locationId) {
+        const savedAudit = await saveAudit(
+          {
+            id: activeAuditId || undefined,
+            status: currentAudit?.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT',
+            saved: true,
+            meta: auditMeta,
+            findings: updatedFindings,
+          } as any,
+          auditMeta.locationId
+        );
+        if (!activeAuditId && savedAudit.id) {
+          setActiveAuditId(savedAudit.id);
+        }
+        const rest = audits.filter((a) => a.id !== activeAuditId && a.id !== savedAudit.id);
+        setAudits([...rest, savedAudit]);
+      }
+
+      setActionModalState(null);
+      toast.success(
+        nextFindingStatus === 'Tamamlanan'
+          ? 'Bulgu sahada doğrulandı ve kapatıldı.'
+          : 'Süreç adımı ve aksiyon kaydedildi.'
+      );
+    } catch (err) {
+      console.error('Action save error:', err);
+      toast.error('Aksiyon kaydedilirken hata oluştu.');
+    } finally {
+      setSavingActionModal(false);
+    }
   };
 
   const handleSave = async (publish = false) => {
@@ -999,22 +1093,28 @@ export default function AuditWorkspace({
                 </Card>
               ) : (
                 <div className="space-y-4">
-                  {/* Özet Şerit */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* 4'lü Özet Şeridi */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="p-3.5 rounded-lg border border-border bg-muted/30 flex items-center justify-between">
                       <span className="text-xs font-medium text-muted-foreground">Devreden Toplam</span>
                       <span className="text-lg font-bold tabular-nums text-foreground">{carryoverFindings.length}</span>
                     </div>
-                    <div className="p-3.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between">
-                      <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Bu Denetimde Kapatılan</span>
-                      <span className="text-lg font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-                        {carryoverFindings.filter((f) => f.status === 'Tamamlanan').length}
+                    <div className="p-3.5 rounded-lg border border-red-500/30 bg-red-500/5 flex items-center justify-between">
+                      <span className="text-xs font-medium text-red-700 dark:text-red-400">Aksiyon Alınmamış</span>
+                      <span className="text-lg font-bold tabular-nums text-red-700 dark:text-red-400">
+                        {carryoverFindings.filter((f) => f.status !== 'Tamamlanan' && !((f.steps || []).some((s) => s.stepType !== 'YERINDE_KONTROL_YOK') || (f.progress || 0) > 0)).length}
                       </span>
                     </div>
                     <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/5 flex items-center justify-between">
-                      <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Halen Açık / Devam Eden</span>
+                      <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Süreci Devam Eden</span>
                       <span className="text-lg font-bold tabular-nums text-amber-700 dark:text-amber-400">
-                        {carryoverFindings.filter((f) => f.status !== 'Tamamlanan').length}
+                        {carryoverFindings.filter((f) => f.status !== 'Tamamlanan' && ((f.steps || []).some((s) => s.stepType !== 'YERINDE_KONTROL_YOK') || (f.progress || 0) > 0)).length}
+                      </span>
+                    </div>
+                    <div className="p-3.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between">
+                      <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Sahada Doğrulandı / Kapatıldı</span>
+                      <span className="text-lg font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                        {carryoverFindings.filter((f) => f.status === 'Tamamlanan').length}
                       </span>
                     </div>
                   </div>
@@ -1023,18 +1123,82 @@ export default function AuditWorkspace({
                   <div className="space-y-3">
                     {carryoverFindings.map((f) => {
                       const normRisk = normalizeRiskLevel(f.risk);
+                      const hasSteps = Boolean(f.steps && f.steps.length > 0);
+                      const hasRealAction = Boolean(
+                        (f.steps && f.steps.some((s) => s.stepType !== 'YERINDE_KONTROL_YOK')) ||
+                        (f.progress || 0) > 0
+                      );
+                      const keyId = (f.rootFindingId || f.no || f.id).trim();
+                      const pastAppearances = audits.filter(
+                        (a) =>
+                          a.id !== activeAuditId &&
+                          a.status === 'PUBLISHED' &&
+                          a.meta?.locationId === auditMeta.locationId &&
+                          a.findings?.some((pf) => (pf.rootFindingId || pf.no || pf.id).trim() === keyId)
+                      ).length;
+                      const repeatCount = Math.max(f.isCarryover ? 2 : 1, pastAppearances + 1);
+                      const refDateStr = f.originReportDate || '';
+                      const curDateStr = auditMeta.reportDate || auditMeta.start || new Date().toISOString().split('T')[0];
+                      const openDays = refDateStr
+                        ? Math.max(
+                          0,
+                          Math.floor(
+                            (new Date(curDateStr).getTime() - new Date(refDateStr).getTime()) /
+                            (1000 * 60 * 60 * 24)
+                          )
+                        )
+                        : 0;
+                      const isChronic = repeatCount >= 3 || openDays >= 180;
+                      const awaitingFieldVerify =
+                        f.status !== 'Tamamlanan' &&
+                        ((f.progress || 0) >= 100 ||
+                          f.steps?.some((s) => s.status === 'Tamamlandı'));
+
                       return (
                         <Card key={f.id} className={`border-l-4 ${getRiskBorderClass(normRisk)}`}>
                           <CardContent className="p-4 space-y-3">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-bold text-sm text-foreground tabular-nums">{f.no}</span>
                                 <Badge className={`text-[11px] border ${getRiskBadgeClass(normRisk)}`}>
                                   {normRisk}
                                 </Badge>
+                                {f.status !== 'Tamamlanan' && (
+                                  <Badge
+                                    className={`text-[10px] border tabular-nums ${isChronic
+                                        ? 'bg-red-600/15 text-red-700 dark:text-red-300 border-red-600/35 font-bold'
+                                        : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/35 font-semibold'
+                                      }`}
+                                  >
+                                    {isChronic
+                                      ? `${repeatCount}. Denetim (Kronik Bulgu)`
+                                      : `${repeatCount}. Denetim (Yinelenen)`}
+                                    {openDays > 0 ? ` • ${openDays} Gündür Açık` : ''}
+                                  </Badge>
+                                )}
+                                {f.originReportNo && (
+                                  <Badge variant="secondary" className="text-[10px] tabular-nums">
+                                    İlk Rapor: {f.originReportNo}
+                                  </Badge>
+                                )}
                                 {f.category && (
                                   <Badge variant="outline" className="text-[11px]">
                                     {f.category}
+                                  </Badge>
+                                )}
+                                {awaitingFieldVerify && (
+                                  <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-[10px]">
+                                    Tamamlandı Bildirildi — Saha Kontrolü Bekliyor
+                                  </Badge>
+                                )}
+                                {f.status === 'Tamamlanan' && (
+                                  <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px]">
+                                    Sahada Doğrulandı &amp; Kapatıldı
+                                  </Badge>
+                                )}
+                                {!hasRealAction && f.status !== 'Tamamlanan' && (
+                                  <Badge className="bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/25 text-[10px]">
+                                    Aksiyon Alınmamış
                                   </Badge>
                                 )}
                                 {f.area && (
@@ -1042,36 +1206,80 @@ export default function AuditWorkspace({
                                 )}
                               </div>
 
-                              {/* Hızlı Son Durum Seçimi */}
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                {([
-                                  { id: 'Tamamlanan', label: 'Kapatıldı', active: 'bg-emerald-600 text-white border-emerald-700' },
-                                  { id: 'Kısmen İyileştirilen', label: 'Kısmen', active: 'bg-amber-500 text-white border-amber-600' },
-                                  { id: 'İyileştirilmeyen', label: 'İyileştirilmedi', active: 'bg-red-600 text-white border-red-700' },
-                                ] as const).map((st) => {
-                                  const selected = f.status === st.id;
-                                  return (
-                                    <button
-                                      key={st.id}
+                              {/* Saha Doğrulama & Ortak Aksiyon Sihirbazı Butonları */}
+                              {!isPublished && (
+                                <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                                  {f.status !== 'Tamamlanan' && (
+                                    <Button
                                       type="button"
-                                      disabled={isPublished}
-                                      onClick={() => {
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        setActionModalState({
+                                          findingId: f.id,
+                                          defaultTemplateId: 'YERINDE_KONTROL_YOK',
+                                        })
+                                      }
+                                      className="h-7 px-2.5 text-xs gap-1 rounded-lg border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                                      title="Sahada tekrar kontrol edilip ilerleme olmadığını belgeleyin"
+                                    >
+                                      <AlertTriangle className="w-3.5 h-3.5" /> Yerinde Kontrol: İlerleme Yok
+                                    </Button>
+                                  )}
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      setActionModalState({
+                                        findingId: f.id,
+                                        defaultTemplateId: 'SAHA_CALISMASI',
+                                      })
+                                    }
+                                    className="h-7 px-2.5 text-xs gap-1 rounded-lg"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" /> Süreç / Aksiyon Gir
+                                  </Button>
+                                  {f.status !== 'Tamamlanan' ? (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      onClick={() =>
+                                        setActionModalState({
+                                          findingId: f.id,
+                                          defaultTemplateId: 'SAHA_KONTROL',
+                                        })
+                                      }
+                                      className="h-7 px-2.5 text-xs gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    >
+                                      <Check className="w-3.5 h-3.5" /> Sahada Kontrol Ettim &amp; Kapat
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
                                         setFindings((prev) =>
                                           prev.map((item) =>
-                                            item.id === f.id ? { ...item, status: st.id } : item
+                                            item.id === f.id
+                                              ? {
+                                                ...item,
+                                                status: hasSteps
+                                                  ? 'Kısmen İyileştirilen'
+                                                  : 'İyileştirilmeyen',
+                                              }
+                                              : item
                                           )
-                                        );
-                                      }}
-                                      className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors duration-200 ${selected
-                                        ? st.active
-                                        : 'bg-background text-muted-foreground border-border hover:text-foreground'
-                                        } disabled:opacity-50`}
+                                        )
+                                      }
+                                      className="h-7 px-2 text-xs text-muted-foreground"
                                     >
-                                      {st.label}
-                                    </button>
-                                  );
-                                })}
-                              </div>
+                                      Tekrar Aç
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
                             </div>
 
                             <p className="text-xs sm:text-sm text-foreground whitespace-pre-wrap leading-relaxed">
@@ -1082,6 +1290,64 @@ export default function AuditWorkspace({
                               <p className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-md border border-border">
                                 <strong className="text-foreground">Öneri:</strong> {f.recommendation}
                               </p>
+                            )}
+
+                            {/* Önceki ve Ara Dönemde Girilen Aksiyon Geçmişi */}
+                            {hasSteps && (
+                              <div className="pt-2 border-t border-border/60 space-y-1.5">
+                                <div className="text-[11px] font-semibold text-muted-foreground flex items-center justify-between">
+                                  <span>İyileştirme Süreç Geçmişi ({f.steps.length} Adım)</span>
+                                  <span className="tabular-nums text-primary font-bold">
+                                    İlerleme: %{f.status === 'Tamamlanan' ? 100 : f.progress || 0}
+                                  </span>
+                                </div>
+                                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                  {f.steps.map((st, sIdx) => (
+                                    <div
+                                      key={st.id || sIdx}
+                                      className="p-2.5 rounded-lg bg-muted/25 border border-border text-xs space-y-1"
+                                    >
+                                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                                        <span className="font-semibold text-foreground">
+                                          #{sIdx + 1} {st.title || st.department}
+                                          {st.performedByName && (
+                                            <span className="font-normal text-muted-foreground">
+                                              {' '}— <strong className="text-foreground">{st.performedByName}</strong>
+                                              {st.performedByTitle ? ` (${st.performedByTitle})` : ''}
+                                            </span>
+                                          )}
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground tabular-nums">
+                                          {st.actionDate
+                                            ? new Date(st.actionDate).toLocaleDateString('tr-TR')
+                                            : ''}{' '}
+                                          • {st.status}
+                                        </span>
+                                      </div>
+                                      {st.explanation && (
+                                        <p className="text-muted-foreground leading-relaxed">
+                                          {st.explanation}
+                                        </p>
+                                      )}
+                                      {st.files && st.files.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5 pt-1">
+                                          {st.files.map((sf, fi) =>
+                                            sf.type?.startsWith('image/') ? (
+                                              <img
+                                                key={fi}
+                                                src={sf.url}
+                                                alt={sf.name}
+                                                onClick={() => setPreviewImage(sf.url)}
+                                                className="w-11 h-11 rounded object-cover border border-border cursor-pointer"
+                                              />
+                                            ) : null
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
                             )}
                           </CardContent>
                         </Card>
@@ -1282,100 +1548,18 @@ export default function AuditWorkspace({
                                 <Button
                                   type="button"
                                   size="sm"
-                                  variant={activeActionFormId === f.id ? 'outline' : 'default'}
-                                  onClick={() => setActiveActionFormId(activeActionFormId === f.id ? null : f.id)}
+                                  onClick={() =>
+                                    setActionModalState({
+                                      findingId: f.id,
+                                      defaultTemplateId: f.isCarryover ? 'SAHA_KONTROL' : 'TALEP_ACILDI',
+                                    })
+                                  }
                                   className="gap-1.5"
                                 >
-                                  {activeActionFormId === f.id ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                                  {activeActionFormId === f.id ? 'Vazgeç' : 'Aksiyon / Güncelleme Ekle'}
+                                  <Plus className="w-4 h-4" />
+                                  Süreç / Aksiyon Gir
                                 </Button>
                               </div>
-
-                              {activeActionFormId === f.id && (
-                                <div className="bg-muted/30 border border-border p-4 rounded-lg mb-6">
-                                  <h4 className="font-semibold text-sm text-foreground mb-3">Yeni Aksiyon Ekle</h4>
-                                  <div className="space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      <div>
-                                        <label className="block text-xs font-medium text-muted-foreground mb-1">Sorumlu Departman *</label>
-                                        <select
-                                          className="w-full h-9 px-3 bg-background border border-input rounded-md text-sm text-foreground"
-                                          value={newAction.department}
-                                          onChange={e => setNewAction({ ...newAction, department: e.target.value })}
-                                        >
-                                          <option value="">Seçiniz</option>
-                                          {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
-                                        </select>
-                                      </div>
-                                      <div>
-                                        <label className="block text-xs font-medium text-muted-foreground mb-1">Durum</label>
-                                        <select
-                                          className="w-full h-9 px-3 bg-background border border-input rounded-md text-sm text-foreground"
-                                          value={newAction.status}
-                                          onChange={e => setNewAction({ ...newAction, status: e.target.value as StepStatus })}
-                                        >
-                                          <option value="Başlamadı">Başlamadı</option>
-                                          <option value="Devam Ediyor">Devam Ediyor</option>
-                                          <option value="Tamamlandı">Tamamlandı</option>
-                                          <option value="İptal Edildi">İptal Edildi</option>
-                                        </select>
-                                      </div>
-                                      <div>
-                                        <label className="block text-xs font-medium text-muted-foreground mb-1">İşlem Tarihi</label>
-                                        <Input
-                                          type="date"
-                                          value={newAction.actionDate}
-                                          onChange={e => setNewAction({ ...newAction, actionDate: e.target.value })}
-                                        />
-                                      </div>
-                                      <div>
-                                        <label className="block text-xs font-medium text-muted-foreground mb-1">Kanıt Dosyası</label>
-                                        <label className="w-full h-9 px-3 flex items-center justify-center bg-background border border-input border-dashed rounded-md text-xs cursor-pointer hover:bg-muted/40">
-                                          <Upload className="w-4 h-4 text-muted-foreground mr-2" />
-                                          <span className="text-muted-foreground">{newAction.files?.length ? `${newAction.files.length} dosya seçildi` : 'Dosya Seç (Foto, PDF)'}</span>
-                                          <input
-                                            type="file"
-                                            multiple
-                                            accept="image/*,application/pdf"
-                                            capture="environment"
-                                            className="hidden"
-                                            onChange={async e => {
-                                              if (e.target.files) {
-                                                try {
-                                                  const uploaded = await uploadAuditFiles(Array.from(e.target.files));
-                                                  setNewAction({ ...newAction, files: [...(newAction.files || []), ...uploaded] });
-                                                } catch (err) {
-                                                  console.error("Upload failed", err);
-                                                  toast.error("Dosya yüklenemedi!");
-                                                }
-                                              }
-                                            }}
-                                          />
-                                        </label>
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <label className="block text-xs font-medium text-muted-foreground mb-1">Aksiyon Açıklaması *</label>
-                                      <textarea
-                                        className="w-full p-2.5 bg-background border border-input rounded-md text-sm text-foreground min-h-[80px]"
-                                        placeholder="Yapılan veya yapılacak işlemleri açıklayın..."
-                                        value={newAction.explanation}
-                                        onChange={e => setNewAction({ ...newAction, explanation: e.target.value })}
-                                      />
-                                    </div>
-                                    <div className="flex justify-end pt-1">
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        onClick={() => handleAddAction(f.id)}
-                                        disabled={!newAction.department || !newAction.explanation}
-                                      >
-                                        Aksiyonu Ekle
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
 
                               {f.steps.length > 0 ? (
                                 <div className="relative border-l-2 border-slate-200 ml-4 space-y-6 pb-4 dark:border-slate-700 mt-4">
@@ -1387,18 +1571,31 @@ export default function AuditWorkspace({
                                           step.status === 'Devam Ediyor' ? 'bg-blue-500' : 'bg-amber-500'
                                         }`}></div>
 
-                                      <div className={`bg-white border p-4 rounded-xl shadow-sm dark:bg-slate-800 ${step.status === 'Tamamlandı' ? 'border-emerald-200 dark:border-emerald-900/50' :
+                                      <div className={`bg-white border p-4 rounded-lg shadow-xs dark:bg-slate-800 ${step.status === 'Tamamlandı' ? 'border-emerald-200 dark:border-emerald-900/50' :
                                         step.status === 'İptal Edildi' ? 'border-red-200 dark:border-red-900/50' :
                                           step.status === 'Devam Ediyor' ? 'border-blue-200 dark:border-blue-900/50' : 'border-amber-200 dark:border-amber-900/50'
                                         }`}>
                                         <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
                                           <div>
                                             <h4 className="font-bold text-slate-800 dark:text-slate-200">Adım {idx + 1}: {step.title || 'Aksiyon Güncellemesi'}</h4>
-                                            <div className="text-sm text-slate-500 mt-1 dark:text-slate-400">
-                                              Sorumlu: <span className="font-semibold text-slate-700 dark:text-slate-300">{step.department}</span>
+                                            <div className="text-xs text-slate-500 mt-1 dark:text-slate-400 flex items-center gap-2 flex-wrap">
+                                              <span>
+                                                Sorumlu Birim: <strong className="text-slate-700 dark:text-slate-300">{step.department}</strong>
+                                              </span>
+                                              {step.performedByName && (
+                                                <span>
+                                                  • İşlemi Giren: <strong className="text-slate-700 dark:text-slate-300">{step.performedByName}</strong>
+                                                  {step.performedByTitle ? ` (${step.performedByTitle})` : ''}
+                                                </span>
+                                              )}
                                             </div>
                                           </div>
                                           <div className="flex flex-wrap items-center gap-2">
+                                            {typeof step.progress === 'number' && (
+                                              <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-md text-xs font-bold border border-primary/20 tabular-nums">
+                                                %{step.progress}
+                                              </span>
+                                            )}
                                             {step.files && step.files.length > 0 && (
                                               <span className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md text-xs font-bold border border-blue-100 flex items-center gap-1 dark:bg-blue-900/30 dark:border-blue-900/50 dark:text-blue-400">
                                                 {step.files.length} Kanıt Yüklendi
@@ -1838,6 +2035,9 @@ export default function AuditWorkspace({
                     findings={findings}
                     auditMeta={auditMeta}
                     facility={facilities.find((f) => f.id === auditMeta.locationId)}
+                    facilityAudits={audits.filter(
+                      (a) => a.meta?.locationId === auditMeta.locationId && a.status === 'PUBLISHED'
+                    )}
                     logoUrl="https://raw.githubusercontent.com/metinsalik/self-agent/refs/heads/main/mlpcare.jpg"
                   />
                 </div>
@@ -1846,6 +2046,19 @@ export default function AuditWorkspace({
           )}
         </CardContent>
       </Card>
+
+      {/* ORTAK ŞABLONLU SÜREÇ & AKSİYON PENCERESİ */}
+      <AuditActionStepDialog
+        open={Boolean(actionModalState)}
+        finding={findings.find((f) => f.id === actionModalState?.findingId) || null}
+        departments={departments}
+        facilityId={auditMeta.locationId}
+        facilityName={activeFacilityName}
+        defaultTemplateId={actionModalState?.defaultTemplateId}
+        saving={savingActionModal}
+        onClose={() => setActionModalState(null)}
+        onSaveStep={handleSaveActionFromModal}
+      />
 
       {/* SHADCN DIALOGS */}
       <Dialog open={Boolean(alertMsg)} onOpenChange={(open) => !open && setAlertMsg('')}>

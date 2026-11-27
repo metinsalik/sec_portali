@@ -11,7 +11,7 @@ import {
   Clock,
   User,
   Pencil,
-  Printer,
+  Info,
   Shield,
   AlertTriangle,
   Flame,
@@ -25,6 +25,7 @@ import {
   History,
   Activity
 } from 'lucide-react';
+import { toast } from 'sonner';
 import AppLayout from '@/components/layout/AppLayout';
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 import { GbfStructuredViewer } from '@/components/hazmat/gbf/GbfStructuredViewer';
@@ -183,19 +184,32 @@ export default function MaterialViewPage() {
               </Badge>
             )}
 
-            {material.sdsUrl && (
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 rounded-lg text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950/40 shadow-2xs shrink-0"
-                title="Güvenlik Bilgi Formu (SDS) Belgesini Aç"
-                asChild
-              >
-                <a href={`${BASE_URL}${material.sdsUrl}`} target="_blank" rel="noreferrer">
-                  <FileText className="w-4 h-4" />
-                </a>
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="icon"
+              className={`h-8 w-8 rounded-lg shadow-2xs shrink-0 ${
+                material.sdsUrl
+                  ? 'text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                  : 'text-red-700 dark:text-red-400 border-red-300 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/40'
+              }`}
+              title={
+                material.sdsUrl
+                  ? 'Güvenlik Bilgi Formu (SDS) Belgesini Aç'
+                  : 'SDS henüz yüklenmemiştir'
+              }
+              onClick={() => {
+                if (material.sdsUrl) {
+                  const url = material.sdsUrl.startsWith('http')
+                    ? material.sdsUrl
+                    : `${BASE_URL}${material.sdsUrl}`;
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                } else {
+                  toast.warning('Bu madde için SDS henüz yüklenmemiştir.');
+                }
+              }}
+            >
+              <FileText className="w-4 h-4" />
+            </Button>
 
             <Button
               onClick={() => setPrintModalOpen(true)}
@@ -204,7 +218,7 @@ export default function MaterialViewPage() {
               className="h-8 w-8 rounded-lg text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 shadow-2xs shrink-0"
               title="Bilgi Kartı Yazdır"
             >
-              <Printer className="w-4 h-4" />
+              <Info className="w-4 h-4" />
             </Button>
 
             <Button

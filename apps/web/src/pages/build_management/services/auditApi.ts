@@ -30,6 +30,13 @@ const transformAudit = (backendAudit: any): Audit => {
     },
     findings: (backendAudit.findings || []).map((f: any) => ({
       id: f.id,
+      rootFindingId: f.rootFindingId || f.id,
+      originReportNo: f.originReportNo || backendAudit.reportNo || '',
+      originReportDate: f.originReportDate ? f.originReportDate.split('T')[0] : (backendAudit.reportDate ? backendAudit.reportDate.split('T')[0] : ''),
+      isCarryover: Boolean(f.isCarryover || (typeof f.history === 'string' && f.history.includes('Devreden Bulgu'))),
+      progress: typeof f.progress === 'number' ? f.progress : (f.status === 'Tamamlanan' ? 100 : 0),
+      closedInReportNo: f.closedInReportNo || null,
+      closedAt: f.closedAt ? f.closedAt.split('T')[0] : null,
       no: f.no,
       area: f.area,
       subarea: f.subarea,
@@ -56,6 +63,13 @@ const transformAudit = (backendAudit: any): Audit => {
         title: a.title,
         explanation: a.explanation,
         completedAt: a.completedAt ? a.completedAt.split('T')[0] : '',
+        stepType: a.stepType || null,
+        progress: typeof a.progress === 'number' ? a.progress : null,
+        progressAdded: typeof a.progressAdded === 'number' ? a.progressAdded : null,
+        performedBy: a.performedBy || null,
+        performedByName: a.performedByName || null,
+        performedByTitle: a.performedByTitle || null,
+        sourceHistoryId: a.sourceHistoryId || null,
         files: a.files || []
       }))
     }))
@@ -119,9 +133,13 @@ export const uploadAuditFiles = async (
   return response.json(); // Array of { name, url, type, size }
 };
 
-export const deleteAudit = async (auditId: string) => {
-  const response = await api.delete(`/renovation-reports/${auditId}`);
-  if (!response.ok) throw new Error('Failed to delete audit');
+export const deleteAudit = async (auditId: string, confirmUsername?: string) => {
+  const qs = confirmUsername ? `?confirmUsername=${encodeURIComponent(confirmUsername)}` : '';
+  const response = await api.delete(`/renovation-reports/${auditId}${qs}`);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Rapor silinemedi');
+  }
   return response.json();
 };
 export const fetchRenovationSettings = async () => {

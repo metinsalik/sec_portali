@@ -1367,6 +1367,8 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
   const [loading, setLoading] = useState(false);
 
   const isGrounding = record.sheetType === 'TOPRAKLAMA_PK';
+  const isAuditSynced =
+    record.sourceModule === 'IRSC_AUDIT' || record.sheetType === 'MERKEZI_DENETIMLER';
   const [standardNoteCode, setStandardNoteCode] = useState<string>(record.standardNoteCode || '');
   const [periodicReportId, setPeriodicReportId] = useState<string | null>(record.periodicReportId || null);
 
@@ -1488,6 +1490,18 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-sm">
 
+          {isAuditSynced && (
+            <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl text-xs text-blue-900 dark:text-blue-200 flex items-start gap-2">
+              <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block">Merkezi Denetim Kaydı (Kısmi Koruma Aktif)</span>
+                <span className="text-[11px] text-muted-foreground">
+                  Entegre Risk ve Güvenlik Denetimi modülünden aktarılan temel bulgu alanları (Tespit, Risk, Mahal, Kategori, Tarih, Fotoğraflar) salt okunurdur ve kayıt buradan silinemez. Keşif notları, teknik müdür açıklaması, bütçe, sorumlu, termin ve aksiyon alanlarını düzenleyebilirsiniz.
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Topraklama PK: Standart Periyodik Kontrol Kusur / Not Seçimi */}
           {isGrounding && (
             <div className="p-3.5 bg-amber-500/10 dark:bg-amber-950/20 border border-amber-500/30 rounded-xl space-y-2.5">
@@ -1558,7 +1572,11 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
               <select
                 value={formData.category}
                 onChange={e => setFormData({ ...formData, category: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none"
+                disabled={isAuditSynced}
+                className={cn(
+                  "w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none",
+                  isAuditSynced && "bg-muted/60 text-muted-foreground cursor-not-allowed"
+                )}
               >
                 {availableCategories.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
@@ -1577,7 +1595,11 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
               <select
                 value={formData.riskScore}
                 onChange={e => setFormData({ ...formData, riskScore: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-semibold"
+                disabled={isAuditSynced}
+                className={cn(
+                  "w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none font-semibold",
+                  isAuditSynced && "bg-muted/60 text-muted-foreground cursor-not-allowed"
+                )}
               >
                 <option value="Kritik">Kritik</option>
                 <option value="Yüksek">Yüksek</option>
@@ -1599,7 +1621,11 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
                 type="date"
                 value={formData.recordDate}
                 onChange={e => setFormData({ ...formData, recordDate: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
+                disabled={isAuditSynced}
+                className={cn(
+                  "w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums",
+                  isAuditSynced && "bg-muted/60 text-muted-foreground cursor-not-allowed"
+                )}
               />
             </div>
 
@@ -1673,7 +1699,11 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
                 type="text"
                 value={formData.location}
                 onChange={e => setFormData({ ...formData, location: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none"
+                disabled={isAuditSynced}
+                className={cn(
+                  "w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none",
+                  isAuditSynced && "bg-muted/60 text-muted-foreground cursor-not-allowed"
+                )}
               />
             </div>
 
@@ -1682,10 +1712,19 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
                 <label className="text-xs font-semibold text-foreground block mb-1">
                   Denetim Adı
                 </label>
-                <AuditNameMultiSelect
-                  value={formData.auditName}
-                  onChange={val => setFormData({ ...formData, auditName: val })}
-                />
+                {isAuditSynced ? (
+                  <input
+                    type="text"
+                    value={formData.auditName}
+                    disabled
+                    className="w-full h-9 px-3 rounded-lg border bg-muted/60 text-muted-foreground text-xs outline-none cursor-not-allowed"
+                  />
+                ) : (
+                  <AuditNameMultiSelect
+                    value={formData.auditName}
+                    onChange={val => setFormData({ ...formData, auditName: val })}
+                  />
+                )}
               </div>
             ) : (
               <div className="col-span-2 grid grid-cols-2 gap-3">
@@ -1740,7 +1779,11 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
               rows={3}
               value={formData.finding}
               onChange={e => setFormData({ ...formData, finding: e.target.value })}
-              className="w-full p-3 rounded-lg border bg-background text-foreground text-xs outline-none resize-none"
+              disabled={isAuditSynced}
+              className={cn(
+                "w-full p-3 rounded-lg border bg-background text-foreground text-xs outline-none resize-none",
+                isAuditSynced && "bg-muted/60 text-muted-foreground cursor-not-allowed"
+              )}
               required
             />
           </div>
@@ -1748,16 +1791,18 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
           {/* Bulgu Fotoğrafları & Dokümanlar (WebP & PDF) */}
           <div>
             <label className="text-xs font-semibold text-foreground block mb-1">
-              Bulgu Fotoğrafları & Belgeleri (Maks. 3 Fotoğraf)
+              {isAuditSynced
+                ? 'Ek Dokümanlar (Bulgu Fotoğrafları Denetim Raporundan Gelir)'
+                : 'Bulgu Fotoğrafları & Belgeleri (Maks. 3 Fotoğraf)'}
             </label>
             <ImprovementAttachmentManager
               facilityId={record.facilityId}
               facilityName={getRecordFacilityName(record.facility, record.facilityId)}
               photos={findingPhotos}
-              onPhotosChange={setFindingPhotos}
+              onPhotosChange={isAuditSynced ? () => {} : setFindingPhotos}
               documents={documents}
               onDocumentsChange={setDocuments}
-              maxPhotos={3}
+              maxPhotos={isAuditSynced ? findingPhotos.length : 3}
             />
           </div>
 
@@ -1769,7 +1814,11 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
               rows={2}
               value={formData.actionPlan}
               onChange={e => setFormData({ ...formData, actionPlan: e.target.value })}
-              className="w-full p-3 rounded-lg border bg-background text-foreground text-xs outline-none resize-none"
+              disabled={isAuditSynced}
+              className={cn(
+                "w-full p-3 rounded-lg border bg-background text-foreground text-xs outline-none resize-none",
+                isAuditSynced && "bg-muted/60 text-muted-foreground cursor-not-allowed"
+              )}
             />
           </div>
 
@@ -1858,7 +1907,7 @@ export const EditRecordDialog: React.FC<EditProps> = ({ record, onClose, onSucce
           </div>
 
           <div className="pt-3 border-t flex items-center justify-between">
-            {onDelete ? (
+            {onDelete && !isAuditSynced ? (
               <Button
                 type="button"
                 variant="ghost"
@@ -2101,6 +2150,18 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-sm">
 
+          {isAuditSynced && (
+            <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl text-xs text-blue-900 dark:text-blue-200 flex items-start gap-2">
+              <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold block">Merkezi Denetim Kaydı (Kısmi Koruma Aktif)</span>
+                <span className="text-[11px] text-muted-foreground">
+                  Entegre Risk ve Güvenlik Denetimi modülünden aktarılan temel bulgu alanları (Tespit, Risk, Mahal, Kategori, Tarih, Fotoğraflar) salt okunurdur ve kayıt buradan silinemez. Keşif notları, teknik müdür açıklaması, bütçe, sorumlu, termin ve aksiyon alanlarını düzenleyebilirsiniz.
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Hastane Seçimi */}
           <div>
             <label className="text-xs font-semibold text-foreground block mb-1">
@@ -2228,7 +2289,11 @@ export const CreateRecordDialog: React.FC<CreateProps> = ({
                 type="date"
                 value={formData.recordDate}
                 onChange={e => setFormData({ ...formData, recordDate: e.target.value })}
-                className="w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums"
+                disabled={isAuditSynced}
+                className={cn(
+                  "w-full h-9 px-3 rounded-lg border bg-background text-foreground text-xs outline-none tabular-nums",
+                  isAuditSynced && "bg-muted/60 text-muted-foreground cursor-not-allowed"
+                )}
               />
             </div>
 

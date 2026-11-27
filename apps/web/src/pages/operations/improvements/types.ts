@@ -127,6 +127,9 @@ export interface ImprovementRecord {
   standardNoteCode?: string | null;
 
   sourceFileName?: string | null;
+  sourceModule?: string | null;
+  sourceFindingId?: string | null;
+  sourceReportNo?: string | null;
   verificationStatus?: VerificationStatusType | string | null;
   verifiedAt?: string | null;
   verifiedBy?: string | null;

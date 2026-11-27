@@ -29,11 +29,23 @@ import {
   ClipboardList,
   Info,
   FileSpreadsheet,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { HazmatExcelImportDialog } from '@/components/hazmat/HazmatExcelImportDialog';
 import { HazardStatementSelector } from '@/components/hazmat/HazardStatementSelector';
+import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { GbfDoc, GbfSubData } from '@/components/hazmat/gbf/gbfSchema';
 import {
   GBF_SECTIONS,
@@ -115,7 +127,16 @@ export default function MaterialFormPage() {
     user?.roles?.includes('management') ||
     user?.roles?.includes('safety')
   );
+  const isGlobalAdmin = !!(
+    user?.isAdmin ||
+    user?.isManagement ||
+    user?.roles?.includes('admin') ||
+    user?.roles?.includes('management')
+  );
   const [excelImportOpen, setExcelImportOpen] = useState(false);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [loadedMaterial, setLoadedMaterial] = useState<any>(null);
   const [isDataLoaded, setIsDataLoaded] = useState(!isEditMode);
   const [isDirty, setIsDirty] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -211,6 +232,7 @@ export default function MaterialFormPage() {
       });
 
       setGbfDoc(hydrateGbfFromMaterial(mat));
+      setLoadedMaterial(mat);
       setIsDataLoaded(true);
       setIsDirty(false);
       return data;
@@ -219,6 +241,28 @@ export default function MaterialFormPage() {
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: false,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!id) throw new Error('Madde kimliği bulunamadı');
+      const res = await api.delete(`/hazmat/materials/${id}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || err.message || 'Madde silinemedi');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success('Tehlikeli madde veritabanından kalıcı olarak silindi.');
+      localStorage.removeItem(draftKey);
+      queryClient.invalidateQueries({ queryKey: ['global-materials-list'] });
+      queryClient.invalidateQueries({ queryKey: ['facility-materials'] });
+      navigate(returnTo);
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Silme işlemi başarısız.');
+    },
   });
 
   // Load Local Draft for New Mode
@@ -673,6 +717,63 @@ export default function MaterialFormPage() {
               <RotateCcw className="w-3.5 h-3.5 mr-1" />
               Sıfırla
             </Button>
+          )}
+          {isEditMode && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className={`h-8 w-8 rounded-lg shrink-0 ${
+                  meta.sdsUrl
+                    ? 'text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                    : 'text-red-700 dark:text-red-400 border-red-300 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/40'
+                }`}
+                title={
+                  meta.sdsUrl
+                    ? 'Güvenlik Bilgi Formu (SDS) Belgesini Aç'
+                    : 'SDS henüz yüklenmemiştir'
+                }
+                onClick={() => {
+                  if (meta.sdsUrl) {
+                    const url = meta.sdsUrl.startsWith('http')
+                      ? meta.sdsUrl
+                      : `${BASE_URL}${meta.sdsUrl}`;
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                  } else {
+                    toast.warning('Bu madde için SDS henüz yüklenmemiştir.');
+                  }
+                }}
+              >
+                <FileText className="w-4 h-4" />
+              </Button>
+              {loadedMaterial && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setPrintModalOpen(true)}
+                  className="h-8 w-8 rounded-lg text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 shrink-0"
+                  title="Bilgi Kartı Yazdır"
+                >
+                  <Info className="w-4 h-4" />
+                </Button>
+              )}
+              {isGlobalAdmin && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => setDeleteConfirmOpen(true)}
+                  className="h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive gap-1.5"
+                  title="Tehlikeli Maddeyi Veritabanından Sil"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Sil
+                </Button>
+              )}
+            </>
           )}
           <Button
             type="button"
@@ -1460,6 +1561,39 @@ export default function MaterialFormPage() {
         onOpenChange={setExcelImportOpen}
         onSuccess={() => navigate(returnTo)}
       />
+
+      {/* Bilgi Kartı Yazdırma Modalı */}
+      <PrintCardModal
+        isOpen={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        material={loadedMaterial}
+      />
+
+      {/* Madde Silme Onayı */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent className="rounded-lg border border-border shadow-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold">
+              Tehlikeli Maddeyi Veritabanından Sil
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground">
+              <strong>{meta.productName || 'Bu tehlikeli maddeyi'}</strong> merkezi veritabanından kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-xs h-8" disabled={deleteMutation.isPending}>
+              İptal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs h-8"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate()}
+            >
+              {deleteMutation.isPending ? 'Siliniyor...' : 'Kalıcı Olarak Sil'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

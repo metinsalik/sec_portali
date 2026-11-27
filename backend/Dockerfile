@@ -25,7 +25,7 @@ RUN mkdir -p /app/backend/uploads
 
 # Build shared package
 WORKDIR /app/packages/shared
-RUN /app/backend/node_modules/.bin/tsc
+RUN node --no-maglev /app/backend/node_modules/.bin/tsc
 
 WORKDIR /app/backend
 
@@ -34,8 +34,8 @@ RUN sed -i 's/\r$//' entrypoint.sh
 RUN chmod +x entrypoint.sh
 
 # Generate prisma client & build
-RUN node /app/node_modules/prisma/build/index.js generate --generator client
-RUN node --max-old-space-size=4096 /app/backend/node_modules/.bin/tsc --noCheck
+RUN node --no-maglev /app/node_modules/prisma/build/index.js generate --generator client
+RUN node --no-maglev --max-old-space-size=4096 /app/backend/node_modules/.bin/tsc --noCheck
 
 EXPOSE 3005
 

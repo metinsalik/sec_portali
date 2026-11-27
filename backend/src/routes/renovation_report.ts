@@ -6,6 +6,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import { syncPublishedAuditToImprovements } from '../services/auditImprovementSync';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -70,7 +71,7 @@ router.post('/upload', authMiddleware, upload.array('files', 20), async (req: Au
       type: file.mimetype,
       size: file.size
     }));
-    
+
     res.json(uploadedFiles);
   } catch (error) {
     console.error('Upload Error:', error);
@@ -91,11 +92,12 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     const audits = await prisma.integratedAudit.findMany({
       where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
       include: {
-        
+
         findings: {
           include: {
             actions: {
-              include: { files: true }
+              include: { files: true },
+              orderBy: { order: 'asc' }
             },
             files: true
           }
@@ -116,6 +118,13 @@ router.post('/save', authMiddleware, async (req: AuthRequest, res: Response) => 
   if (!facilityId) return res.status(400).json({ error: 'facilityId zorunludur' });
 
   try {
+    const actorRecord = req.user?.username
+      ? await prisma.user.findUnique({
+        where: { username: req.user.username },
+        select: { username: true, fullName: true, title: true }
+      })
+      : null;
+
     const result = await prisma.$transaction(async (tx) => {
       // Create or update the main audit
       const auditData = {
@@ -142,7 +151,7 @@ router.post('/save', authMiddleware, async (req: AuthRequest, res: Response) => 
       if (!id || id.startsWith('draft_')) {
         // Create new
         const createdAudit = await tx.integratedAudit.create({
-          data: { 
+          data: {
             ...auditData,
             createdBy: req.user?.username || req.user?.fullName || 'unknown'
           }
@@ -158,167 +167,259 @@ router.post('/save', authMiddleware, async (req: AuthRequest, res: Response) => 
 
       // 2. Sync Findings WITH PERMANENT UUIDs (Upsert existing, create new with UUID, delete only removed)
       const incomingFindings = Array.isArray(findings) ? findings : [];
-      const resolvedFindings = incomingFindings.map((finding: any) => {
-        const rawId = typeof finding.id === 'string' ? finding.id.trim() : '';
-        const isPersistentId = Boolean(rawId) && !rawId.startsWith('f_') && !rawId.startsWith('temp_');
-        return {
-          ...finding,
-          _resolvedId: isPersistentId ? rawId : crypto.randomUUID(),
-        };
-      });
+        const resolvedFindings: any[] = [];
+        for (const finding of incomingFindings) {
+          const rawId = typeof finding.id === 'string' ? finding.id.trim() : '';
+          const isPersistentId = Boolean(rawId) && !rawId.startsWith('f_') && !rawId.startsWith('temp_');
+            let candidateId = isPersistentId ? rawId : crypto.randomUUID();
+
+            // Başka bir denetimde (auditId) aynı primary key varsa yeni UUID ver, kök kimliği koru
+            if(isPersistentId) {
+              const otherAuditOwner = await tx.integratedFinding.findUnique({
+                where: { id: candidateId },
+                select: { auditId: true, rootFindingId: true }
+              });
+              if (otherAuditOwner && otherAuditOwner.auditId !== auditId) {
+                finding.rootFindingId = finding.rootFindingId || otherAuditOwner.rootFindingId || candidateId;
+                finding.isCarryover = true;
+                candidateId = crypto.randomUUID();
+              }
+            }
+
+        resolvedFindings.push({
+              ...finding,
+      _resolvedId: candidateId,
+        });
+  }
 
       const keepFindingIds = resolvedFindings.map((f: any) => f._resolvedId);
 
-      // Delete ONLY findings that were removed from this audit
-      await tx.integratedFinding.deleteMany({
-        where: {
-          auditId,
-          ...(keepFindingIds.length > 0 ? { id: { notIn: keepFindingIds } } : {}),
-        },
-      });
+  // Delete ONLY findings that were removed from this audit
+  await tx.integratedFinding.deleteMany({
+    where: {
+      auditId,
+      ...(keepFindingIds.length > 0 ? { id: { notIn: keepFindingIds } } : {}),
+    },
+  });
 
-      // Upsert each finding preserving its exact UUID
-      for (const finding of resolvedFindings) {
-        const findingId = finding._resolvedId;
-        const findingPayload = {
-          no: finding.no,
-          area: finding.area || '',
-          subarea: finding.subarea || null,
-          category: finding.category || '',
-          subcategory: finding.subcategory || null,
-          risk: finding.risk || 'Önemli',
-          targetDate: finding.targetDate ? new Date(finding.targetDate) : null,
-          isStarted: finding.isStarted || false,
-          residualRisk: finding.residualRisk || null,
-          riskReasoning: finding.riskReasoning || null,
-          findingDesc: finding.findingDesc || '',
-          riskDesc: finding.riskDesc || '',
-          recommendation: finding.recommendation || '',
-          status: finding.status || 'Yeni Tespit Edilen',
-          history: finding.history || null,
-          departments: finding.departments || [],
-        };
+  // Upsert each finding preserving its exact UUID & rootFindingId
+  for (const finding of resolvedFindings) {
+    const findingId = finding._resolvedId;
+    const isClosed = (finding.status || 'Yeni Tespit Edilen') === 'Tamamlanan';
+    const stepMaxProg = Array.isArray(finding.steps)
+      ? finding.steps.reduce((m: number, s: any) => Math.max(m, Number(s?.progress) || 0), 0)
+      : 0;
+    const computedProgress = isClosed
+      ? 100
+      : Math.min(99, Math.max(Number(finding.progress) || 0, stepMaxProg));
 
-        const existingFinding = await tx.integratedFinding.findFirst({
-          where: { id: findingId, auditId },
-          select: { id: true },
-        });
+    const findingPayload = {
+      rootFindingId: finding.rootFindingId || findingId,
+      originReportNo: finding.originReportNo || meta.reportNo || null,
+      originReportDate: finding.originReportDate
+        ? new Date(finding.originReportDate)
+        : meta.reportDate
+          ? new Date(meta.reportDate)
+          : new Date(),
+      isCarryover: Boolean(
+        finding.isCarryover ||
+        (typeof finding.history === 'string' && finding.history.includes('Devreden Bulgu'))
+      ),
+      progress: computedProgress,
+      closedInReportNo: isClosed ? (finding.closedInReportNo || meta.reportNo || null) : null,
+      closedAt: isClosed
+        ? finding.closedAt
+          ? new Date(finding.closedAt)
+          : new Date()
+        : null,
+      no: finding.no,
+      area: finding.area || '',
+      subarea: finding.subarea || null,
+      category: finding.category || '',
+      subcategory: finding.subcategory || null,
+      risk: finding.risk || 'Önemli',
+      targetDate: finding.targetDate ? new Date(finding.targetDate) : null,
+      isStarted: Boolean(finding.isStarted || computedProgress > 0 || (finding.steps && finding.steps.length > 0)),
+      residualRisk: finding.residualRisk || null,
+      riskReasoning: finding.riskReasoning || null,
+      findingDesc: finding.findingDesc || '',
+      riskDesc: finding.riskDesc || '',
+      recommendation: finding.recommendation || '',
+      status: finding.status || 'Yeni Tespit Edilen',
+      history: finding.history || null,
+      departments: finding.departments || [],
+    };
 
-        if (existingFinding) {
-          await tx.integratedFinding.update({
-            where: { id: findingId },
-            data: findingPayload,
-          });
-          // Replace finding-level files cleanly
-          await tx.integratedFile.deleteMany({ where: { findingId } });
-        } else {
-          await tx.integratedFinding.create({
-            data: {
-              id: findingId,
-              auditId,
-              ...findingPayload,
-            },
-          });
-        }
-
-        // Finding Files
-        if (finding.files && finding.files.length > 0) {
-          await tx.integratedFile.createMany({
-            data: finding.files.map((f: any) => ({
-              findingId,
-              name: f.name || 'dosya',
-              url: f.url,
-              type: f.type || 'unknown',
-            })),
-          });
-        }
-
-        // 3. Sync Actions (preserve persistent action UUIDs too)
-        const incomingSteps = Array.isArray(finding.steps) ? finding.steps : [];
-        const resolvedSteps = incomingSteps.map((step: any) => {
-          const rawStepId = typeof step.id === 'string' ? step.id.trim() : '';
-          const isPersistentStepId = Boolean(rawStepId) && !rawStepId.startsWith('step_');
-          return {
-            ...step,
-            _resolvedStepId: isPersistentStepId ? rawStepId : crypto.randomUUID(),
-          };
-        });
-        const keepStepIds = resolvedSteps.map((s: any) => s._resolvedStepId);
-
-        await tx.integratedAction.deleteMany({
-          where: {
-            findingId,
-            ...(keepStepIds.length > 0 ? { id: { notIn: keepStepIds } } : {}),
-          },
-        });
-
-        for (const step of resolvedSteps) {
-          const actionId = step._resolvedStepId;
-          const actionPayload = {
-            department: step.department,
-            order: step.order || 1,
-            status: step.status,
-            actionDate: step.actionDate ? new Date(step.actionDate) : null,
-            title: step.title || null,
-            explanation: step.explanation || null,
-            completedAt: step.completedAt ? new Date(step.completedAt) : null,
-          };
-
-          const existingAction = await tx.integratedAction.findFirst({
-            where: { id: actionId, findingId },
-            select: { id: true },
-          });
-
-          if (existingAction) {
-            await tx.integratedAction.update({
-              where: { id: actionId },
-              data: actionPayload,
-            });
-            await tx.integratedFile.deleteMany({ where: { actionId } });
-          } else {
-            await tx.integratedAction.create({
-              data: {
-                id: actionId,
-                findingId,
-                ...actionPayload,
-              },
-            });
-          }
-
-          if (step.files && step.files.length > 0) {
-            await tx.integratedFile.createMany({
-              data: step.files.map((f: any) => ({
-                actionId,
-                name: f.name || 'dosya',
-                url: f.url,
-                type: f.type || 'unknown',
-              })),
-            });
-          }
-        }
-      }
-
-      // Fetch the full constructed audit
-      const completeAudit = await tx.integratedAudit.findUnique({
-        where: { id: auditId },
-        include: {
-          
-          findings: {
-            include: {
-              actions: { include: { files: true } },
-              files: true
-            }
-          }
-        }
-      });
-      return completeAudit;
+    const existingFinding = await tx.integratedFinding.findFirst({
+      where: { id: findingId, auditId },
+      select: { id: true },
     });
 
-    res.status(200).json(result);
-  } catch (err) {
-    console.error('Save Audit Error:', err);
-    res.status(500).json({ error: 'Rapor kaydedilemedi.' });
+    if (existingFinding) {
+      await tx.integratedFinding.update({
+        where: { id: findingId },
+        data: findingPayload,
+      });
+      // Replace finding-level files cleanly
+      await tx.integratedFile.deleteMany({ where: { findingId } });
+    } else {
+      await tx.integratedFinding.create({
+        data: {
+          id: findingId,
+          auditId,
+          ...findingPayload,
+        },
+      });
+    }
+
+    // Finding Files
+    if (finding.files && finding.files.length > 0) {
+      await tx.integratedFile.createMany({
+        data: finding.files.map((f: any) => ({
+          findingId,
+          name: f.name || 'dosya',
+          url: f.url,
+          type: f.type || 'unknown',
+        })),
+      });
+    }
+
+    // 3. Sync Actions (preserve persistent action UUIDs too)
+    const incomingSteps = Array.isArray(finding.steps) ? finding.steps : [];
+      const resolvedSteps: any[] = [];
+      for (const step of incomingSteps) {
+        const rawStepId = typeof step.id === 'string' ? step.id.trim() : '';
+        const isPersistentStepId = Boolean(rawStepId) && !rawStepId.startsWith('step_');
+          let candidateStepId = isPersistentStepId ? rawStepId : crypto.randomUUID();
+
+          if(isPersistentStepId) {
+            const otherStepOwner = await tx.integratedAction.findUnique({
+              where: { id: candidateStepId },
+              select: { findingId: true }
+            });
+            if (otherStepOwner && otherStepOwner.findingId !== findingId) {
+              candidateStepId = crypto.randomUUID();
+            }
+          }
+
+          resolvedSteps.push({
+            ...step,
+    _resolvedStepId: candidateStepId,
+          });
+        }
+const keepStepIds = resolvedSteps.map((s: any) => s._resolvedStepId);
+
+await tx.integratedAction.deleteMany({
+  where: {
+    findingId,
+    ...(keepStepIds.length > 0 ? { id: { notIn: keepStepIds } } : {}),
+  },
+});
+
+  for (let sIdx = 0; sIdx < resolvedSteps.length; sIdx++) {
+    const step = resolvedSteps[sIdx];
+    const actionId = step._resolvedStepId;
+    const existingAction = await tx.integratedAction.findFirst({
+      where: { id: actionId, findingId },
+      select: { id: true, performedBy: true, performedByName: true, performedByTitle: true, sourceHistoryId: true },
+    });
+
+    // sourceHistoryId yalnızca başka bir satırda kullanılmıyorsa korunsun (devreden kopyalarda çakışmayı önler)
+    let safeSourceHistoryId: string | null = existingAction?.sourceHistoryId || step.sourceHistoryId || null;
+    if (safeSourceHistoryId && !existingAction) {
+      const alreadyLinked = await tx.integratedAction.findUnique({
+        where: { sourceHistoryId: safeSourceHistoryId },
+        select: { id: true }
+      });
+      if (alreadyLinked) safeSourceHistoryId = null;
+    }
+
+    const actionPayload = {
+      department: step.department || 'İlgili Birim',
+      order: step.order || sIdx + 1,
+      status: step.status || 'Devam Ediyor',
+      actionDate: step.actionDate ? new Date(step.actionDate) : new Date(),
+      title: step.title || null,
+      explanation: step.explanation || null,
+      completedAt:
+        step.completedAt
+          ? new Date(step.completedAt)
+          : step.status === 'Tamamlandı'
+            ? new Date(step.actionDate || Date.now())
+            : null,
+      stepType: step.stepType || null,
+      progress: step.progress !== undefined && step.progress !== null ? Number(step.progress) : null,
+      progressAdded: step.progressAdded !== undefined && step.progressAdded !== null ? Number(step.progressAdded) : null,
+      performedBy: step.performedBy || existingAction?.performedBy || actorRecord?.username || req.user?.username || null,
+      performedByName:
+        step.performedByName ||
+        existingAction?.performedByName ||
+        actorRecord?.fullName ||
+        req.user?.fullName ||
+        req.user?.username ||
+        null,
+      performedByTitle:
+        step.performedByTitle ||
+        existingAction?.performedByTitle ||
+        actorRecord?.title ||
+        null,
+      ...(safeSourceHistoryId ? { sourceHistoryId: safeSourceHistoryId } : {}),
+    };
+
+    if (existingAction) {
+      await tx.integratedAction.update({
+        where: { id: actionId },
+        data: actionPayload,
+      });
+      await tx.integratedFile.deleteMany({ where: { actionId } });
+    } else {
+      await tx.integratedAction.create({
+        data: {
+          id: actionId,
+          findingId,
+          ...actionPayload,
+        },
+      });
+    }
+
+    if (step.files && step.files.length > 0) {
+      await tx.integratedFile.createMany({
+        data: step.files.map((f: any) => ({
+          actionId,
+          name: f.name || 'dosya',
+          url: f.url,
+          type: f.type || 'unknown',
+        })),
+      });
+    }
   }
+}
+
+// Fetch the full constructed audit
+const completeAudit = await tx.integratedAudit.findUnique({
+  where: { id: auditId },
+  include: {
+
+    findings: {
+      include: {
+        actions: { include: { files: true }, orderBy: { order: 'asc' } },
+        files: true
+      }
+    }
+  }
+});
+return completeAudit;
+    });
+
+if ((status || 'DRAFT') === 'PUBLISHED' && result?.id) {
+  await syncPublishedAuditToImprovements(result.id, req.user?.username);
+}
+
+res.status(200).json(result);
+  } catch (err) {
+  console.error('Save Audit Error:', err);
+  res.status(500).json({ error: 'Rapor kaydedilemedi.' });
+}
 });
 
 // ============================================================================
@@ -639,11 +740,43 @@ router.delete('/pool/:id', authMiddleware, async (req: AuthRequest, res: Respons
 // Delete a report
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    const existing = await prisma.integratedAudit.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, status: true, reportNo: true }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Rapor bulunamadı.' });
+    }
+
+    const isAdminOrMgmt = !!(
+      req.user?.isAdmin ||
+      req.user?.isManagement ||
+      req.user?.roles?.includes('admin') ||
+      req.user?.roles?.includes('management')
+    );
+
+    if (existing.status === 'PUBLISHED') {
+      if (!isAdminOrMgmt) {
+        return res.status(403).json({ error: 'Yayınlanmış raporları yalnızca yöneticiler silebilir.' });
+      }
+      const confirmUsername = String(req.query.confirmUsername || req.body?.confirmUsername || '').trim().toLowerCase();
+      const actualUsername = String(req.user?.username || '').trim().toLowerCase();
+      if (!actualUsername || confirmUsername !== actualUsername) {
+        return res.status(400).json({ error: 'Silme işlemini onaylamak için kullanıcı adınızı doğru girmelisiniz.' });
+      }
+    } else if (!isIrscManager(req)) {
+      return res.status(403).json({ error: 'Bu raporu silme yetkiniz yok.' });
+    }
+
     await prisma.integratedAudit.delete({
       where: { id: req.params.id }
     });
+
+    console.log(`[RenovationReport] Rapor silindi: ${existing.reportNo || existing.id} (status=${existing.status}) - silen: ${req.user?.username}`);
     res.json({ success: true });
   } catch (err) {
+    console.error('Delete Report Error:', err);
     res.status(500).json({ error: 'Rapor silinemedi.' });
   }
 });
@@ -678,7 +811,7 @@ router.get('/settings', authMiddleware, async (req: AuthRequest, res: Response) 
 router.post('/settings', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { categories, departments, areas, criteria } = req.body;
-    
+
     const settings = await prisma.renovationReportSetting.upsert({
       where: { id: 'default' },
       update: {

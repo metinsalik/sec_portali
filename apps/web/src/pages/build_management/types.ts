@@ -92,10 +92,24 @@ export interface ActionStep {
   title?: string;
   explanation?: string;
   completedAt?: string;
+  stepType?: string;
+  progress?: number | null;
+  progressAdded?: number | null;
+  performedBy?: string | null;
+  performedByName?: string | null;
+  performedByTitle?: string | null;
+  sourceHistoryId?: string | null;
 }
 
 export interface Finding {
   id: string;
+  rootFindingId?: string;
+  originReportNo?: string;
+  originReportDate?: string;
+  isCarryover?: boolean;
+  progress?: number;
+  closedInReportNo?: string | null;
+  closedAt?: string | null;
   no: string;
   area: string; // Eskiler için geriye dönük uyumluluk
   subarea?: string;

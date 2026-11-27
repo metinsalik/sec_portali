@@ -83,6 +83,7 @@ export const DenetimlerPage: React.FC = () => {
         onRefresh={fetchRecords}
         facilities={facilities}
         selectedFacilityId={selectedFacilityId}
+        hideCreateButton={currentSheetKey === 'MERKEZI_DENETIMLER'}
       />
 
     </div>

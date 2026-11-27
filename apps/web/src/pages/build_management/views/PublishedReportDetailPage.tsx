@@ -23,6 +23,7 @@ import {
   MapPin,
   Tag,
   Loader2,
+  Trash2,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import toast from 'react-hot-toast';
@@ -38,14 +39,23 @@ import {
   getRiskBadgeClass,
   getRiskBorderClass,
 } from '../types';
-import { saveAudit, uploadAuditFiles } from '../services/auditApi';
+import { saveAudit, uploadAuditFiles, deleteAudit } from '../services/auditApi';
 import ReportTemplate from './ReportTemplate';
 import { AUDIT_RICH_CONTENT_CLASS } from '../components/AuditRichTextEditor';
+import { AuditActionStepDialog } from '../components/AuditActionStepDialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 interface PublishedReportDetailPageProps {
   reportId: string;
@@ -63,6 +73,17 @@ export default function PublishedReportDetailPage({ reportId }: PublishedReportD
     user?.roles?.includes('management') ||
     user?.roles?.includes('safety')
   );
+
+  const canDeletePublished = !!(
+    user?.isAdmin ||
+    user?.isManagement ||
+    user?.roles?.includes('admin') ||
+    user?.roles?.includes('management')
+  );
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [confirmUsername, setConfirmUsername] = useState('');
+  const [deletingReport, setDeletingReport] = useState(false);
 
   const audit = useMemo(() => audits.find((a) => a.id === reportId), [audits, reportId]);
   const facility = useMemo(
@@ -90,10 +111,22 @@ export default function PublishedReportDetailPage({ reportId }: PublishedReportD
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [savingAction, setSavingAction] = useState(false);
 
+  const sanitizePdfPart = (val: string) =>
+    val
+      .trim()
+      .replace(/[\\/:*?"<>|]+/g, '')
+      .replace(/\s+/g, '_');
+  const pdfFileName = [
+    sanitizePdfPart(audit?.meta?.reportNo || ''),
+    sanitizePdfPart(facility?.name || ''),
+  ]
+    .filter(Boolean)
+    .join('_') || 'IRSC_Denetim_Raporu';
+
   const printRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: audit?.meta?.reportNo ? `${audit.meta.reportNo}_Rapor` : 'IRSC_Denetim_Raporu',
+    documentTitle: pdfFileName,
   });
 
   if (!audit) {
@@ -326,6 +359,20 @@ export default function PublishedReportDetailPage({ reportId }: PublishedReportD
               Çalışma Alanında Aç
             </Button>
           )}
+          {canDeletePublished && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setConfirmUsername('');
+                setDeleteModalOpen(true);
+              }}
+              className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="w-4 h-4" />
+              Raporu Sil
+            </Button>
+          )}
         </div>
       </div>
 
@@ -503,8 +550,8 @@ export default function PublishedReportDetailPage({ reportId }: PublishedReportD
                           <Badge
                             variant="outline"
                             className={`text-[11px] ${f.status === 'Tamamlanan'
-                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                                : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
                               }`}
                           >
                             {f.status || 'Yeni Tespit Edilen'}
@@ -572,8 +619,8 @@ export default function PublishedReportDetailPage({ reportId }: PublishedReportD
                             </span>
                             <span
                               className={`flex items-center gap-1 px-2 py-0.5 rounded-md border tabular-nums ${isOverdue
-                                  ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400 font-semibold'
-                                  : 'bg-muted/40 border-border'
+                                ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400 font-semibold'
+                                : 'bg-muted/40 border-border'
                                 }`}
                             >
                               <Calendar className="w-3.5 h-3.5" />
@@ -585,20 +632,10 @@ export default function PublishedReportDetailPage({ reportId }: PublishedReportD
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() =>
-                              setActionFormFindingId(actionFormFindingId === f.id ? null : f.id)
-                            }
+                            onClick={() => setActionFormFindingId(f.id)}
                             className="h-8 text-xs gap-1.5"
                           >
-                            {actionFormFindingId === f.id ? (
-                              <>
-                                <X className="w-3.5 h-3.5" /> Vazgeç
-                              </>
-                            ) : (
-                              <>
-                                <Plus className="w-3.5 h-3.5" /> Aksiyon / Güncelleme Ekle
-                              </>
-                            )}
+                            <Plus className="w-3.5 h-3.5" /> Süreç / Aksiyon Gir
                           </Button>
                         </div>
 
@@ -627,126 +664,12 @@ export default function PublishedReportDetailPage({ reportId }: PublishedReportD
                           </div>
                         )}
 
-                        {/* Yeni Aksiyon Giriş Formu */}
-                        {actionFormFindingId === f.id && (
-                          <div className="p-4 rounded-lg border border-primary/30 bg-muted/30 space-y-3">
-                            <h4 className="text-xs font-bold text-foreground">Yeni Aksiyon Adımı Ekle</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              <div>
-                                <label className="text-[11px] font-medium text-muted-foreground block mb-1">
-                                  Sorumlu Departman *
-                                </label>
-                                <select
-                                  value={newAction.department || ''}
-                                  onChange={(e) => setNewAction({ ...newAction, department: e.target.value })}
-                                  className="w-full h-9 px-3 rounded-lg border border-input bg-background text-foreground text-xs outline-none focus:ring-2 focus:ring-ring"
-                                >
-                                  <option value="">Seçiniz...</option>
-                                  {departments.map((d) => (
-                                    <option key={d.id} value={d.name}>
-                                      {d.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div>
-                                <label className="text-[11px] font-medium text-muted-foreground block mb-1">
-                                  Durum
-                                </label>
-                                <select
-                                  value={newAction.status || 'Devam Ediyor'}
-                                  onChange={(e) =>
-                                    setNewAction({ ...newAction, status: e.target.value as StepStatus })
-                                  }
-                                  className="w-full h-9 px-3 rounded-lg border border-input bg-background text-foreground text-xs outline-none focus:ring-2 focus:ring-ring"
-                                >
-                                  <option value="Başlamadı">Başlamadı</option>
-                                  <option value="Devam Ediyor">Devam Ediyor</option>
-                                  <option value="Tamamlandı">Tamamlandı</option>
-                                  <option value="İptal Edildi">İptal Edildi</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="text-[11px] font-medium text-muted-foreground block mb-1">
-                                  İşlem Tarihi
-                                </label>
-                                <Input
-                                  type="date"
-                                  value={newAction.actionDate || ''}
-                                  onChange={(e) => setNewAction({ ...newAction, actionDate: e.target.value })}
-                                  className="h-9 text-xs"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="text-[11px] font-medium text-muted-foreground block mb-1">
-                                Aksiyon Açıklaması *
-                              </label>
-                              <textarea
-                                rows={3}
-                                value={newAction.explanation || ''}
-                                onChange={(e) => setNewAction({ ...newAction, explanation: e.target.value })}
-                                placeholder="Yapılan veya planlanan aksiyonu açıklayın..."
-                                className="w-full p-2.5 rounded-lg border border-input bg-background text-foreground text-xs outline-none focus:ring-2 focus:ring-ring"
-                              />
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                              <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed border-input bg-background text-xs text-muted-foreground hover:text-foreground cursor-pointer">
-                                {uploadingFiles ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                  <Upload className="w-3.5 h-3.5" />
-                                )}
-                                <span>
-                                  {newAction.files?.length
-                                    ? `${newAction.files.length} kanıt eklendi`
-                                    : 'Kanıt Fotoğraf / PDF Ekle'}
-                                </span>
-                                <input
-                                  type="file"
-                                  multiple
-                                  accept="image/*,application/pdf"
-                                  className="hidden"
-                                  onChange={async (e) => {
-                                    if (!e.target.files?.length) return;
-                                    setUploadingFiles(true);
-                                    try {
-                                      const uploaded = await uploadAuditFiles(Array.from(e.target.files));
-                                      setNewAction((prev) => ({
-                                        ...prev,
-                                        files: [...(prev.files || []), ...uploaded],
-                                      }));
-                                      toast.success('Kanıt dosyaları yüklendi.');
-                                    } catch {
-                                      toast.error('Dosya yüklenemedi.');
-                                    } finally {
-                                      setUploadingFiles(false);
-                                    }
-                                  }}
-                                />
-                              </label>
-
-                              <Button
-                                size="sm"
-                                disabled={savingAction || !newAction.department || !newAction.explanation?.trim()}
-                                onClick={() => handleSaveActionStep(f.id)}
-                                className="gap-1.5 text-xs"
-                              >
-                                {savingAction && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                                Aksiyonu Kaydet
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-
                         {/* Mevcut Aksiyon Adımları */}
                         {f.steps && f.steps.length > 0 && (
                           <div className="space-y-2 pt-2 border-t border-border/60">
                             <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                               <MessageSquare className="w-3.5 h-3.5 text-primary" />
-                              Aksiyon Geçmişi ({f.steps.length})
+                              Aksiyon ve İyileştirme Süreç Geçmişi ({f.steps.length})
                             </span>
                             <div className="space-y-2">
                               {f.steps.map((step, sIdx) => (
@@ -755,10 +678,28 @@ export default function PublishedReportDetailPage({ reportId }: PublishedReportD
                                   className="p-3 rounded-lg border border-border bg-muted/20 space-y-1.5 text-xs"
                                 >
                                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                                    <span className="font-semibold text-foreground">
-                                      Adım {sIdx + 1}: {step.department}
-                                    </span>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-semibold text-foreground">
+                                        Adım {sIdx + 1}: {step.title || step.department}
+                                      </span>
+                                      {step.performedByName && (
+                                        <span className="text-[11px] text-muted-foreground">
+                                          • <strong className="text-foreground">{step.performedByName}</strong>
+                                          {step.performedByTitle ? ` (${step.performedByTitle})` : ''}
+                                        </span>
+                                      )}
+                                      {step.department && (
+                                        <Badge variant="secondary" className="text-[10px]">
+                                          {step.department}
+                                        </Badge>
+                                      )}
+                                    </div>
                                     <div className="flex items-center gap-2">
+                                      {typeof step.progress === 'number' && (
+                                        <Badge variant="outline" className="text-[10px] tabular-nums bg-primary/10 text-primary border-primary/20">
+                                          %{step.progress}
+                                        </Badge>
+                                      )}
                                       {step.actionDate && (
                                         <span className="text-muted-foreground tabular-nums">
                                           {formatDate(step.actionDate)}
@@ -1006,12 +947,172 @@ export default function PublishedReportDetailPage({ reportId }: PublishedReportD
                 findings={findings}
                 auditMeta={audit.meta}
                 facility={facility}
+                facilityAudits={audits.filter(
+                  (a) => a.meta?.locationId === audit.meta?.locationId && a.status === 'PUBLISHED'
+                )}
                 logoUrl="https://raw.githubusercontent.com/metinsalik/self-agent/refs/heads/main/mlpcare.jpg"
               />
             </div>
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Ortak Süreç & Aksiyon Giriş Penceresi */}
+      <AuditActionStepDialog
+        open={Boolean(actionFormFindingId)}
+        finding={findings.find((x) => x.id === actionFormFindingId) || null}
+        departments={departments}
+        facilityId={audit.meta?.locationId}
+        facilityName={facility?.name}
+        defaultTemplateId="TALEP_ACILDI"
+        saving={savingAction}
+        onClose={() => setActionFormFindingId(null)}
+        onSaveStep={async (findingId, step, nextFindingStatus, nextProgress) => {
+          setSavingAction(true);
+          try {
+            const updatedFindings = findings.map((item) => {
+              if (item.id !== findingId) return item;
+              return {
+                ...item,
+                status: nextFindingStatus,
+                progress: nextProgress,
+                isStarted: true,
+                closedInReportNo:
+                  nextFindingStatus === 'Tamamlanan'
+                    ? audit.meta?.reportNo || item.closedInReportNo || null
+                    : null,
+                closedAt:
+                  nextFindingStatus === 'Tamamlanan'
+                    ? step.actionDate || new Date().toISOString().split('T')[0]
+                    : null,
+                steps: [...(item.steps || []), step],
+              };
+            });
+            const saved = await saveAudit(
+              { ...audit, findings: updatedFindings } as any,
+              audit.meta.locationId
+            );
+            setAudits(audits.map((a) => (a.id === audit.id ? saved : a)));
+            setActionFormFindingId(null);
+            toast.success('Süreç adımı ve aksiyon rapora kaydedildi.');
+          } catch (err) {
+            console.error('Aksiyon kaydedilemedi:', err);
+            toast.error('Aksiyon kaydedilirken hata oluştu.');
+          } finally {
+            setSavingAction(false);
+          }
+        }}
+      />
+
+      {/* Yayınlanmış Rapor Silme Onay Penceresi */}
+      <Dialog
+        open={deleteModalOpen}
+        onOpenChange={(open) => {
+          if (!deletingReport) {
+            setDeleteModalOpen(open);
+            if (!open) setConfirmUsername('');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md w-[95vw] rounded-lg border border-border bg-card p-0 overflow-hidden shadow-lg flex flex-col gap-0">
+          <DialogHeader className="px-5 py-3.5 bg-muted/30 border-b border-border shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-destructive/10 text-destructive border border-destructive/20 flex items-center justify-center shrink-0">
+                <Trash2 className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
+                  Yayınlanmış Raporu Sil
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground truncate mt-0.5">
+                  {audit.meta?.reportNo || 'Denetim Raporu'}
+                  {facility ? ` — ${facility.name}` : ''}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const expected = (user?.username || '').trim().toLowerCase();
+              if (!expected || confirmUsername.trim().toLowerCase() !== expected) {
+                toast.error('Kullanıcı adınız eşleşmiyor.');
+                return;
+              }
+              setDeletingReport(true);
+              try {
+                await deleteAudit(audit.id, confirmUsername.trim());
+                setAudits(audits.filter((a) => a.id !== audit.id));
+                setDeleteModalOpen(false);
+                toast.success('Yayınlanmış rapor kalıcı olarak silindi.');
+                navigate('/renovation-report/reports');
+              } catch (err: any) {
+                toast.error(err?.message || 'Rapor silinemedi.');
+              } finally {
+                setDeletingReport(false);
+              }
+            }}
+            className="flex flex-col"
+          >
+            <div className="p-5 space-y-4">
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                <p className="text-xs text-destructive leading-relaxed">
+                  Bu işlem <strong>geri alınamaz</strong>. Yayınlanmış denetim raporu, tüm bulguları ({totalFindings} adet) ve aksiyon geçmişi kalıcı olarak silinecektir.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground block">
+                  Onaylamak için kullanıcı adınızı (
+                  <span className="font-mono font-semibold text-destructive">{user?.username}</span>
+                  ) yazın *
+                </label>
+                <Input
+                  value={confirmUsername}
+                  onChange={(e) => setConfirmUsername(e.target.value)}
+                  placeholder={user?.username || 'Kullanıcı adınız'}
+                  autoComplete="off"
+                  className="h-9 rounded-lg text-xs font-mono"
+                  disabled={deletingReport}
+                  required
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="mx-0 mb-0 rounded-none px-5 py-3.5 bg-muted/30 border-t border-border shrink-0 gap-2 sm:gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setConfirmUsername('');
+                }}
+                disabled={deletingReport}
+                className="h-8 rounded-lg text-xs"
+              >
+                Vazgeç
+              </Button>
+              <Button
+                type="submit"
+                variant="destructive"
+                size="sm"
+                disabled={
+                  deletingReport ||
+                  !user?.username ||
+                  confirmUsername.trim().toLowerCase() !== user.username.trim().toLowerCase()
+                }
+                className="h-8 px-4 rounded-lg text-xs font-semibold gap-1.5"
+              >
+                {deletingReport ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                Kalıcı Olarak Sil
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Görsel Önizleme Lightbox */}
       {previewImage && (
