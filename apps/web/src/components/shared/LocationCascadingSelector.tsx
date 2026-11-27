@@ -153,17 +153,19 @@ export default function LocationCascadingSelector({
         set.add(parts.description);
       }
     });
+    dynamicMahals.forEach((m) => set.add(m));
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
-  }, [parsedLocations, selectedBuildingName, selectedBlock, selectedFloor, activeDept]);
+  }, [parsedLocations, selectedBuildingName, selectedBlock, selectedFloor, activeDept, dynamicMahals]);
 
   const allDeptMahals = useMemo(() => {
-    if (!activeDept) return [];
     const set = new Set<string>();
-    parsedLocations.forEach(({ parts }) => {
-      if (parts.department.toLowerCase() === activeDept.toLowerCase() && parts.description) {
-        set.add(parts.description);
-      }
-    });
+    if (activeDept) {
+      parsedLocations.forEach(({ parts }) => {
+        if (parts.department.toLowerCase() === activeDept.toLowerCase() && parts.description) {
+          set.add(parts.description);
+        }
+      });
+    }
     dynamicMahals.forEach((m) => set.add(m));
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'tr'));
   }, [parsedLocations, activeDept, dynamicMahals]);
@@ -193,8 +195,9 @@ export default function LocationCascadingSelector({
             setSelectedDepartment(deptMatch.parts.department);
             setCustomDepartment('');
           } else {
-            setSelectedDepartment('custom');
-            setCustomDepartment(p.department);
+            setDynamicDepartments((prev) => Array.from(new Set([...prev, p.department])));
+            setSelectedDepartment(p.department);
+            setCustomDepartment('');
           }
         }
 
@@ -206,8 +209,9 @@ export default function LocationCascadingSelector({
             setSelectedMahal(descMatch.parts.description);
             setCustomMahal('');
           } else {
-            setSelectedMahal('custom');
-            setCustomMahal(p.description);
+            setDynamicMahals((prev) => Array.from(new Set([...prev, p.description])));
+            setSelectedMahal(p.description);
+            setCustomMahal('');
           }
         }
       }
@@ -469,6 +473,12 @@ export default function LocationCascadingSelector({
             className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
           >
             <option value="">Birim Seçiniz... (Opsiyonel)</option>
+            {selectedDepartment &&
+              selectedDepartment !== 'custom' &&
+              !floorDepartments.includes(selectedDepartment) &&
+              !otherDepartments.includes(selectedDepartment) && (
+                <option value={selectedDepartment}>{selectedDepartment}</option>
+              )}
             {floorDepartments.length > 0 && (
               <optgroup label="Bu Katta Tanımlı Birimler">
                 {floorDepartments.map((d) => (
@@ -583,6 +593,12 @@ export default function LocationCascadingSelector({
             className="w-full h-9 rounded-md border border-input bg-background px-2.5 text-xs focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
           >
             <option value="">Mahal Seçiniz... (Opsiyonel)</option>
+            {selectedMahal &&
+              selectedMahal !== 'custom' &&
+              !floorMahals.includes(selectedMahal) &&
+              !otherMahals.includes(selectedMahal) && (
+                <option value={selectedMahal}>{selectedMahal}</option>
+              )}
             {floorMahals.length > 0 && (
               <optgroup label="Bu Katta / Birimde Tanımlı Mahaller">
                 {floorMahals.map((m) => (
