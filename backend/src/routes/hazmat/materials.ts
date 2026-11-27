@@ -941,6 +941,42 @@ router.put('/:materialId', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
+// Quick-update only SDS PDF URL for a material
+router.patch('/:id/sds', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { sdsUrl } = req.body as { sdsUrl?: string | null };
+
+    if (!sdsUrl || !String(sdsUrl).trim()) {
+      return res.status(400).json({ error: 'SDS dosya yolu (sdsUrl) zorunludur.' });
+    }
+
+    const existing = await prisma.hazmatMaterial.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Tehlikeli madde bulunamadı.' });
+    }
+
+    const updated = await prisma.hazmatMaterial.update({
+      where: { id },
+      data: { sdsUrl: String(sdsUrl).trim() },
+    });
+
+    await prisma.hazmatAuditLog.create({
+      data: {
+        materialId: id,
+        action: 'UPDATE',
+        details: 'Güvenlik Bilgi Formu (SDS) PDF belgesi yüklendi.',
+        username: req.user?.username || 'system',
+      },
+    });
+
+    res.json({ success: true, material: updated });
+  } catch (error) {
+    console.error('Error updating material SDS:', error);
+    res.status(500).json({ error: 'SDS güncellenirken hata oluştu.' });
+  }
+});
+
 // DELETE a specific material globally (Admin only)
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res) => {
   if (!req.user?.isAdmin && !req.user?.isManagement) {

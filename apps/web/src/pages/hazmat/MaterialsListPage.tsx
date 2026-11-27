@@ -1,8 +1,8 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api, { BASE_URL } from '@/lib/api';
+import api, { API_URL, BASE_URL } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   Plus,
@@ -20,7 +20,8 @@ import {
   PackageOpen,
   FileSpreadsheet,
   ChevronDown,
-  Check
+  Check,
+  Upload
 } from 'lucide-react';
 import { PrintCardModal } from '@/components/hazmat/PrintCardModal';
 import { HazmatExcelImportDialog } from '@/components/hazmat/HazmatExcelImportDialog';
@@ -34,6 +35,14 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
 
@@ -180,6 +189,42 @@ export default function MaterialsListPage() {
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [sdsPromptMaterial, setSdsPromptMaterial] = useState<any>(null);
+  const [sdsUploading, setSdsUploading] = useState(false);
+  const sdsFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleQuickSdsUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !sdsPromptMaterial) return;
+    setSdsUploading(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      const token = localStorage.getItem('token');
+      const upRes = await fetch(`${API_URL}/hazmat/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formDataUpload,
+      });
+      if (!upRes.ok) throw new Error('SDS PDF yüklenemedi');
+      const upData = await upRes.json();
+
+      const patchRes = await api.patch(`/hazmat/materials/${sdsPromptMaterial.id}/sds`, {
+        sdsUrl: upData.url,
+      });
+      if (!patchRes.ok) throw new Error('SDS kaydı güncellenemedi');
+
+      toast.success(`"${sdsPromptMaterial.productName}" için SDS belgesi yüklendi.`);
+      setSdsPromptMaterial(null);
+      queryClient.invalidateQueries({ queryKey: ['global-materials-list'] });
+      queryClient.invalidateQueries({ queryKey: ['facility-materials'] });
+    } catch (err: any) {
+      toast.error(err?.message || 'SDS yüklenirken hata oluştu.');
+    } finally {
+      setSdsUploading(false);
+      e.target.value = '';
+    }
+  };
 
   // Fetch all materials from central database
   const { data: items = [], isLoading } = useQuery<any[]>({
@@ -656,7 +701,7 @@ export default function MaterialsListPage() {
                                     : `${BASE_URL}${item.sdsUrl}`;
                                   window.open(url, '_blank', 'noopener,noreferrer');
                                 } else {
-                                  toast.warning('Bu madde için SDS henüz yüklenmemiştir.');
+                                  setSdsPromptMaterial(item);
                                 }
                               }}
                             >
@@ -727,6 +772,66 @@ export default function MaterialsListPage() {
         open={excelImportOpen}
         onOpenChange={setExcelImportOpen}
       />
+
+      {/* Gizli SDS PDF Seçici */}
+      <input
+        ref={sdsFileInputRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        className="hidden"
+        onChange={handleQuickSdsUpload}
+      />
+
+      {/* SDS Eksik Uyarı & Hızlı Yükleme Dialogu */}
+      <Dialog
+        open={!!sdsPromptMaterial}
+        onOpenChange={(open) => !open && !sdsUploading && setSdsPromptMaterial(null)}
+      >
+        <DialogContent className="sm:max-w-md rounded-lg border border-border bg-card p-0 overflow-hidden shadow-lg gap-0">
+          <DialogHeader className="px-5 py-3.5 bg-muted/30 border-b border-border">
+            <DialogTitle className="text-sm font-bold flex items-center gap-2 text-foreground">
+              <span className="w-7 h-7 rounded-md bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 flex items-center justify-center shrink-0">
+                <FileText className="w-4 h-4" />
+              </span>
+              SDS Belgesi Bulunamadı
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground pt-1">
+              <strong className="text-foreground">{sdsPromptMaterial?.productName}</strong> için henüz Güvenlik Bilgi Formu (SDS) yüklenmemiştir. Şimdi PDF olarak yüklemek ister misiniz?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mx-0 mb-0 rounded-none px-5 py-3 bg-muted/20 border-t border-border flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={sdsUploading}
+              onClick={() => setSdsPromptMaterial(null)}
+              className="h-8 text-xs"
+            >
+              İptal
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={sdsUploading}
+              onClick={() => sdsFileInputRef.current?.click()}
+              className="h-8 text-xs gap-1.5"
+            >
+              {sdsUploading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Yükleniyor...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-3.5 h-3.5" />
+                  SDS Yükle (PDF)
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

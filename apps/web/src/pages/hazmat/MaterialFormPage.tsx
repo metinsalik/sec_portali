@@ -1131,23 +1131,35 @@ export default function MaterialFormPage() {
                 Orijinal GBF / SDS PDF Dosyası
               </Label>
               <Input type="file" accept=".pdf" onChange={(e) => handleFileUpload(e, 'sdsUrl')} className="h-8 text-xs" />
-              {meta.sdsUrl && (
-                <div className="flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400">
+              {meta.sdsUrl ? (
+                <div className="flex items-center justify-between gap-2 pt-0.5">
                   <a
                     href={meta.sdsUrl.startsWith('http') ? meta.sdsUrl : `${BASE_URL}${meta.sdsUrl}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="underline truncate"
+                    className="min-w-0 max-w-full"
+                    title="SDS PDF Dosyasını Görüntüle"
                   >
-                    PDF dosyasını görüntüle
+                    <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 text-[11px] font-semibold gap-1.5 max-w-full cursor-pointer transition-colors">
+                      <FileText className="w-3 h-3 shrink-0" />
+                      <span className="truncate">
+                        {meta.productName.trim() || 'Tehlikeli Madde'} — SDS
+                      </span>
+                    </Badge>
                   </a>
                   <button
                     type="button"
-                    className="text-destructive hover:underline ml-2"
+                    className="text-[11px] text-destructive hover:underline shrink-0 font-medium"
                     onClick={() => updateMeta('sdsUrl', '')}
                   >
                     Kaldır
                   </button>
+                </div>
+              ) : (
+                <div className="pt-0.5">
+                  <Badge className="bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 text-[10.5px] font-semibold">
+                    Henüz SDS yüklenmemiştir
+                  </Badge>
                 </div>
               )}
             </div>

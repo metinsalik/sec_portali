@@ -374,7 +374,7 @@ export default function MaterialViewPage() {
                   </div>
 
                   {/* 5. Kişisel Koruyucu Donanımlar (KKD) */}
-                  <div className="p-3 space-y-2 bg-card">
+                  <div className="p-3 border-b border-border/50 space-y-2 bg-card">
                     <div className="flex items-center gap-1.5">
                       <Shield className="w-3.5 h-3.5 text-primary" />
                       <span className="text-[11px] font-semibold text-foreground uppercase tracking-wider">
@@ -406,6 +406,35 @@ export default function MaterialViewPage() {
                       </div>
                     ) : (
                       <p className="text-xs text-muted-foreground italic">Özel KKD bulunmuyor</p>
+                    )}
+                  </div>
+
+                  {/* 6. SDS Belgesi */}
+                  <div className="p-3 flex items-center justify-between gap-2 bg-card">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
+                      SDS Belgesi
+                    </span>
+                    {material.sdsUrl ? (
+                      <a
+                        href={
+                          material.sdsUrl.startsWith('http')
+                            ? material.sdsUrl
+                            : `${BASE_URL}${material.sdsUrl}`
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        className="min-w-0 max-w-full"
+                        title="Güvenlik Bilgi Formu (SDS) Belgesini Aç"
+                      >
+                        <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 text-[11px] font-semibold gap-1.5 max-w-full cursor-pointer transition-colors">
+                          <FileText className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{material.productName} — SDS</span>
+                        </Badge>
+                      </a>
+                    ) : (
+                      <Badge className="bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 text-[10.5px] font-semibold">
+                        Henüz SDS yüklenmemiştir
+                      </Badge>
                     )}
                   </div>
                 </Card>
