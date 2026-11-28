@@ -3,6 +3,42 @@ import * as xlsx from 'xlsx';
 
 const prisma = new PrismaClient();
 
+const DEFAULT_RISK_LEVELS = [
+  { name: 'Kritik', color: 'bg-red-600' },
+  { name: 'Yüksek', color: 'bg-orange-500' },
+  { name: 'Önemli', color: 'bg-amber-500' },
+  { name: 'Olası', color: 'bg-yellow-500' },
+  { name: 'Önemsiz', color: 'bg-slate-500' },
+];
+
+function normalizeRiskLevel(level?: string | null): string {
+  const val = String(level || '').trim();
+  if (!val) return 'Belirlenmedi';
+  const lower = val.toLocaleLowerCase('tr-TR');
+  if (lower.includes('tolere') || lower === 'kritik') return 'Kritik';
+  if (lower.includes('yüksek')) return 'Yüksek';
+  if (lower.includes('önemli')) return 'Önemli';
+  if (lower.includes('olası')) return 'Olası';
+  if (lower.includes('önemsiz')) return 'Önemsiz';
+  return val;
+}
+
+function normalizeRiskSettingsList(raw: any[]): { name: string; color: string }[] {
+  if (!Array.isArray(raw) || raw.length === 0) return DEFAULT_RISK_LEVELS;
+  const seen = new Set<string>();
+  const normalized: { name: string; color: string }[] = [];
+  for (const r of raw) {
+    const name = normalizeRiskLevel(r?.name);
+    if (name === 'Belirlenmedi' || seen.has(name)) continue;
+    seen.add(name);
+    normalized.push({
+      name,
+      color: name === 'Kritik' ? 'bg-red-600' : (r?.color || 'bg-slate-500'),
+    });
+  }
+  return normalized.length > 0 ? normalized : DEFAULT_RISK_LEVELS;
+}
+
 export const isgDefterService = {
   // === SETTINGS ===
   getSettings: async (facilityId: string) => {
@@ -14,9 +50,9 @@ export const isgDefterService = {
     // Always fetch global settings for risk levels
     const globalSettings = await prisma.isgDefterSetting.findUnique({ where: { facilityId: 'all' } });
 
-    // Use global risk levels if available, else local, else empty array
+    // Use global risk levels if available, else local, else default Improvements scale
     const rawRiskLevels = globalSettings?.riskLevels || settings?.riskLevels;
-    const parsedRiskLevels = rawRiskLevels ? JSON.parse(rawRiskLevels) : [];
+    const parsedRiskLevels = normalizeRiskSettingsList(rawRiskLevels ? JSON.parse(rawRiskLevels) : []);
 
     if (settings) {
       return {
@@ -67,7 +103,7 @@ export const isgDefterService = {
 
   // === RECORDS & PAGES ===
   getPages: async (facilityId: string, year?: number) => {
-    return prisma.notebookPage.findMany({
+    const pages = await prisma.notebookPage.findMany({
       where: {
         ...(facilityId && facilityId !== 'all' && { facilityId }),
         ...(year && { year }),
@@ -78,6 +114,7 @@ export const isgDefterService = {
           include: {
             actions: true,
             category: true,
+            department: true,
             comments: {
               orderBy: { createdAt: 'asc' }
             }
@@ -86,6 +123,13 @@ export const isgDefterService = {
       },
       orderBy: { date: 'desc' }
     });
+    return pages.map((p) => ({
+      ...p,
+      items: p.items.map((item) => ({
+        ...item,
+        riskLevel: normalizeRiskLevel(item.riskLevel),
+      })),
+    }));
   },
 
   createPage: async (data: any) => {
@@ -165,10 +209,24 @@ export const isgDefterService = {
   },
 
   createItemAction: async (data: any) => {
-    const action = await prisma.notebookItemAction.create({ data });
+    const { departmentId, departmentName, ...actionData } = data;
+    let finalContent = String(actionData.content || '').trim();
+    if (departmentName && !finalContent.startsWith(`[${departmentName}]`)) {
+      finalContent = `[${departmentName}] ${finalContent}`;
+    }
+
+    const action = await prisma.notebookItemAction.create({
+      data: {
+        ...actionData,
+        content: finalContent,
+      },
+    });
     await prisma.notebookItem.update({
-      where: { id: data.notebookItemId },
-      data: { status: data.status }
+      where: { id: actionData.notebookItemId },
+      data: {
+        status: actionData.status,
+        ...(departmentId ? { departmentId: Number(departmentId) } : {}),
+      }
     });
     return action;
   },
@@ -338,18 +396,25 @@ export const isgDefterService = {
       }
     };
 
-    const allItems = await prisma.notebookItem.findMany({
+    const rawItems = await prisma.notebookItem.findMany({
       where: baseWhere,
       include: {
         page: { include: { facility: true } },
         category: true,
         mainCategory: true,
+        department: true,
+        actions: { orderBy: { createdAt: 'desc' } },
       }
     });
 
+    const allItems = rawItems.map((i) => ({
+      ...i,
+      riskLevel: normalizeRiskLevel(i.riskLevel),
+    }));
+
     const monthInt = month && month !== 'all' ? parseInt(month) : null;
     const activeStatus = status && status !== 'all' ? status : null;
-    const activeRisk = risk && risk !== 'all' ? risk : null;
+    const activeRisk = risk && risk !== 'all' ? normalizeRiskLevel(risk) : null;
     const activeMainCat = mainCategory && mainCategory !== 'all' ? mainCategory : null;
     const activeCat = category && category !== 'all' ? category : null;
 
@@ -424,52 +489,44 @@ export const isgDefterService = {
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
 
-    // Incomplete Item Age (Days since creation) - Uses fully filtered list
-    let age0_30 = 0, age31_60 = 0, age61_90 = 0, age91_180 = 0, age180plus = 0;
-    incompleteItemsList.forEach(i => {
-      const diffTime = Math.abs(now.getTime() - new Date(i.createdAt).getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      if (diffDays <= 30) age0_30++;
-      else if (diffDays <= 60) age31_60++;
-      else if (diffDays <= 90) age61_90++;
-      else if (diffDays <= 180) age91_180++;
-      else age180plus++;
-    });
-    
-    const incompleteJobAge = [
-      { name: '0-30 Gün', value: age0_30, color: 'bg-blue-100 text-blue-600' },
-      { name: '31-60 Gün', value: age31_60, color: 'bg-blue-200 text-blue-700' },
-      { name: '61-90 Gün', value: age61_90, color: 'bg-blue-300 text-blue-800' },
-      { name: '91-180 Gün', value: age91_180, color: 'bg-blue-600 text-white' },
-      { name: '180+ Gün', value: age180plus, color: 'bg-red-500 text-white' }
-    ];
+    const criticalOpenCount = incompleteItemsList.filter(i => i.riskLevel === 'Kritik').length;
+    const highOpenCount = incompleteItemsList.filter(i => i.riskLevel === 'Yüksek').length;
 
-    // Monthly Flow (Filter by everything EXCEPT month)
-    const flowItems = allItems.filter(i => matchesStatus(i) && matchesRisk(i) && matchesMainCat(i) && matchesCat(i));
-    const monthlyFlowMap: Record<string, { month: string, index: number, open: number, closed: number }> = {};
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const mKey = `${d.getFullYear()}-${d.getMonth()}`;
-      monthlyFlowMap[mKey] = {
-        month: d.toLocaleString('tr-TR', { month: 'short' }),
-        index: i,
-        open: 0,
-        closed: 0
-      };
-    }
-    
-    flowItems.forEach(i => {
-      const d = new Date(i.page.date); 
-      const mKey = `${d.getFullYear()}-${d.getMonth()}`;
-      if (monthlyFlowMap[mKey]) {
-        if (i.status === 'Tamamlandı') monthlyFlowMap[mKey].closed++;
-        else monthlyFlowMap[mKey].open++;
+    // Open/Closed Breakdown by Facility (when all) or Department (when single facility)
+    const breakdownMap: Record<string, { name: string; open: number; closed: number; total: number }> = {};
+    fullyFilteredItems.forEach((i) => {
+      const groupName =
+        facilityId === 'all'
+          ? i.page.facility?.name || 'Bilinmeyen Tesis'
+          : i.department?.name || 'Atanmamış Departman';
+      if (!breakdownMap[groupName]) {
+        breakdownMap[groupName] = { name: groupName, open: 0, closed: 0, total: 0 };
       }
+      if (i.status === 'Tamamlandı') breakdownMap[groupName].closed++;
+      else if (i.status !== 'İptal Edildi') breakdownMap[groupName].open++;
+      breakdownMap[groupName].total++;
     });
-    
-    const monthlyFlow = Object.values(monthlyFlowMap)
-      .sort((a, b) => b.index - a.index)
-      .map(m => ({ month: m.month, open: m.open, closed: m.closed }));
+    const openClosedBreakdown = Object.values(breakdownMap)
+      .sort((a, b) => b.open - a.open || b.total - a.total)
+      .slice(0, 10);
+
+    // Open/Closed Breakdown by Risk Level
+    const riskOrder = ['Kritik', 'Yüksek', 'Önemli', 'Olası', 'Önemsiz', 'Belirlenmedi'];
+    const riskOpenClosedMap: Record<string, { name: string; open: number; closed: number; total: number }> = {};
+    fullyFilteredItems.forEach((i) => {
+      const rName = i.riskLevel || 'Belirlenmedi';
+      if (!riskOpenClosedMap[rName]) {
+        riskOpenClosedMap[rName] = { name: rName, open: 0, closed: 0, total: 0 };
+      }
+      if (i.status === 'Tamamlandı') riskOpenClosedMap[rName].closed++;
+      else if (i.status !== 'İptal Edildi') riskOpenClosedMap[rName].open++;
+      riskOpenClosedMap[rName].total++;
+    });
+    const openClosedByRisk = Object.values(riskOpenClosedMap).sort((a, b) => {
+      const ia = riskOrder.indexOf(a.name);
+      const ib = riskOrder.indexOf(b.name);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
 
     // Fire and Emergency (Specific Alarm)
     const fireKeywords = ['yangın', 'acil'];
@@ -491,13 +548,15 @@ export const isgDefterService = {
       totalItems,
       incompleteItems,
       closedItems,
+      criticalOpenCount,
+      highOpenCount,
       openPercentage: totalItems > 0 ? (closedItems / totalItems) * 100 : 0,
-      monthlyFlow,
+      openClosedBreakdown,
+      openClosedByRisk,
       statusDistribution,
       riskDistribution,
       mainCategoryDistribution,
       subCategoryDistribution,
-      incompleteJobAge,
       fireAndEmergency: {
         total: fireTotal,
         open: fireOpen

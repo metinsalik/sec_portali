@@ -43,11 +43,15 @@ router.post('/', async (req, res) => {
       }
     });
 
-    // Also immediately create BEKLEYEN submissions for these facilities if not strictly periodic in the future
-    // For simplicity, we just create the first batch now if startDate is <= today or null
+    const template = await prisma.checklistTemplate.findUnique({
+      where: { id: templateId },
+      select: { title: true },
+    });
+
+    // Anlık gönderim veya başlangıç tarihi gelmiş periyodik atamalarda hemen BEKLEYEN denetim aç
     const now = new Date();
     const shouldCreateInitial = !isPeriodic || !startDate || new Date(startDate) <= now;
-    
+
     if (shouldCreateInitial) {
       const submissionsToCreate = facilityIds.map((facilityId: string) => ({
         templateId,
@@ -59,6 +63,30 @@ router.post('/', async (req, res) => {
       await prisma.checklistSubmission.createMany({
         data: submissionsToCreate
       });
+    }
+
+    // İlgili tesis kullanıcılarına bildirim gönder (kokpit + zil)
+    try {
+      const targetUsers = await prisma.userFacility.findMany({
+        where: { facilityId: { in: facilityIds } },
+        select: { username: true },
+        distinct: ['username'],
+      });
+      if (targetUsers.length > 0) {
+        const modeText = isPeriodic ? 'Periyodik Kontrol Listesi' : 'Anlık Kontrol Listesi';
+        await prisma.notification.createMany({
+          data: targetUsers.map((u) => ({
+            title: `${modeText}: ${template?.title || 'Yeni Denetim'}`,
+            message: `${template?.title || 'Kontrol listesi'} tesisinize atandı. Lütfen kontrol listesini doldurup tamamlayın.`,
+            type: isPeriodic ? 'INFO' : 'WARNING',
+            module: 'CHECKLISTS',
+            username: u.username,
+            link: '/checklists/submissions?status=bekleyen',
+          })),
+        });
+      }
+    } catch (notifErr) {
+      console.error('Checklist assignment notification error:', notifErr);
     }
 
     res.status(201).json(assignment);

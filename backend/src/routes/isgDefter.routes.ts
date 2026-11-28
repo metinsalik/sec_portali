@@ -1,7 +1,10 @@
 import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
 import { isgDefterService } from '../services/isgDefter.service';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import multer from 'multer';
+
+const prisma = new PrismaClient();
 
 import path from 'path';
 import fs from 'fs';
@@ -49,6 +52,18 @@ const requireAdmin = (req: any, res: any, next: any) => {
 };
 
 router.use(authMiddleware, requireModuleAccess);
+
+// === DEPARTMENTS ===
+router.get('/departments', async (req, res) => {
+  try {
+    const departments = await prisma.department.findMany({
+      orderBy: { name: 'asc' },
+    });
+    res.json(departments);
+  } catch (error) {
+    res.status(500).json({ error: 'Departmanlar alınamadı.' });
+  }
+});
 
 // === DASHBOARD & PAGES ===
 router.get('/facilities/:facilityId/dashboard', async (req, res) => {

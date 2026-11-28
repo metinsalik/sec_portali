@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Activity, Flame, ShieldAlert, CheckCircle2, Clock, Calendar, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Activity, Flame, ShieldAlert, CheckCircle2, Clock, Calendar, AlertTriangle, ArrowRight, Eye, ExternalLink, Building2 } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend 
@@ -22,6 +23,8 @@ export default function IsgDefterDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const tableScrollRef = useRef<HTMLDivElement>(null);
+  const [breakdownView, setBreakdownView] = useState<'group' | 'risk'>('group');
+  const [previewItem, setPreviewItem] = useState<any | null>(null);
 
   // Sync with LocalStorage on Mount
   useEffect(() => {
@@ -161,18 +164,40 @@ export default function IsgDefterDashboard() {
     'İptal Edildi': '#64748b'
   };
 
+  const getRiskBadgeClass = (riskLevel?: string) => {
+    switch (riskLevel) {
+      case 'Kritik':
+        return 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-400/50 font-semibold';
+      case 'Yüksek':
+        return 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-400/50 font-semibold';
+      case 'Önemli':
+        return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400/50';
+      case 'Olası':
+        return 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 border-yellow-400/50';
+      case 'Önemsiz':
+        return 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-400/50';
+      default:
+        return 'bg-muted text-muted-foreground border-border';
+    }
+  };
+
   const donutData = [
     { name: 'Kapanan', value: stats.closedItems, fill: '#22c55e' },
-    { name: 'Devam Eden', value: stats.incompleteItems, fill: '#e2e8f0' }
+    { name: 'Açık', value: stats.incompleteItems, fill: '#ef4444' }
   ];
 
+  const breakdownChartData =
+    breakdownView === 'risk'
+      ? (stats.openClosedByRisk || [])
+      : (stats.openClosedBreakdown || []);
+
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-4 max-w-[1600px] mx-auto pb-10">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Gösterge Paneli</h2>
-          <p className="text-muted-foreground mt-1">
-            İSG Kurul kararlarını, aksiyon süreçlerini ve iş yeri güvenliği performans metriklerini anlık takip edin.
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Gösterge Paneli</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            İSG Tespit ve Öneri Defteri kapsamındaki açık ve kapalı tespitleri, risk düzeylerini ve aksiyonları takip edin.
           </p>
         </div>
       </div>
@@ -280,19 +305,19 @@ export default function IsgDefterDashboard() {
         </CardContent>
       </Card>
 
-      {/* GENEL GÖRÜNÜM & AYLIK AKIŞ */}
+      {/* GENEL GÖRÜNÜM & AÇIK / KAPALI ANALİZİ */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* OVERVIEW */}
         <Card className="lg:col-span-4 shadow-sm flex flex-col">
           <CardHeader className="pb-0">
             <CardTitle>Genel Görünüm</CardTitle>
             <CardDescription>
-              {selectedYear === 'all' ? 'Tüm Yıllar' : `${selectedYear} Yılı`} • Seçili Tesis
+              {selectedYear === 'all' ? 'Tüm Yıllar' : `${selectedYear} Yılı`} • {stats.facilityName || 'Seçili Tesis'}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col justify-between pt-6">
             <div className="text-center mb-6">
-              <div className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter">
+              <div className="text-5xl font-black text-foreground tracking-tighter">
                 {stats.totalItems}
               </div>
               <div className="text-sm font-medium text-muted-foreground mt-1 uppercase tracking-widest">
@@ -318,71 +343,105 @@ export default function IsgDefterDashboard() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center mt-2">
-                <span className="text-3xl font-bold text-slate-900 dark:text-white">
+                <span className="text-3xl font-bold text-foreground">
                   %{Math.round(stats.openPercentage)}
                 </span>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Kapanış Oranı</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.incompleteItems}</div>
-                <div className="text-[11px] uppercase font-semibold text-blue-600 mt-1 flex items-center justify-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div> Tamamlanmamış
+            <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border">
+              <div className="text-center cursor-pointer rounded-md p-1 hover:bg-muted/50 transition-colors" onClick={() => updateParam('status', 'Tamamlanmamış')}>
+                <div className="text-2xl font-bold text-foreground">{stats.incompleteItems}</div>
+                <div className="text-[11px] uppercase font-semibold text-red-600 dark:text-red-400 mt-1 flex items-center justify-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div> Açık
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.closedItems}</div>
-                <div className="text-[11px] uppercase font-semibold text-green-600 mt-1 flex items-center justify-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-600"></div> Kapalı
+              <div className="text-center cursor-pointer rounded-md p-1 hover:bg-muted/50 transition-colors" onClick={() => updateParam('status', 'Tamamlandı')}>
+                <div className="text-2xl font-bold text-foreground">{stats.closedItems}</div>
+                <div className="text-[11px] uppercase font-semibold text-emerald-600 dark:text-emerald-400 mt-1 flex items-center justify-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Kapalı
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* MONTHLY FLOW */}
+        {/* OPEN / CLOSED BREAKDOWN */}
         <Card className="lg:col-span-8 shadow-sm">
-          <CardHeader>
-            <CardTitle>Aylık Karar Akışı</CardTitle>
-            <CardDescription>Son 12 ay - Açılan ve Kapanan Kararlar</CardDescription>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <CardTitle>Açık / Kapalı Dağılım Analizi</CardTitle>
+              <CardDescription>
+                {breakdownView === 'risk'
+                  ? 'Risk düzeyine göre açık ve kapalı tespit sayıları'
+                  : activeFacilityId === 'all'
+                  ? 'Tesislere göre açık ve kapalı tespit sayıları'
+                  : 'Departmanlara göre açık ve kapalı tespit sayıları'}
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border border-border/60">
+              <Button
+                type="button"
+                size="sm"
+                variant={breakdownView === 'group' ? 'default' : 'ghost'}
+                className="h-7 text-xs px-2.5"
+                onClick={() => setBreakdownView('group')}
+              >
+                {activeFacilityId === 'all' ? 'Tesis Bazlı' : 'Departman Bazlı'}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={breakdownView === 'risk' ? 'default' : 'ghost'}
+                className="h-7 text-xs px-2.5"
+                onClick={() => setBreakdownView('risk')}
+              >
+                Risk Düzeyine Göre
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="h-[320px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.monthlyFlow} margin={{ top: 20, right: 30, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                  <RechartsTooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                  <Bar dataKey="closed" name="Kapanan Karar" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                  <Bar dataKey="open" name="Tamamlanmamış" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                </BarChart>
-              </ResponsiveContainer>
+              {breakdownChartData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                  Gösterilecek veri bulunamadı.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={breakdownChartData} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" opacity={0.4} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={8} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                    <RechartsTooltip cursor={{ fill: 'rgba(148,163,184,0.1)' }} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px' }} />
+                    <Bar dataKey="open" name="Açık Tespit" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} maxBarSize={44} />
+                    <Bar dataKey="closed" name="Kapalı (Tamamlandı)" stackId="a" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={44} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* DISTRIBUTIONS ROW 1 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* STATUS DIST */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Durum Dağılımı</CardTitle>
-            <CardDescription>Grafiğe tıklayarak filtreleyin</CardDescription>
+        <Card className="shadow-xs">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-base">Durum Dağılımı</CardTitle>
+            <CardDescription className="text-xs">Grafiğe tıklayarak filtreleyin</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center h-[200px]">
-              <div className="w-1/2 h-full">
+          <CardContent className="px-4 pb-4">
+            <div className="flex items-center gap-2 h-[176px]">
+              <div className="w-[46%] h-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={stats.statusDistribution}
                       cx="50%" cy="50%"
-                      innerRadius={50} outerRadius={70}
+                      innerRadius={42} outerRadius={62}
                       paddingAngle={2}
                       dataKey="value"
                       onClick={(data) => updateParam('status', data.name)}
@@ -396,14 +455,14 @@ export default function IsgDefterDashboard() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-1/2 space-y-3">
+              <div className="w-[54%] space-y-1 max-h-[172px] overflow-y-auto pr-1">
                 {stats.statusDistribution.map((item: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between cursor-pointer hover:bg-slate-50 p-1 rounded-md" onClick={() => updateParam('status', item.name)}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: STATUS_COLORS[item.name] || COLORS[idx % COLORS.length] }}></div>
-                      <span className="text-sm font-medium">{item.name}</span>
+                  <div key={idx} className="flex items-center justify-between cursor-pointer hover:bg-muted/60 px-1.5 py-1 rounded text-xs" onClick={() => updateParam('status', item.name)}>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: STATUS_COLORS[item.name] || COLORS[idx % COLORS.length] }}></div>
+                      <span className="font-medium truncate">{item.name}</span>
                     </div>
-                    <span className="font-bold">{item.value}</span>
+                    <span className="font-bold ml-2 shrink-0">{item.value}</span>
                   </div>
                 ))}
               </div>
@@ -412,20 +471,20 @@ export default function IsgDefterDashboard() {
         </Card>
 
         {/* RISK DIST */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Öncelik Dağılımı</CardTitle>
-            <CardDescription>Grafiğe tıklayarak filtreleyin</CardDescription>
+        <Card className="shadow-xs">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-base">Öncelik Dağılımı</CardTitle>
+            <CardDescription className="text-xs">Grafiğe tıklayarak filtreleyin</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center h-[200px]">
-              <div className="w-1/2 h-full">
+          <CardContent className="px-4 pb-4">
+            <div className="flex items-center gap-2 h-[176px]">
+              <div className="w-[46%] h-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={stats.riskDistribution}
                       cx="50%" cy="50%"
-                      innerRadius={50} outerRadius={70}
+                      innerRadius={42} outerRadius={62}
                       paddingAngle={2}
                       dataKey="value"
                       onClick={(data) => updateParam('risk', data.name)}
@@ -439,14 +498,14 @@ export default function IsgDefterDashboard() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-1/2 space-y-3">
+              <div className="w-[54%] space-y-0.5 max-h-[172px] overflow-y-auto pr-1">
                 {stats.riskDistribution.map((item: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between cursor-pointer hover:bg-slate-50 p-1 rounded-md" onClick={() => updateParam('risk', item.name)}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
-                      <span className="text-sm font-medium">{item.name}</span>
+                  <div key={idx} className="flex items-center justify-between cursor-pointer hover:bg-muted/60 px-1.5 py-0.5 rounded text-xs" onClick={() => updateParam('risk', item.name)}>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
+                      <span className="font-medium truncate">{item.name}</span>
                     </div>
-                    <span className="font-bold">{item.value}</span>
+                    <span className="font-bold ml-2 shrink-0">{item.value}</span>
                   </div>
                 ))}
               </div>
@@ -454,30 +513,60 @@ export default function IsgDefterDashboard() {
           </CardContent>
         </Card>
 
-        {/* OPEN JOB AGE */}
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Bekleme Süresi</CardTitle>
-            <CardDescription>Tespit tarihinden bugüne geçen süre (Açık olanlar)</CardDescription>
+        {/* OPEN / CLOSED SUMMARY */}
+        <Card className="shadow-xs">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <CardTitle className="text-base">Açık / Kapalı Tespit Özeti</CardTitle>
+            <CardDescription className="text-xs">Tespitlerin güncel kapanma durumu ve kritik açıklar</CardDescription>
           </CardHeader>
-          <CardContent className="h-[200px] flex flex-col justify-center">
-            <div className="flex gap-2 justify-between">
-              {stats.incompleteJobAge.map((bucket: any, idx: number) => (
-                <div key={idx} className="flex-1 flex flex-col items-center">
-                  <div className={`w-full aspect-square rounded-xl border flex items-center justify-center shadow-sm ${bucket.color} text-xl md:text-2xl font-bold`}>
-                    {bucket.value}
-                  </div>
-                  <span className="text-[10px] text-muted-foreground mt-2 font-medium text-center">{bucket.name}</span>
+          <CardContent className="px-4 pb-4 space-y-3">
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => updateParam('status', 'Tamamlanmamış')}
+                className="p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-left hover:bg-red-500/15 transition-colors"
+              >
+                <div className="text-[11px] font-semibold text-red-600 dark:text-red-400 uppercase">Açık Tespit</div>
+                <div className="text-xl font-bold text-foreground mt-0.5">{stats.incompleteItems}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  Toplamın %{stats.totalItems > 0 ? Math.round((stats.incompleteItems / stats.totalItems) * 100) : 0}&apos;i
                 </div>
-              ))}
+              </button>
+              <button
+                type="button"
+                onClick={() => updateParam('status', 'Tamamlandı')}
+                className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-left hover:bg-emerald-500/15 transition-colors"
+              >
+                <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase">Kapalı (Tamamlandı)</div>
+                <div className="text-xl font-bold text-foreground mt-0.5">{stats.closedItems}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  Toplamın %{Math.round(stats.openPercentage)}&apos;i
+                </div>
+              </button>
             </div>
-            
-            {stats.incompleteJobAge[4].value > 0 && (
-              <div className="mt-6 bg-red-50 text-red-700 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2 border border-red-100">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="font-bold">{stats.incompleteJobAge[4].value} tespit</span> 180 günü aştı — öncelikli takip önerilir.
+
+            <div className="space-y-1.5 pt-1 border-t border-border/50">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">Kritik Seviye (Açık)</span>
+                <button
+                  type="button"
+                  onClick={() => updateParam('risk', 'Kritik')}
+                  className="font-bold text-red-600 dark:text-red-400 hover:underline"
+                >
+                  {stats.criticalOpenCount ?? 0} kayıt
+                </button>
               </div>
-            )}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">Yüksek Seviye (Açık)</span>
+                <button
+                  type="button"
+                  onClick={() => updateParam('risk', 'Yüksek')}
+                  className="font-bold text-orange-600 dark:text-orange-400 hover:underline"
+                >
+                  {stats.highOpenCount ?? 0} kayıt
+                </button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -560,90 +649,195 @@ export default function IsgDefterDashboard() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <div 
-              className="max-h-[500px] overflow-y-auto" 
-              ref={tableScrollRef}
-              onScroll={(e) => {
-                sessionStorage.setItem('isg_dashboard_table_scroll', e.currentTarget.scrollTop.toString());
-              }}
-            >
-              <Table>
-                <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
-                  <TableRow>
-                    <TableHead className="w-[140px]">Tesis</TableHead>
-                    <TableHead className="w-[120px]">Tespit Tarihi</TableHead>
-                    <TableHead className="w-[120px]">Durum</TableHead>
-                    <TableHead className="w-[140px]">Öncelik / Risk</TableHead>
-                    <TableHead>Tespit İçeriği</TableHead>
-                    <TableHead className="w-[100px] text-right">Aksiyonlar</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stats.recentItems.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">Kayıt bulunamadı</TableCell>
-                    </TableRow>
-                  ) : (
-                    stats.recentItems.map((item: any) => {
-                      return (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">
-                            <Badge variant="secondary" className="bg-blue-50 text-blue-800 hover:bg-blue-100 font-normal">
-                              {item.page?.facility?.name || stats.facilityName}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium whitespace-nowrap">
-                            {format(new Date(item.page.date), 'dd.MM.yyyy')}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`font-normal ${
-                              item.status === 'Tamamlandı' ? 'border-green-200 bg-green-50 text-green-700' :
-                              item.status === 'Devam Ediyor' ? 'border-blue-200 bg-blue-50 text-blue-700' :
-                              item.status === 'İptal Edildi' ? 'border-slate-200 bg-slate-50 text-slate-700' :
-                              'border-red-200 bg-red-50 text-red-700'
-                            }`}>
-                              {item.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={`font-normal ${
-                              item.riskLevel.includes('Tolere') ? 'border-red-300 bg-red-50 text-red-700' :
-                              item.riskLevel.includes('Yüksek') ? 'border-orange-300 bg-orange-50 text-orange-700' :
-                              item.riskLevel.includes('Önemli') ? 'border-amber-300 bg-amber-50 text-amber-700' :
-                              'border-green-300 bg-green-50 text-green-700'
-                            }`}>
-                              {item.riskLevel}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="line-clamp-2 text-sm max-w-[500px]" title={item.content}>
-                              {item.content}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-2">
-                              {item.mainCategory?.name} {item.category ? `> ${item.category.name}` : ''}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
+          <div
+            className="max-h-[520px] overflow-auto relative"
+            ref={tableScrollRef}
+            onScroll={(e) => {
+              sessionStorage.setItem('isg_dashboard_table_scroll', e.currentTarget.scrollTop.toString());
+            }}
+          >
+            <table className="w-full caption-bottom text-sm border-collapse">
+              <thead className="bg-muted/95 sticky top-0 z-20 border-b border-border shadow-xs">
+                <tr>
+                  <th className="h-10 px-3 text-left align-middle font-semibold text-xs text-muted-foreground w-[140px] whitespace-nowrap">Tesis</th>
+                  <th className="h-10 px-3 text-left align-middle font-semibold text-xs text-muted-foreground w-[105px] whitespace-nowrap">Tespit Tarihi</th>
+                  <th className="h-10 px-3 text-left align-middle font-semibold text-xs text-muted-foreground w-[115px] whitespace-nowrap">Durum</th>
+                  <th className="h-10 px-3 text-left align-middle font-semibold text-xs text-muted-foreground w-[110px] whitespace-nowrap">Risk Düzeyi</th>
+                  <th className="h-10 px-3 text-left align-middle font-semibold text-xs text-muted-foreground min-w-[320px]">Tespit İçeriği</th>
+                  <th className="h-10 px-3 text-center align-middle font-semibold text-xs text-muted-foreground w-[108px] sticky right-0 z-30 bg-muted/95 backdrop-blur-xs border-l border-border/60 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {stats.recentItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-12 text-muted-foreground">Kayıt bulunamadı</td>
+                  </tr>
+                ) : (
+                  stats.recentItems.map((item: any) => {
+                    return (
+                      <tr key={item.id} className="group hover:bg-muted/40 transition-colors">
+                        <td className="px-3 py-2.5 align-middle font-medium whitespace-nowrap">
+                          <Badge variant="secondary" className="font-normal">
+                            {item.page?.facility?.name || stats.facilityName}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2.5 align-middle font-medium whitespace-nowrap text-xs">
+                          {format(new Date(item.page.date), 'dd.MM.yyyy')}
+                        </td>
+                        <td className="px-3 py-2.5 align-middle whitespace-nowrap">
+                          <Badge variant="outline" className={`font-normal ${
+                            item.status === 'Tamamlandı' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' :
+                            item.status === 'Devam Ediyor' ? 'border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300' :
+                            item.status === 'İptal Edildi' ? 'border-border bg-muted text-muted-foreground' :
+                            'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300'
+                          }`}>
+                            {item.status}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2.5 align-middle whitespace-nowrap">
+                          <Badge variant="outline" className={getRiskBadgeClass(item.riskLevel)}>
+                            {item.riskLevel}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2.5 align-middle">
+                          <div className="line-clamp-2 text-sm max-w-[540px]" title={item.content}>
+                            {item.content}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {item.mainCategory?.name} {item.category ? `> ${item.category.name}` : ''}
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 align-middle sticky right-0 z-10 bg-card group-hover:bg-muted/95 border-l border-border/60 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.08)]">
+                          <div className="flex flex-col gap-1 items-stretch w-[92px] mx-auto">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="h-7 px-2 text-[11px] font-medium justify-center"
+                              onClick={() => setPreviewItem(item)}
+                            >
+                              <Eye className="w-3 h-3 mr-1" />
+                              İncele
+                            </Button>
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              className="text-xs font-medium"
+                              className="h-7 px-2 text-[11px] font-medium justify-center"
                               onClick={() => navigate(`/safety-management/isg-defter/items/${item.id}`)}
                             >
-                              Detaylar
+                              Detay
+                              <ArrowRight className="w-3 h-3 ml-1" />
                             </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
+
+      {/* QUICK PREVIEW DIALOG */}
+      <Dialog open={!!previewItem} onOpenChange={(open) => { if (!open) setPreviewItem(null); }}>
+        <DialogContent className="sm:max-w-[640px] max-h-[85vh] overflow-y-auto">
+          {previewItem && (
+            <>
+              <DialogHeader>
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <Badge variant="secondary" className="font-normal">
+                    <Building2 className="w-3 h-3 mr-1" />
+                    {previewItem.page?.facility?.name || stats.facilityName}
+                  </Badge>
+                  <Badge variant="outline" className={`font-normal ${
+                    previewItem.status === 'Tamamlandı' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' :
+                    previewItem.status === 'Devam Ediyor' ? 'border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300' :
+                    previewItem.status === 'İptal Edildi' ? 'border-border bg-muted text-muted-foreground' :
+                    'border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300'
+                  }`}>
+                    {previewItem.status}
+                  </Badge>
+                  <Badge variant="outline" className={getRiskBadgeClass(previewItem.riskLevel)}>
+                    {previewItem.riskLevel}
+                  </Badge>
+                </div>
+                <DialogTitle className="text-lg">
+                  Tespit Özeti (#{previewItem.id})
+                </DialogTitle>
+                <DialogDescription className="flex flex-wrap items-center gap-3 text-xs">
+                  <span className="inline-flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {format(new Date(previewItem.page.date), 'dd MMMM yyyy', { locale: tr })}
+                  </span>
+                  {(previewItem.mainCategory?.name || previewItem.category?.name) && (
+                    <span>
+                      • {previewItem.mainCategory?.name || ''}
+                      {previewItem.category?.name ? ` > ${previewItem.category.name}` : ''}
+                    </span>
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                <div className="rounded-lg border border-border bg-muted/30 p-4">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Tespit / Öneri İçeriği
+                  </div>
+                  <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                    {previewItem.content}
+                  </p>
+                  {previewItem.authorType && (
+                    <div className="mt-3 pt-2 border-t border-border/50 text-xs text-muted-foreground">
+                      Kaydı Oluşturan: <span className="font-medium text-foreground">{previewItem.authorType}{previewItem.authorName && previewItem.authorName !== 'Sistem' ? ` - ${previewItem.authorName}` : ''}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Alınan Aksiyonlar ({previewItem.actions?.length || 0})
+                  </div>
+                  {!previewItem.actions || previewItem.actions.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                      Henüz bir aksiyon kaydı girilmemiş.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {previewItem.actions.map((act: any) => (
+                        <div key={act.id} className="rounded-lg border border-border bg-card p-3 text-xs space-y-1">
+                          <p className="text-foreground font-medium whitespace-pre-wrap">{act.content}</p>
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                            <span>{act.createdBy || 'Sistem'}</span>
+                            <span>{format(new Date(act.createdAt), 'dd.MM.yyyy HH:mm', { locale: tr })}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button type="button" variant="outline" onClick={() => setPreviewItem(null)}>
+                  Kapat
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const targetId = previewItem.id;
+                    setPreviewItem(null);
+                    navigate(`/safety-management/isg-defter/items/${targetId}`);
+                  }}
+                >
+                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                  Tam Detay &amp; Aksiyon Sayfası
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -153,7 +153,7 @@ export default function IsgDefterSettings() {
                     <Input name="maxPagesPerCilt" type="number" defaultValue={settings?.maxPagesPerCilt || 50} required />
                     <p className="text-xs text-muted-foreground">Sayfa sayısı bu sınıra ulaştığında otomatik olarak yeni cilde geçilir.</p>
                   </div>
-                  <Button type="submit" className="bg-slate-900 text-white hover:bg-slate-800" disabled={updateSettingsMutation.isPending}>
+                  <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={updateSettingsMutation.isPending}>
                     {updateSettingsMutation.isPending ? 'Kaydediliyor...' : 'Kaydet'}
                   </Button>
                 </form>
@@ -192,7 +192,7 @@ export default function IsgDefterSettings() {
                 {isGlobal ? '' : ' Not: Risk düzeyleri tüm tesisler için ortaktır.'}
                 </CardDescription>
               </div>
-              <Button className="bg-slate-900 text-white hover:bg-slate-800" onClick={() => { setCurrentRisk({ name: '', color: 'bg-gray-500' }); setIsRiskModalOpen(true); }}>Yeni Risk Düzeyi</Button>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => { setCurrentRisk({ name: '', color: 'bg-gray-500' }); setIsRiskModalOpen(true); }}>Yeni Risk Düzeyi</Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -257,7 +257,7 @@ export default function IsgDefterSettings() {
                   <Label>Excel Dosyası (.xlsx, .xls)</Label>
                   <Input name="file" type="file" accept=".xlsx, .xls" required />
                 </div>
-                <Button type="submit" className="w-full bg-slate-900 text-white hover:bg-slate-800" disabled={importExcelMutation.isPending}>
+                <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={importExcelMutation.isPending}>
                   <Upload className="w-4 h-4 mr-2" />
                   {importExcelMutation.isPending ? 'Yükleniyor...' : 'Verileri Yükle'}
                 </Button>

@@ -7,13 +7,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Send, FileText, ImageIcon, ArrowLeft, CheckCircle, ShieldAlert, Folder, Clock, Activity, CheckCircle2, Calendar, Pencil, X, Check, Building2, Trash2 } from 'lucide-react';
+import { Send, FileText, ImageIcon, ArrowLeft, CheckCircle, ShieldAlert, Folder, Clock, Activity, CheckCircle2, Calendar, Pencil, X, Check, Building2, Trash2, Search, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,6 +29,10 @@ export default function IsgDefterItemDetail() {
   const [isUploadingAction, setIsUploadingAction] = useState(false);
   const [editingContent, setEditingContent] = useState(false);
   const [editContentVal, setEditContentVal] = useState('');
+  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
+  const [deptSearch, setDeptSearch] = useState<string>('');
+  const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState<boolean>(false);
+  const [actionStatus, setActionStatus] = useState<string>('Tamamlandı');
   
   const activeFacilityId = localStorage.getItem('activeFacilityId');
   
@@ -72,6 +77,15 @@ export default function IsgDefterItemDetail() {
   const mainCategories = categories.filter((c: any) => !c.parentId);
   const subCategories1 = categories.filter((c: any) => itemData?.mainCategoryId && c.parentId === itemData.mainCategoryId);
   const subCategories2 = categories.filter((c: any) => itemData?.categoryId && c.parentId === itemData.categoryId);
+
+  const { data: departments = [] } = useQuery<any[]>({
+    queryKey: ['isg-defter-departments'],
+    queryFn: async () => {
+      const res = await api.get('/safety-management/isg-defter/departments');
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
 
   const { data: comments = [], isLoading } = useQuery({
     queryKey: ['isg-defter-comments', itemId],
@@ -136,10 +150,20 @@ export default function IsgDefterItemDetail() {
 
   const handleCompleteAction = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const deptIdToUse = selectedDeptId || (itemData?.departmentId ? String(itemData.departmentId) : '');
+    if (!deptIdToUse) {
+      toast.error('Lütfen işlemi yapan departmanı seçin.');
+      return;
+    }
+    const selectedDeptObj = departments.find((d: any) => String(d.id) === deptIdToUse);
     setIsUploadingAction(true);
     const formData = new FormData(e.currentTarget);
     formData.append('notebookItemId', itemId!);
-    formData.append('status', 'Tamamlandı');
+    formData.append('status', actionStatus);
+    formData.append('departmentId', deptIdToUse);
+    if (selectedDeptObj?.name) {
+      formData.append('departmentName', selectedDeptObj.name);
+    }
     addActionMutation.mutate(formData);
   };
 
@@ -174,8 +198,13 @@ export default function IsgDefterItemDetail() {
             <div className="flex items-center gap-3">
               <h2 className="text-3xl font-bold tracking-tight text-foreground">Kayıt #{itemData.id}</h2>
               {facilityName && (
-                <Badge variant="outline" className="bg-slate-100 text-slate-800 border-slate-200 flex items-center shadow-sm">
+                <Badge variant="outline" className="bg-muted text-foreground border-border flex items-center shadow-sm">
                   <Building2 className="w-3 h-3 mr-1 text-primary" /> {facilityName}
+                </Badge>
+              )}
+              {itemData.department?.name && (
+                <Badge variant="secondary" className="text-xs font-medium">
+                  {itemData.department.name}
                 </Badge>
               )}
               <Badge className={`${statusColor} text-white px-3 py-1 text-sm shadow-sm flex items-center`}>
@@ -190,26 +219,44 @@ export default function IsgDefterItemDetail() {
         </div>
         <div className="flex gap-2">
           {user?.roles?.some((r: string) => ['admin', 'management'].includes(r)) && (
-            <Button 
-              onClick={() => {
-                if (window.confirm("Bu tespiti tamamen silmek istediğinize emin misiniz?")) {
-                  deleteItemMutation.mutate();
-                }
-              }}
-              variant="destructive"
-              className="shadow-md transition-transform active:scale-95"
-              size="lg"
-            >
-              <Trash2 className="w-5 h-5 mr-2" /> Sil
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="default" className="shadow-sm">
+                  <Trash2 className="w-4 h-4 mr-2" /> Sil
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Tespit Kaydını Sil</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Bu tespiti tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>İptal</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteItemMutation.mutate()}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Evet, Sil
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
           {!isCompleted && (
             <Button 
-              onClick={() => setIsCompleteModalOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md transition-transform active:scale-95"
-              size="lg"
+              onClick={() => {
+                setSelectedDeptId(itemData?.departmentId ? String(itemData.departmentId) : '');
+                setDeptSearch('');
+                setIsDeptDropdownOpen(false);
+                setActionStatus('Tamamlandı');
+                setIsCompleteModalOpen(true);
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+              size="default"
             >
-              <CheckCircle className="w-5 h-5 mr-2" /> İşlemi Tamamla ve Kapat
+              <CheckCircle className="w-4 h-4 mr-2" /> Aksiyon Gir / Kapat
             </Button>
           )}
         </div>
@@ -400,7 +447,7 @@ export default function IsgDefterItemDetail() {
                   />
                   <div className="flex items-center justify-end gap-2">
                     <Button variant="ghost" size="sm" onClick={() => setEditingContent(false)}>İptal</Button>
-                    <Button size="sm" className="bg-slate-900 text-white hover:bg-slate-800" onClick={() => {
+                    <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => {
                       if (editContentVal.trim() && editContentVal !== itemData.content) {
                         updateItemMutation.mutate({ content: editContentVal.trim() });
                       } else {
@@ -492,7 +539,7 @@ export default function IsgDefterItemDetail() {
                       </Button>
                     </div>
                   </div>
-                  <Button type="submit" className="h-[60px] px-6 rounded-xl bg-slate-900 text-white hover:bg-slate-800 shadow-sm transition-transform active:scale-95" disabled={!newComment.trim() || addCommentMutation.isPending}>
+                  <Button type="submit" className="h-[60px] px-6 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-transform active:scale-95" disabled={!newComment.trim() || addCommentMutation.isPending}>
                     {addCommentMutation.isPending ? <Activity className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                   </Button>
                 </form>
@@ -543,31 +590,115 @@ export default function IsgDefterItemDetail() {
 
       {/* Completion Modal */}
       <Dialog open={isCompleteModalOpen} onOpenChange={setIsCompleteModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>İşlemi Tamamla ve Kapat</DialogTitle>
+            <DialogTitle>Yapılan İşi Gir ve Kapat</DialogTitle>
             <DialogDescription>
-              Bu uygunsuzluğun giderildiğine dair bir açıklama girin. İsterseniz kanıt olarak bir fotoğraf veya belge yükleyebilirsiniz.
+              İşlemi gerçekleştiren departmanı arayıp seçin, yapılan işi açıklayın ve isterseniz kanıt dosyası ekleyin.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCompleteAction} className="space-y-4 mt-2">
+            <div className="space-y-2 relative">
+              <Label>İşi Yapan / Sorumlu Departman (Zorunlu)</Label>
+              {(() => {
+                const activeDeptId = selectedDeptId || (itemData?.departmentId ? String(itemData.departmentId) : '');
+                const selectedDeptObj = departments.find((d: any) => String(d.id) === activeDeptId);
+                const filteredDepts = departments.filter((d: any) =>
+                  d.name.toLocaleLowerCase('tr-TR').includes(deptSearch.trim().toLocaleLowerCase('tr-TR'))
+                );
+                return (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsDeptDropdownOpen((prev) => !prev)}
+                      className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs hover:border-primary/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <span className={selectedDeptObj ? 'text-foreground truncate' : 'text-muted-foreground'}>
+                        {selectedDeptObj ? selectedDeptObj.name : 'Departman ara ve seç...'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0 ml-2" />
+                    </button>
+
+                    {isDeptDropdownOpen && (
+                      <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover text-popover-foreground shadow-md">
+                        <div className="flex items-center border-b border-border px-2.5 py-1.5">
+                          <Search className="h-3.5 w-3.5 text-muted-foreground mr-2 shrink-0" />
+                          <input
+                            type="text"
+                            value={deptSearch}
+                            onChange={(e) => setDeptSearch(e.target.value)}
+                            placeholder="Departman ara..."
+                            autoFocus
+                            className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+                          />
+                        </div>
+                        <div className="max-h-48 overflow-y-auto p-1">
+                          {filteredDepts.length === 0 ? (
+                            <div className="py-4 text-center text-xs text-muted-foreground">
+                              Eşleşen departman bulunamadı.
+                            </div>
+                          ) : (
+                            filteredDepts.map((d: any) => {
+                              const isSelected = String(d.id) === activeDeptId;
+                              return (
+                                <button
+                                  key={d.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedDeptId(String(d.id));
+                                    setIsDeptDropdownOpen(false);
+                                  }}
+                                  className={`w-full flex items-center justify-between rounded-sm px-2.5 py-1.5 text-left text-xs transition-colors ${
+                                    isSelected
+                                      ? 'bg-primary/10 text-primary font-semibold'
+                                      : 'hover:bg-accent hover:text-accent-foreground'
+                                  }`}
+                                >
+                                  <span className="truncate">{d.name}</span>
+                                  {isSelected && <Check className="h-3.5 w-3.5 shrink-0 ml-2" />}
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+
             <div className="space-y-2">
-              <Label>Açıklama (Zorunlu)</Label>
+              <Label>Kapanış / İşlem Durumu</Label>
+              <Select value={actionStatus} onValueChange={setActionStatus}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue>
+                    {actionStatus === 'Tamamlandı' ? 'Tamamlandı (Kapat)' : 'Devam Ediyor (Aksiyon Ekle)'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Tamamlandı">Tamamlandı (Kapat)</SelectItem>
+                  <SelectItem value="Devam Ediyor">Devam Ediyor (Aksiyon Ekle)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Yapılan İş / Açıklama (Zorunlu)</Label>
               <Textarea 
                 name="content" 
-                placeholder="Örn: Yangın merdivenlerindeki aydınlatmalar yenilendi."
+                placeholder="Örn: Teknik Bakım ekibi tarafından yangın merdiveni aydınlatması yenilendi."
                 required
                 className="min-h-[100px]"
               />
             </div>
             <div className="space-y-2">
-              <Label>Kanıt Yükle (İsteğe Bağlı)</Label>
+              <Label>Kanıt Fotoğrafı / Belge (İsteğe Bağlı)</Label>
               <Input type="file" name="file" accept="image/*,.pdf" />
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setIsCompleteModalOpen(false)}>İptal</Button>
-              <Button type="submit" className="bg-slate-900 text-white hover:bg-slate-800" disabled={isUploadingAction}>
-                {isUploadingAction ? 'Kaydediliyor...' : 'Tamamla ve Kapat'}
+              <Button type="button" variant="outline" onClick={() => setIsCompleteModalOpen(false)}>İptal</Button>
+              <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isUploadingAction}>
+                {isUploadingAction ? 'Kaydediliyor...' : actionStatus === 'Tamamlandı' ? 'Kaydet ve Kapat' : 'Aksiyonu Kaydet'}
               </Button>
             </DialogFooter>
           </form>

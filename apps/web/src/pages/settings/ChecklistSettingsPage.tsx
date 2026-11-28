@@ -7,20 +7,26 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Edit, Trash2, ListChecks, Tags, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, ListChecks, Tags, Loader2, ExternalLink, FolderTree } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
 export default function ChecklistSettingsPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  // CATEGORIES
+  // CATEGORIES (Merkezi /settings/definitions 3 seviyeli ağaç)
   const [catModal, setCatModal] = useState<{ open: boolean; edit?: any }>({ open: false });
   const [catName, setCatName] = useState('');
 
-  const { data: categories = [], isLoading: catLoading } = useQuery({
-    queryKey: ['checklist-categories'],
-    queryFn: async () => (await api.get('/checklists/categories')).json(),
+  const { data: categories = [], isLoading: catLoading } = useQuery<any[]>({
+    queryKey: ['definition-categories'],
+    queryFn: async () => {
+      const res = await api.get('/settings/definitions/categories');
+      if (!res.ok) return [];
+      return res.json();
+    },
   });
 
   const catMutation = useMutation({
@@ -193,52 +199,75 @@ export default function ChecklistSettingsPage() {
           </div>
         </TabsContent>
 
-        {/* Categories Tab */}
+        {/* Categories Tab (Merkezi /settings/definitions 3 Seviyeli Ağaç) */}
         <TabsContent value="categories" className="space-y-4 mt-0">
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">Maddelerin sınıflandırılacağı kontrol kategorileri.</p>
-            <Button 
-              onClick={() => {
-                setCatName('');
-                setCatModal({ open: true });
-              }}
-              className="gap-2 h-9 text-xs px-3.5 rounded-md"
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              Kontrol listesi maddeleri merkezi <strong>Tanım Yönetimi</strong> altındaki 3 seviyeli kategori yapısını (Ana Kategori → Kategori → Alt Kategori) kullanır.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/settings/definitions')}
+              className="gap-1.5 h-9 text-xs px-3.5 rounded-md"
             >
-              <Plus className="w-3.5 h-3.5" /> Yeni Kategori
+              <ExternalLink className="w-3.5 h-3.5" />
+              Tanım Yönetiminde Düzenle
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {categories.map((c: any) => (
-              <div 
-                key={c.id} 
-                className="flex justify-between items-center border border-border/60 rounded-lg p-3 bg-card shadow-xs hover:border-border transition-all duration-200"
-              >
-                <div className="flex items-center gap-2">
-                  <Tags className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="font-medium text-xs text-foreground">{c.name}</span>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-7 w-7 rounded-md text-destructive hover:bg-destructive/10" 
-                  onClick={() => {
-                    if (confirm('Silmek istediğinize emin misiniz?')) delCatMutation.mutate(c.id);
-                  }}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            ))}
-
-            {categories.length === 0 && !catLoading && (
-              <div className="col-span-full py-10 flex flex-col items-center justify-center border border-dashed border-border/60 rounded-lg bg-muted/10">
-                <Tags className="w-9 h-9 text-muted-foreground/40 mb-2" />
-                <p className="text-xs font-medium text-foreground">Henüz kategori bulunmuyor.</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Yukarıdaki butona tıklayarak yeni kategori oluşturabilirsiniz.</p>
-              </div>
-            )}
-          </div>
+          {catLoading ? (
+            <div className="h-32 rounded-lg bg-muted animate-pulse" />
+          ) : categories.filter((c: any) => c.parentId === null).length === 0 ? (
+            <div className="py-10 flex flex-col items-center justify-center border border-dashed border-border/60 rounded-lg bg-muted/10">
+              <FolderTree className="w-9 h-9 text-muted-foreground/40 mb-2" />
+              <p className="text-xs font-medium text-foreground">Tanım Yönetiminde kategori bulunamadı.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {categories
+                .filter((c: any) => c.parentId === null)
+                .map((mainCat: any) => {
+                  const midCats = categories.filter((c: any) => c.parentId === mainCat.id);
+                  return (
+                    <div
+                      key={mainCat.id}
+                      className="border border-border/70 rounded-lg p-3.5 bg-card space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                          <FolderTree className="w-3.5 h-3.5 text-primary" />
+                          {mainCat.name}
+                        </span>
+                        <Badge variant="secondary" className="text-[10px] tabular-nums">
+                          {midCats.length} alt
+                        </Badge>
+                      </div>
+                      {midCats.length > 0 && (
+                        <div className="pl-3 border-l border-border space-y-1.5">
+                          {midCats.map((mid: any) => {
+                            const subCats = categories.filter((c: any) => c.parentId === mid.id);
+                            return (
+                              <div key={mid.id} className="space-y-0.5">
+                                <p className="text-[11px] font-medium text-foreground">{mid.name}</p>
+                                {subCats.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 pl-2">
+                                    {subCats.map((sub: any) => (
+                                      <Badge key={sub.id} variant="outline" className="text-[10px] font-normal">
+                                        {sub.name}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

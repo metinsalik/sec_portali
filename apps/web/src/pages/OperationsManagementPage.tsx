@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
+import api from '@/lib/api';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import {
@@ -9,11 +11,12 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { DomainCockpitSidebar, type DomainCockpitItem } from '@/components/shared/DomainCockpitSidebar';
 import {
   ArrowLeft,
   ArrowRight,
@@ -25,14 +28,40 @@ import {
   Camera,
   User,
   LogOut,
-  Settings
+  Settings,
 } from 'lucide-react';
+
+interface DomainCockpitResponse {
+  domain: string;
+  moduleCounts: Record<string, number>;
+  items: DomainCockpitItem[];
+}
 
 export default function OperationsManagementPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const hasAdminAccess = user?.isAdmin || user?.isManagement || user?.roles?.includes('admin') || user?.roles?.includes('management');
+  const hasAdminAccess =
+    user?.isAdmin ||
+    user?.isManagement ||
+    user?.roles?.includes('admin') ||
+    user?.roles?.includes('management');
+
+  const activeFacilityId = localStorage.getItem('activeFacilityId') || '';
+
+  const { data: cockpit, isLoading, isFetching, refetch } = useQuery<DomainCockpitResponse>({
+    queryKey: ['domain-cockpit', 'operations', activeFacilityId],
+    queryFn: async () => {
+      const qs =
+        activeFacilityId && activeFacilityId !== 'all'
+          ? `&facilityId=${activeFacilityId}`
+          : '';
+      const res = await api.get(`/portal/domain-cockpit?domain=operations${qs}`);
+      if (!res.ok) throw new Error('Alan kokpiti yüklenemedi');
+      return res.json();
+    },
+    refetchInterval: 30_000,
+  });
 
   const getInitials = (name: string) => {
     if (!name) return 'U';
@@ -41,6 +70,80 @@ export default function OperationsManagementPage() {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
   const userInitials = getInitials(user?.fullName || user?.username || 'Kullanıcı');
+
+  const counts = cockpit?.moduleCounts || {};
+
+  const subModules = [
+    {
+      key: 'PANEL',
+      show: hasAdminAccess || user?.modules?.includes('PANEL'),
+      title: 'İSG Atama Paneli',
+      desc: 'Profesyonel yönetimi, OSGB takibi, kurumsal atamalar ve yasal süre hesaplamaları.',
+      to: '/panel',
+      icon: LayoutGrid,
+      iconCls: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white',
+      badgeCount: counts.PANEL || 0,
+      badgeLabel: 'uyarı',
+    },
+    {
+      key: 'RENOVATION_REPORT',
+      show: hasAdminAccess || user?.modules?.includes('RENOVATION_REPORT'),
+      title: 'Entegre Risk ve Güvenlik Denetimi',
+      desc: 'İnşaat ve renovasyon alanlarının operasyonel teslim raporları ve takibi.',
+      to: '/renovation-report',
+      icon: ClipboardCheck,
+      iconCls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white',
+      badgeCount: counts.RENOVATION_REPORT || 0,
+      badgeLabel: 'açık bulgu',
+    },
+    {
+      key: 'FIRE_SAFETY_CONTROL',
+      show: hasAdminAccess || user?.modules?.includes('FIRE_SAFETY_CONTROL'),
+      title: 'Yangın Güvenliği Kontrol Sistemi',
+      desc: 'Saha tespitleri, itfaiye ve denetim raporları, termin ve aksiyon takibi, kanıt yönetimi.',
+      to: '/fire-safety-control',
+      icon: Flame,
+      iconCls: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 group-hover:bg-rose-600 group-hover:text-white',
+      badgeCount: counts.FIRE_SAFETY_CONTROL || 0,
+      badgeLabel: 'açık madde',
+    },
+    {
+      key: 'FM200_TRACKING',
+      show: hasAdminAccess || user?.modules?.includes('FM200_TRACKING'),
+      title: 'FM-200 & Gazlı Söndürme',
+      desc: '4 fazlı adım adım denetim sihirbazı, mahal tüp envanteri, sızdırmazlık testi ve iş emri.',
+      to: '/fm200',
+      icon: ShieldAlert,
+      iconCls: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 group-hover:bg-cyan-600 group-hover:text-white',
+      badgeCount: counts.FM200_TRACKING || 0,
+      badgeLabel: 'iş emri',
+    },
+    {
+      key: 'IMPROVEMENTS_TRACKING',
+      show: hasAdminAccess || user?.modules?.includes('IMPROVEMENTS_TRACKING'),
+      title: 'İyileştirme ve Aksiyon Takip',
+      desc: 'Hastane denetimleri, elektrik PK, topraklama, pano ve trafo periyodik kontrolleri.',
+      to: '/operations-management/improvements',
+      icon: CheckSquare,
+      iconCls: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white',
+      badgeCount: counts.IMPROVEMENTS_TRACKING || 0,
+      badgeLabel: 'açık kayıt',
+    },
+    {
+      key: 'THERMAL_CAMERA',
+      show:
+        hasAdminAccess ||
+        user?.modules?.includes('ELECTRIC_PANEL_INSPECTION') ||
+        user?.modules?.includes('THERMAL_CAMERA'),
+      title: 'Elektrik Pano & Termal Kamera',
+      desc: 'Tesislerdeki panoların termal kamera ile periyodik ısınma ölçümleri ve aksiyon yönetimi.',
+      to: '/operations-management/thermal-camera',
+      icon: Camera,
+      iconCls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:bg-amber-600 group-hover:text-white',
+      badgeCount: counts.THERMAL_CAMERA || 0,
+      badgeLabel: 'kritik/dikkat',
+    },
+  ].filter((m) => m.show);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
@@ -105,7 +208,9 @@ export default function OperationsManagementPage() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 rounded-lg shadow-sm">
-                <DropdownMenuLabel className="text-xs font-semibold">{user?.fullName || user?.username || 'Kullanıcı'}</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-xs font-semibold">
+                  {user?.fullName || user?.username || 'Kullanıcı'}
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem onClick={() => navigate('/profile')} className="text-xs cursor-pointer rounded-md">
@@ -131,179 +236,80 @@ export default function OperationsManagementPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col justify-between">
-        <div className="space-y-6">
-          {/* Header Title Section */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px] font-medium rounded-md border-border/60 text-muted-foreground">
-                  Saha ve Operasyon
-                </Badge>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-                Operasyon Yönetim Sistemi
-              </h2>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                İşlemlerinizi gerçekleştirmek için ilgili operasyon alt modülünü seçin.
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/portal')}
-              className="h-8 text-xs rounded-md border-border/60 self-start sm:self-auto"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
-              Ana Portal'a Dön
-            </Button>
+      <main className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-1">
+            <Badge variant="outline" className="text-[10px] font-medium rounded-md border-border/60 text-muted-foreground">
+              Saha ve Operasyon
+            </Badge>
+            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
+              Operasyon Yönetim Sistemi
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Solda alt modülleri seçebilir, sağda bu alana ait açık ve öncelikli işlerinizi takip edebilirsiniz.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/portal')}
+            className="h-8 text-xs rounded-md border-border/60 self-start sm:self-auto"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
+            Ana Portal&apos;a Dön
+          </Button>
+        </div>
+
+        {/* 12 Kolon Grid: Sol 2/3 Alt Modüller + Sağ 1/3 Alana Özel Görev/Aksiyonlar */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {subModules.map((mod) => {
+              const Icon = mod.icon;
+              return (
+                <Card
+                  key={mod.key}
+                  onClick={() => navigate(mod.to)}
+                  className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-3.5">
+                      <div className={`w-10 h-10 rounded-md flex items-center justify-center transition-colors ${mod.iconCls}`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      {mod.badgeCount > 0 && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-semibold tabular-nums bg-primary/10 text-primary border-primary/25"
+                        >
+                          {mod.badgeCount} {mod.badgeLabel}
+                        </Badge>
+                      )}
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                      {mod.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
+                      {mod.desc}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
+                    <span>Modüle Git</span>
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                  </div>
+                </Card>
+              );
+            })}
           </div>
 
-          {/* Module Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {/* Card 1: İSG Atama Paneli */}
-            {(hasAdminAccess || user?.modules?.includes('PANEL')) && (
-              <Card
-                onClick={() => navigate('/panel')}
-                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
-              >
-                <div>
-                  <div className="w-10 h-10 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-blue-600 group-hover:text-white">
-                    <LayoutGrid className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                    İSG Atama Paneli
-                  </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
-                    Profesyonel yönetimi, OSGB takibi, kurumsal atamalar ve yasal süre hesaplamaları.
-                  </p>
-                </div>
-                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
-                  <span>Modüle Git</span>
-                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                </div>
-              </Card>
-            )}
-
-            {/* Card 2: Entegre Risk ve Güvenlik Denetimi */}
-            {(hasAdminAccess || user?.modules?.includes('RENOVATION_REPORT')) && (
-              <Card
-                onClick={() => navigate('/renovation-report')}
-                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
-              >
-                <div>
-                  <div className="w-10 h-10 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
-                    <ClipboardCheck className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                    Entegre Risk ve Güvenlik Denetimi
-                  </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
-                    İnşaat ve renovasyon alanlarının operasyonel teslim raporları ve takibi.
-                  </p>
-                </div>
-                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
-                  <span>Modüle Git</span>
-                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                </div>
-              </Card>
-            )}
-
-            {/* Card 3: Yangın Güvenliği Kontrol Sistemi */}
-            {(hasAdminAccess || user?.modules?.includes('FIRE_SAFETY_CONTROL')) && (
-              <Card
-                onClick={() => navigate('/fire-safety-control')}
-                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
-              >
-                <div>
-                  <div className="w-10 h-10 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-rose-600 group-hover:text-white">
-                    <Flame className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                    Yangın Güvenliği Kontrol Sistemi
-                  </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
-                    Saha tespitleri, itfaiye ve denetim raporları, termin ve aksiyon takibi, kanıt yönetimi.
-                  </p>
-                </div>
-                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
-                  <span>Modüle Git</span>
-                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                </div>
-              </Card>
-            )}
-
-            {/* Card 4: FM-200 & Gazlı Söndürme */}
-            {(hasAdminAccess || user?.modules?.includes('FM200_TRACKING')) && (
-              <Card
-                onClick={() => navigate('/fm200')}
-                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
-              >
-                <div>
-                  <div className="w-10 h-10 rounded-md bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-cyan-600 group-hover:text-white">
-                    <ShieldAlert className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                    FM-200 & Gazlı Söndürme
-                  </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
-                    4 fazlı adım adım denetim sihirbazı, mahal tüp envanteri, sızdırmazlık testi ve kanıtlı iş emri yönetimi.
-                  </p>
-                </div>
-                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
-                  <span>Modüle Git</span>
-                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                </div>
-              </Card>
-            )}
-
-            {/* Card 5: İyileştirme ve Aksiyon Takip */}
-            {(hasAdminAccess || user?.modules?.includes('IMPROVEMENTS_TRACKING')) && (
-              <Card
-                onClick={() => navigate('/operations-management/improvements')}
-                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
-              >
-                <div>
-                  <div className="w-10 h-10 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-indigo-600 group-hover:text-white">
-                    <CheckSquare className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                    İyileştirme ve Aksiyon Takip
-                  </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
-                    Hastane denetimleri, elektrik PK, topraklama, pano ve trafo periyodik kontrolleri konsolide takibi.
-                  </p>
-                </div>
-                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
-                  <span>Modüle Git</span>
-                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                </div>
-              </Card>
-            )}
-
-            {/* Card 6: Elektrik Pano & Termal Kamera Kontrolü */}
-            {(hasAdminAccess || user?.modules?.includes('ELECTRIC_PANEL_INSPECTION') || user?.modules?.includes('THERMAL_CAMERA')) && (
-              <Card
-                onClick={() => navigate('/operations-management/thermal-camera')}
-                className="group border border-border/60 hover:border-primary/50 shadow-xs hover:shadow-sm transition-all duration-200 rounded-lg p-5 flex flex-col justify-between cursor-pointer bg-card"
-              >
-                <div>
-                  <div className="w-10 h-10 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3.5 transition-colors group-hover:bg-amber-600 group-hover:text-white">
-                    <Camera className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                    Elektrik Pano & Termal Kamera
-                  </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
-                    Tesislerdeki panoların termal kamera ile periyodik ısınma ölçümleri, Excel yükleme ve kritik aksiyon yönetimi.
-                  </p>
-                </div>
-                <div className="flex items-center justify-between pt-4 mt-4 border-t border-border/40 text-xs font-medium text-primary">
-                  <span>Modüle Git</span>
-                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                </div>
-              </Card>
-            )}
+          <div className="lg:col-span-4">
+            <DomainCockpitSidebar
+              title="Operasyon İşlerim & Öncelikler"
+              description="Operasyon alt modüllerindeki size ait veya gecikmiş kayıtlar."
+              items={cockpit?.items || []}
+              isLoading={isLoading}
+              isFetching={isFetching}
+              onRefresh={() => refetch()}
+            />
           </div>
         </div>
       </main>

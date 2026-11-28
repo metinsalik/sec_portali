@@ -25,13 +25,26 @@ export default function IsgDefterRecords() {
   const activeFacilityId = localStorage.getItem('activeFacilityId');
   
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
+  // Restore saved filters from sessionStorage when returning without query params
+  useEffect(() => {
+    const currentStr = searchParams.toString();
+    if (!currentStr) {
+      const saved = sessionStorage.getItem('isg_records_query');
+      if (saved) {
+        setSearchParams(new URLSearchParams(saved), { replace: true });
+      }
+    } else {
+      sessionStorage.setItem('isg_records_query', currentStr);
+    }
+  }, [searchParams, setSearchParams]);
+
   const selectedYear = searchParams.get('year') === 'all' ? 'all' : (Number(searchParams.get('year')) || new Date().getFullYear());
   const selectedMonth = searchParams.get('month') ? (searchParams.get('month') === 'all' ? 'all' : Number(searchParams.get('month'))) : 'all';
-  const [selectedMainCategory, setSelectedMainCategory] = useState(searchParams.get('mainCategory') || 'all');
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all');
-  const [selectedSubCategory, setSelectedSubCategory] = useState(searchParams.get('subCategory') || 'all');
-  const [selectedRisk, setSelectedRisk] = useState(searchParams.get('risk') || 'all');
+  const selectedMainCategory = searchParams.get('mainCategory') || 'all';
+  const selectedCategory = searchParams.get('category') || 'all';
+  const selectedSubCategory = searchParams.get('subCategory') || 'all';
+  const selectedRisk = searchParams.get('risk') || 'all';
 
   const updateParam = (key: string, value: string | null) => {
     const newParams = new URLSearchParams(searchParams);
@@ -40,26 +53,26 @@ export default function IsgDefterRecords() {
     } else {
       newParams.delete(key);
     }
-    setSearchParams(newParams);
 
     if (key === 'mainCategory') {
-      setSelectedMainCategory(value || 'all');
-      setSelectedCategory('all');
-      setSelectedSubCategory('all');
+      newParams.delete('category');
+      newParams.delete('subCategory');
     } else if (key === 'category') {
-      setSelectedCategory(value || 'all');
-      setSelectedSubCategory('all');
-    } else if (key === 'subCategory') {
-      setSelectedSubCategory(value || 'all');
-    } else if (key === 'risk') setSelectedRisk(value || 'all');
+      newParams.delete('subCategory');
+    }
+
+    const nextStr = newParams.toString();
+    if (nextStr) {
+      sessionStorage.setItem('isg_records_query', nextStr);
+    } else {
+      sessionStorage.removeItem('isg_records_query');
+    }
+    setSearchParams(newParams);
   };
-  
+
   const clearFilters = () => {
+    sessionStorage.removeItem('isg_records_query');
     setSearchParams(new URLSearchParams());
-    setSelectedMainCategory('all');
-    setSelectedCategory('all');
-    setSelectedSubCategory('all');
-    setSelectedRisk('all');
   };
   
   const selectedDate = searchParams.get('date') || null;
@@ -287,7 +300,7 @@ export default function IsgDefterRecords() {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center justify-between mb-6 bg-slate-50 p-4 rounded-xl border w-full">
+          <div className="flex items-center justify-between mb-6 bg-card p-4 rounded-xl border border-border w-full">
             <div className="flex items-center gap-4">
               <Button variant="outline" size="icon" onClick={() => updateParam('date', null)}>
                 <ArrowLeft className="h-4 w-4" />
@@ -300,7 +313,7 @@ export default function IsgDefterRecords() {
                 </div>
               </div>
             </div>
-            <Button onClick={() => navigate(`/safety-management/isg-defter/pages/${primaryPage?.id}/builder`)} className="bg-slate-900 text-white hover:bg-slate-800">
+            <Button onClick={() => navigate(`/safety-management/isg-defter/pages/${primaryPage?.id}/builder`)} className="bg-primary text-primary-foreground hover:bg-primary/90">
               <PlusCircle className="w-4 h-4 mr-2" /> Yeni Madde Ekle
             </Button>
           </div>
@@ -338,7 +351,7 @@ export default function IsgDefterRecords() {
                       <Input name="date" type="date" defaultValue={format(new Date(activeGroup.date), 'yyyy-MM-dd')} className="w-36 h-8 text-xs" required />
                       <Input name="ciltNo" type="number" defaultValue={primaryPage?.ciltNo || ''} placeholder="Cilt" className="w-16 h-8 text-xs" />
                       <Input name="pageNo" type="text" defaultValue={primaryPage?.pageNo || ''} placeholder="Sayfa (Örn: 1-3)" className="w-[120px] h-8 text-xs" />
-                      <Button type="submit" size="sm" className="h-8 bg-slate-900 text-white hover:bg-slate-800">Kaydet</Button>
+                      <Button type="submit" size="sm" className="h-8 bg-primary text-primary-foreground hover:bg-primary/90">Kaydet</Button>
                       <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setEditingPageId(null)}>İptal</Button>
                     </form>
                   ) : (
@@ -411,13 +424,22 @@ export default function IsgDefterRecords() {
                     </TableCell>
                     
                     <TableCell>
-                      <span className="text-xs px-2 py-1 bg-slate-100 text-slate-900 rounded-md truncate max-w-[150px]" title={getCategoryPath(item)}>
-                        {getCategoryPath(item)}
+                      <span className="text-xs px-2 py-1 bg-muted text-foreground rounded-md truncate max-w-[150px] inline-block" title={getCategoryPath(item)}>
+                        {getCategoryPath(item) || '—'}
                       </span>
                     </TableCell>
 
                     <TableCell>
-                      {item.riskLevel}
+                      <Badge variant="outline" className={
+                        item.riskLevel === 'Kritik' ? 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-400/50' :
+                        item.riskLevel === 'Yüksek' ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-400/50' :
+                        item.riskLevel === 'Önemli' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-400/50' :
+                        item.riskLevel === 'Olası' ? 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-300 border-yellow-400/50' :
+                        item.riskLevel === 'Önemsiz' ? 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-400/50' :
+                        'bg-muted text-muted-foreground border-border'
+                      }>
+                        {item.riskLevel}
+                      </Badge>
                     </TableCell>
 
                     <TableCell>
@@ -448,7 +470,7 @@ export default function IsgDefterRecords() {
                             </AlertDialogContent>
                           </AlertDialog>
                         </div>
-                        <Button variant="default" className="bg-slate-900 text-white hover:bg-slate-800" size="sm" onClick={(e) => {
+                        <Button variant="default" className="bg-primary text-primary-foreground hover:bg-primary/90" size="sm" onClick={(e) => {
                            e.stopPropagation();
                            navigate(`/safety-management/isg-defter/items/${item.id}`);
                         }}>
@@ -476,105 +498,140 @@ export default function IsgDefterRecords() {
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center bg-muted rounded-md p-1 border">
-            <Button variant="ghost" size="sm" className={`h-8 px-3 ${viewMode === 'card' ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-sm' : ''}`} onClick={() => updateParam('view', 'card')}>Kartlar</Button>
-            <Button variant="ghost" size="sm" className={`h-8 px-3 ${viewMode === 'list' ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-sm' : ''}`} onClick={() => updateParam('view', 'list')}>Liste</Button>
+            <Button variant="ghost" size="sm" className={`h-8 px-3 ${viewMode === 'card' ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm' : ''}`} onClick={() => updateParam('view', 'card')}>Kartlar</Button>
+            <Button variant="ghost" size="sm" className={`h-8 px-3 ${viewMode === 'list' ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm' : ''}`} onClick={() => updateParam('view', 'list')}>Liste</Button>
           </div>
-          <Button className="bg-slate-900 text-white hover:bg-slate-800" onClick={() => setIsNewPageModalOpen(true)}>
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setIsNewPageModalOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" /> Yeni Tespit (Sayfa) Ekle
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6 p-4 bg-muted/30 rounded-xl border items-end">
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Yıl</label>
-          <Select value={selectedYear.toString()} onValueChange={(v) => updateParam('year', v)}>
-            <SelectTrigger><SelectValue placeholder="Tüm Yıllar" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Yıllar</SelectItem>
-              {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => new Date().getFullYear() - i).map(y => (
-                <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Ay</label>
-          <Select value={selectedMonth.toString()} onValueChange={(v) => updateParam('month', v)}>
-            <SelectTrigger><SelectValue placeholder="Tüm Aylar" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Aylar</SelectItem>
-              {Array.from({ length: 12 }).map((_, i) => <SelectItem key={i} value={i.toString()}>{format(new Date(2024, i, 1), 'MMMM', { locale: tr })}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
+      <Card className="mb-6 shadow-xs border-border/60">
+        <CardContent className="p-4 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Yıl</label>
+              <Select value={selectedYear.toString()} onValueChange={(v) => updateParam('year', v)}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue>{selectedYear === 'all' ? 'Tüm Yıllar' : selectedYear}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Yıllar</SelectItem>
+                  {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                    <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Ana Kategori</label>
-          <Select value={selectedMainCategory} onValueChange={(v) => updateParam('mainCategory', v)}>
-            <SelectTrigger><SelectValue placeholder="Tümü" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tümü</SelectItem>
-              {mainCategories.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Kategori</label>
-          <Select value={selectedCategory} onValueChange={(v) => updateParam('category', v)} disabled={selectedMainCategory === 'all'}>
-            <SelectTrigger><SelectValue placeholder="Tümü" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tümü</SelectItem>
-              {subCategories1.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1 w-full">
-          <label className="text-xs font-medium">Alt Kategori</label>
-          <Select value={selectedSubCategory} onValueChange={(v) => updateParam('subCategory', v)} disabled={selectedCategory === 'all'}>
-            <SelectTrigger className="bg-background">
-              <SelectValue placeholder="Alt Kategori">
-                <span className="block truncate max-w-[90%]">
-                  {selectedSubCategory === 'all' ? 'Tümü' : categories.find((c: any) => c.id.toString() === selectedSubCategory)?.name || 'Tümü'}
-                </span>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tümü</SelectItem>
-              {subCategories2.map((c: any) => (
-                <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Ay</label>
+              <Select value={selectedMonth.toString()} onValueChange={(v) => updateParam('month', v)}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue>
+                    {selectedMonth === 'all' ? 'Tüm Aylar' : format(new Date(2024, Number(selectedMonth), 1), 'MMMM', { locale: tr })}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Aylar</SelectItem>
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <SelectItem key={i} value={i.toString()}>{format(new Date(2024, i, 1), 'MMMM', { locale: tr })}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="flex-1 space-y-1 w-full">
-          <label className="text-xs font-medium">Risk Düzeyi</label>
-          <Select value={selectedRisk} onValueChange={(v) => updateParam('risk', v)}>
-            <SelectTrigger className="bg-background">
-              <SelectValue placeholder="Risk Seçin">
-                {selectedRisk === 'all' ? 'Tüm Riskler' : selectedRisk}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Riskler</SelectItem>
-              {(settings?.riskLevels || []).map((r: any) => (
-                <SelectItem key={r.name} value={r.name}>{r.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        {(selectedMonth !== 'all' || selectedMainCategory !== 'all' || selectedRisk !== 'all' || selectedYear !== 'all') && (
-          <Button variant="ghost" onClick={clearFilters} className="text-xs h-9 px-3 mt-2 md:mt-0 whitespace-nowrap lg:col-span-6 md:col-span-2">
-            Filtreleri Temizle
-          </Button>
-        )}
-      </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Ana Kategori</label>
+              <Select value={selectedMainCategory} onValueChange={(v) => updateParam('mainCategory', v)}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue>
+                    <span className="truncate block">
+                      {selectedMainCategory === 'all'
+                        ? 'Tüm Ana Kategoriler'
+                        : categories.find((c: any) => c.id.toString() === selectedMainCategory)?.name || 'Tüm Ana Kategoriler'}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Ana Kategoriler</SelectItem>
+                  {mainCategories.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Kategori</label>
+              <Select value={selectedCategory} onValueChange={(v) => updateParam('category', v)} disabled={selectedMainCategory === 'all'}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue>
+                    <span className="truncate block">
+                      {selectedCategory === 'all'
+                        ? 'Tüm Kategoriler'
+                        : categories.find((c: any) => c.id.toString() === selectedCategory)?.name || 'Tüm Kategoriler'}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Kategoriler</SelectItem>
+                  {subCategories1.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Alt Kategori</label>
+              <Select value={selectedSubCategory} onValueChange={(v) => updateParam('subCategory', v)} disabled={selectedCategory === 'all'}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue>
+                    <span className="truncate block">
+                      {selectedSubCategory === 'all'
+                        ? 'Tüm Alt Kategoriler'
+                        : categories.find((c: any) => c.id.toString() === selectedSubCategory)?.name || 'Tüm Alt Kategoriler'}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Alt Kategoriler</SelectItem>
+                  {subCategories2.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Risk Düzeyi</label>
+              <Select value={selectedRisk} onValueChange={(v) => updateParam('risk', v)}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue>
+                    {selectedRisk === 'all' ? 'Tüm Riskler' : selectedRisk}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Riskler</SelectItem>
+                  {(settings?.riskLevels || []).map((r: any) => (
+                    <SelectItem key={r.name} value={r.name}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {(selectedMonth !== 'all' || selectedMainCategory !== 'all' || selectedRisk !== 'all' || selectedYear !== 'all') && (
+            <div className="flex justify-end pt-1 border-t border-border/40">
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs h-7 px-2.5 text-muted-foreground hover:text-foreground">
+                Filtreleri Temizle
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* LIST OF DATE CARDS (PAGES ONLY) */}
       {viewMode === 'card' ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {groupedByDate.length === 0 ? (
             <div className="col-span-full p-8 text-center text-muted-foreground border rounded-xl bg-muted/20">
               Bu kriterlere uygun kayıt bulunamadı.
@@ -638,7 +695,7 @@ export default function IsgDefterRecords() {
                     <p className="mt-3 text-muted-foreground text-xs">
                       Bu tarihte toplam <span className="font-medium text-foreground">{group.items.length}</span> adet madde (tespit/öneri) bulunuyor.
                     </p>
-                    <Button className="w-full mt-4 bg-slate-900 text-white hover:bg-slate-800" variant="default" onClick={() => updateParam('date', group.dateString)}>
+                    <Button className="w-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90" variant="default" onClick={() => updateParam('date', group.dateString)}>
                       Sayfa İçeriğini İncele <Search className="w-4 h-4 ml-2" />
                     </Button>
                   </CardContent>
@@ -648,9 +705,9 @@ export default function IsgDefterRecords() {
           )}
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
+        <div className="border rounded-lg overflow-hidden bg-card shadow-sm">
           <Table>
-            <TableHeader className="bg-slate-50">
+            <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead>Tarih</TableHead>
                 <TableHead>Tesis</TableHead>
@@ -743,7 +800,7 @@ export default function IsgDefterRecords() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsNewPageModalOpen(false)}>İptal</Button>
-              <Button type="submit" disabled={createPageMutation.isPending} className="bg-slate-900 text-white hover:bg-slate-800">
+              <Button type="submit" disabled={createPageMutation.isPending} className="bg-primary text-primary-foreground hover:bg-primary/90">
                 {createPageMutation.isPending ? 'Oluşturuluyor...' : 'Oluştur ve Maddelere Geç'}
               </Button>
             </DialogFooter>

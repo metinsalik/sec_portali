@@ -684,8 +684,8 @@ export default function FacilityLocationsPage() {
       const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
       const blokNode = binaNode
         ? (Object.values(binaNode.blocks).find(
-            (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
-          ) as any)
+          (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
+        ) as any)
         : null;
       if (!blokNode) return [];
       return Object.values(blokNode.floors)
@@ -698,13 +698,13 @@ export default function FacilityLocationsPage() {
       const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
       const blokNode = binaNode
         ? (Object.values(binaNode.blocks).find(
-            (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
-          ) as any)
+          (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
+        ) as any)
         : null;
       const floorNode = blokNode
         ? (Object.values(blokNode.floors).find(
-            (f: any) => f.name === parentFloor || (f.isPlaceholder && !parentFloor)
-          ) as any)
+          (f: any) => f.name === parentFloor || (f.isPlaceholder && !parentFloor)
+        ) as any)
         : null;
       if (!floorNode) return [];
       return Object.values(floorNode.departments)
@@ -717,18 +717,18 @@ export default function FacilityLocationsPage() {
       const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
       const blokNode = binaNode
         ? (Object.values(binaNode.blocks).find(
-            (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
-          ) as any)
+          (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
+        ) as any)
         : null;
       const floorNode = blokNode
         ? (Object.values(blokNode.floors).find(
-            (f: any) => f.name === parentFloor || (f.isPlaceholder && !parentFloor)
-          ) as any)
+          (f: any) => f.name === parentFloor || (f.isPlaceholder && !parentFloor)
+        ) as any)
         : null;
       const deptNode = floorNode
         ? (Object.values(floorNode.departments).find(
-            (d: any) => d.name === parentDepartment || (d.isPlaceholder && !parentDepartment)
-          ) as any)
+          (d: any) => d.name === parentDepartment || (d.isPlaceholder && !parentDepartment)
+        ) as any)
         : null;
       if (!deptNode) return [];
       return deptNode.rooms
@@ -763,8 +763,8 @@ export default function FacilityLocationsPage() {
       const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
       const blokNode = binaNode
         ? (Object.values(binaNode.blocks).find(
-            (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
-          ) as any)
+          (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
+        ) as any)
         : null;
       if (!blokNode) return [];
       return Object.values(blokNode.floors)
@@ -777,13 +777,13 @@ export default function FacilityLocationsPage() {
       const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
       const blokNode = binaNode
         ? (Object.values(binaNode.blocks).find(
-            (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
-          ) as any)
+          (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
+        ) as any)
         : null;
       const floorNode = blokNode
         ? (Object.values(blokNode.floors).find(
-            (f: any) => f.name === parentFloor || (f.isPlaceholder && !parentFloor)
-          ) as any)
+          (f: any) => f.name === parentFloor || (f.isPlaceholder && !parentFloor)
+        ) as any)
         : null;
       if (!floorNode) return [];
       return Object.values(floorNode.departments)
@@ -796,18 +796,18 @@ export default function FacilityLocationsPage() {
       const binaNode = Object.values(tree).find((b: any) => b.name === parentBuildingName) as any;
       const blokNode = binaNode
         ? (Object.values(binaNode.blocks).find(
-            (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
-          ) as any)
+          (blk: any) => blk.name === parentBuilding || (blk.isPlaceholder && !parentBuilding)
+        ) as any)
         : null;
       const floorNode = blokNode
         ? (Object.values(blokNode.floors).find(
-            (f: any) => f.name === parentFloor || (f.isPlaceholder && !parentFloor)
-          ) as any)
+          (f: any) => f.name === parentFloor || (f.isPlaceholder && !parentFloor)
+        ) as any)
         : null;
       const deptNode = floorNode
         ? (Object.values(floorNode.departments).find(
-            (d: any) => d.name === parentDepartment || (d.isPlaceholder && !parentDepartment)
-          ) as any)
+          (d: any) => d.name === parentDepartment || (d.isPlaceholder && !parentDepartment)
+        ) as any)
         : null;
       if (!deptNode) return [];
       return deptNode.rooms
@@ -1119,690 +1119,690 @@ export default function FacilityLocationsPage() {
                 {Object.values(tree)
                   .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'tr'))
                   .map((binaNode: any) => {
-                  const binaOpen = isNodeExpanded(binaNode.id, true);
-                  const isRenamingBina =
-                    renameTarget?.nodeKey === binaNode.id && renameTarget?.level === 'buildingName';
+                    const binaOpen = isNodeExpanded(binaNode.id, true);
+                    const isRenamingBina =
+                      renameTarget?.nodeKey === binaNode.id && renameTarget?.level === 'buildingName';
 
-                  return (
-                    <div key={binaNode.id} className="border border-border/70 rounded-lg overflow-hidden bg-background">
-                      {/* SEVİYE 1: BİNA ADI */}
-                      <div
-                        onClick={() => !isRenamingBina && toggleNode(binaNode.id)}
-                        className="px-3.5 py-2.5 bg-muted/40 hover:bg-muted/60 cursor-pointer flex items-center justify-between gap-2 transition-colors"
-                      >
-                        {isRenamingBina ? (
-                          <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
+                    return (
+                      <div key={binaNode.id} className="border border-border/70 rounded-lg overflow-hidden bg-background">
+                        {/* SEVİYE 1: BİNA ADI */}
+                        <div
+                          onClick={() => !isRenamingBina && toggleNode(binaNode.id)}
+                          className="px-3.5 py-2.5 bg-muted/40 hover:bg-muted/60 cursor-pointer flex items-center justify-between gap-2 transition-colors"
+                        >
+                          {isRenamingBina ? (
+                            <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
+                              <Input
+                                autoFocus
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && saveRename()}
+                                className="h-7 text-xs flex-1"
+                              />
+                              <Button size="sm" className="h-7 px-2 text-xs" onClick={saveRename} disabled={renameMutation.isPending}>
+                                <Check className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setRenameTarget(null)}>
+                                <X className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-2 min-w-0">
+                                {binaOpen ? <ChevronDown className="w-4 h-4 text-primary shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+                                <Building className="w-4 h-4 text-primary shrink-0" />
+                                <span className="text-xs font-bold text-foreground truncate">{binaNode.name}</span>
+                                <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
+                                  {Object.keys(binaNode.blocks).length} Blok
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2 text-[11px] text-primary hover:bg-primary/10"
+                                  onClick={() =>
+                                    openInlineAdd({
+                                      level: 'block',
+                                      buildingName: binaNode.name,
+                                      block: '',
+                                      floor: '',
+                                      department: '',
+                                      nodeKey: binaNode.id,
+                                    })
+                                  }
+                                >
+                                  <Plus className="w-3 h-3 mr-1" /> Blok
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2 text-[11px] text-emerald-600 hover:bg-emerald-500/10"
+                                  onClick={() =>
+                                    openInlineAdd({
+                                      level: 'floor',
+                                      buildingName: binaNode.name,
+                                      block: 'Blok Belirtilmemiş',
+                                      floor: '',
+                                      department: '',
+                                      nodeKey: binaNode.id,
+                                    })
+                                  }
+                                >
+                                  <Plus className="w-3 h-3 mr-1" /> Kat
+                                </Button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openMergeModal({
+                                      level: 'buildingName',
+                                      sourceValue: binaNode.name,
+                                    })
+                                  }
+                                  className="p-1 text-muted-foreground hover:text-amber-600 rounded transition-colors"
+                                  title="Binayı Başka Bir Bina ile Birleştir"
+                                >
+                                  <GitMerge className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    startRename({
+                                      level: 'buildingName',
+                                      oldValue: binaNode.name,
+                                      nodeKey: binaNode.id,
+                                    })
+                                  }
+                                  className="p-1 text-muted-foreground hover:text-primary rounded"
+                                  title="Bina Adını Düzenle"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    removeNode({
+                                      label: binaNode.name,
+                                      level: 'buildingName',
+                                      value: binaNode.name,
+                                    })
+                                  }
+                                  className="p-1 text-muted-foreground hover:text-destructive rounded"
+                                  title="Binayı ve Altındaki Tüm Kayıtları Sil"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Bina İçi Hızlı Blok/Kat Ekleme */}
+                        {binaOpen && inlineAdd && inlineAdd.nodeKey === binaNode.id && (
+                          <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 border-b border-border/50">
                             <Input
                               autoFocus
-                              value={renameValue}
-                              onChange={(e) => setRenameValue(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && saveRename()}
-                              className="h-7 text-xs flex-1"
+                              value={inlineValue}
+                              onChange={(e) => setInlineValue(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && saveInlineAdd()}
+                              placeholder={inlineAdd.level === 'block' ? 'Yeni Blok Adı (ör. A Blok)...' : 'Yeni Kat Adı (ör. 1.Kat)...'}
+                              className="h-7 text-xs flex-1 bg-background"
                             />
-                            <Button size="sm" className="h-7 px-2 text-xs" onClick={saveRename} disabled={renameMutation.isPending}>
-                              <Check className="w-3.5 h-3.5" />
+                            <Button size="sm" className="h-7 px-2.5 text-xs" onClick={saveInlineAdd} disabled={addMutation.isPending}>
+                              <Check className="w-3.5 h-3.5 mr-1" /> Ekle
                             </Button>
-                            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setRenameTarget(null)}>
-                              <X className="w-3.5 h-3.5" />
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setInlineAdd(null)}>
+                              İptal
                             </Button>
                           </div>
-                        ) : (
-                          <>
-                            <div className="flex items-center gap-2 min-w-0">
-                              {binaOpen ? <ChevronDown className="w-4 h-4 text-primary shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
-                              <Building className="w-4 h-4 text-primary shrink-0" />
-                              <span className="text-xs font-bold text-foreground truncate">{binaNode.name}</span>
-                              <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
-                                {Object.keys(binaNode.blocks).length} Blok
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-[11px] text-primary hover:bg-primary/10"
-                                onClick={() =>
-                                  openInlineAdd({
-                                    level: 'block',
-                                    buildingName: binaNode.name,
-                                    block: '',
-                                    floor: '',
-                                    department: '',
-                                    nodeKey: binaNode.id,
-                                  })
-                                }
-                              >
-                                <Plus className="w-3 h-3 mr-1" /> Blok
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-[11px] text-emerald-600 hover:bg-emerald-500/10"
-                                onClick={() =>
-                                  openInlineAdd({
-                                    level: 'floor',
-                                    buildingName: binaNode.name,
-                                    block: 'Blok Belirtilmemiş',
-                                    floor: '',
-                                    department: '',
-                                    nodeKey: binaNode.id,
-                                  })
-                                }
-                              >
-                                <Plus className="w-3 h-3 mr-1" /> Kat
-                              </Button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openMergeModal({
-                                    level: 'buildingName',
-                                    sourceValue: binaNode.name,
-                                  })
-                                }
-                                className="p-1 text-muted-foreground hover:text-amber-600 rounded transition-colors"
-                                title="Binayı Başka Bir Bina ile Birleştir"
-                              >
-                                <GitMerge className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  startRename({
-                                    level: 'buildingName',
-                                    oldValue: binaNode.name,
-                                    nodeKey: binaNode.id,
-                                  })
-                                }
-                                className="p-1 text-muted-foreground hover:text-primary rounded"
-                                title="Bina Adını Düzenle"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeNode({
-                                    label: binaNode.name,
-                                    level: 'buildingName',
-                                    value: binaNode.name,
-                                  })
-                                }
-                                className="p-1 text-muted-foreground hover:text-destructive rounded"
-                                title="Binayı ve Altındaki Tüm Kayıtları Sil"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </>
                         )}
-                      </div>
 
-                      {/* Bina İçi Hızlı Blok/Kat Ekleme */}
-                      {binaOpen && inlineAdd && inlineAdd.nodeKey === binaNode.id && (
-                        <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 border-b border-border/50">
-                          <Input
-                            autoFocus
-                            value={inlineValue}
-                            onChange={(e) => setInlineValue(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && saveInlineAdd()}
-                            placeholder={inlineAdd.level === 'block' ? 'Yeni Blok Adı (ör. A Blok)...' : 'Yeni Kat Adı (ör. 1.Kat)...'}
-                            className="h-7 text-xs flex-1 bg-background"
-                          />
-                          <Button size="sm" className="h-7 px-2.5 text-xs" onClick={saveInlineAdd} disabled={addMutation.isPending}>
-                            <Check className="w-3.5 h-3.5 mr-1" /> Ekle
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setInlineAdd(null)}>
-                            İptal
-                          </Button>
-                        </div>
-                      )}
+                        {/* SEVİYE 2: BLOKLAR */}
+                        {binaOpen && (
+                          <div className="divide-y divide-border/50">
+                            {Object.values(binaNode.blocks)
+                              .sort(compareBlocks)
+                              .map((blokNode: any) => {
+                                const blokOpen = isNodeExpanded(blokNode.id, true);
+                                const isRenamingBlok =
+                                  renameTarget?.nodeKey === blokNode.id && renameTarget?.level === 'building';
+                                const bCode = !blokNode.isPlaceholder ? getBlockCode(blokNode.name) : '';
 
-                      {/* SEVİYE 2: BLOKLAR */}
-                      {binaOpen && (
-                        <div className="divide-y divide-border/50">
-                          {Object.values(binaNode.blocks)
-                            .sort(compareBlocks)
-                            .map((blokNode: any) => {
-                            const blokOpen = isNodeExpanded(blokNode.id, true);
-                            const isRenamingBlok =
-                              renameTarget?.nodeKey === blokNode.id && renameTarget?.level === 'building';
-                            const bCode = !blokNode.isPlaceholder ? getBlockCode(blokNode.name) : '';
+                                return (
+                                  <div key={blokNode.id} className="bg-background">
+                                    <div
+                                      onClick={() => !isRenamingBlok && toggleNode(blokNode.id)}
+                                      className="pl-6 pr-3.5 py-2 bg-muted/20 hover:bg-muted/35 cursor-pointer flex items-center justify-between gap-2 transition-colors"
+                                    >
+                                      {isRenamingBlok ? (
+                                        <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
+                                          <Input
+                                            autoFocus
+                                            value={renameValue}
+                                            onChange={(e) => setRenameValue(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && saveRename()}
+                                            className="h-7 text-xs flex-1"
+                                          />
+                                          <Button size="sm" className="h-7 px-2 text-xs" onClick={saveRename} disabled={renameMutation.isPending}>
+                                            <Check className="w-3.5 h-3.5" />
+                                          </Button>
+                                          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setRenameTarget(null)}>
+                                            <X className="w-3.5 h-3.5" />
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <>
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            {blokOpen ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                                            <Building2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                            <span className={`text-xs font-semibold truncate ${blokNode.isPlaceholder ? 'text-muted-foreground italic' : 'text-foreground'}`}>
+                                              {blokNode.isPlaceholder ? 'Tek Blok / Genel Blok' : blokNode.name}
+                                            </span>
+                                            {bCode && (
+                                              <Badge variant="outline" className="text-[9px] font-mono py-0 px-1 font-bold">
+                                                {bCode}
+                                              </Badge>
+                                            )}
+                                            <span className="text-[10px] text-muted-foreground">
+                                              ({Object.keys(blokNode.floors).length} Kat)
+                                            </span>
+                                          </div>
 
-                            return (
-                              <div key={blokNode.id} className="bg-background">
-                                <div
-                                  onClick={() => !isRenamingBlok && toggleNode(blokNode.id)}
-                                  className="pl-6 pr-3.5 py-2 bg-muted/20 hover:bg-muted/35 cursor-pointer flex items-center justify-between gap-2 transition-colors"
-                                >
-                                  {isRenamingBlok ? (
-                                    <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
-                                      <Input
-                                        autoFocus
-                                        value={renameValue}
-                                        onChange={(e) => setRenameValue(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && saveRename()}
-                                        className="h-7 text-xs flex-1"
-                                      />
-                                      <Button size="sm" className="h-7 px-2 text-xs" onClick={saveRename} disabled={renameMutation.isPending}>
-                                        <Check className="w-3.5 h-3.5" />
-                                      </Button>
-                                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setRenameTarget(null)}>
-                                        <X className="w-3.5 h-3.5" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        {blokOpen ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
-                                        <Building2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                                        <span className={`text-xs font-semibold truncate ${blokNode.isPlaceholder ? 'text-muted-foreground italic' : 'text-foreground'}`}>
-                                          {blokNode.isPlaceholder ? 'Tek Blok / Genel Blok' : blokNode.name}
-                                        </span>
-                                        {bCode && (
-                                          <Badge variant="outline" className="text-[9px] font-mono py-0 px-1 font-bold">
-                                            {bCode}
-                                          </Badge>
-                                        )}
-                                        <span className="text-[10px] text-muted-foreground">
-                                          ({Object.keys(blokNode.floors).length} Kat)
-                                        </span>
-                                      </div>
-
-                                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="ghost"
-                                          className="h-6 px-2 text-[11px] text-emerald-600 hover:bg-emerald-500/10"
-                                          onClick={() =>
-                                            openInlineAdd({
-                                              level: 'floor',
-                                              buildingName: binaNode.name,
-                                              block: blokNode.name,
-                                              floor: '',
-                                              department: '',
-                                              nodeKey: blokNode.id,
-                                            })
-                                          }
-                                        >
-                                          <Plus className="w-3 h-3 mr-1" /> Kat Ekle
-                                        </Button>
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            openMergeModal({
-                                              level: 'building',
-                                              sourceValue: blokNode.isPlaceholder ? '' : blokNode.name,
-                                              parentBuildingName: binaNode.name,
-                                            })
-                                          }
-                                          className="p-1 text-muted-foreground hover:text-amber-600 rounded transition-colors"
-                                          title="Bloğu Başka Bir Blok ile Birleştir"
-                                        >
-                                          <GitMerge className="w-3 h-3" />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            startRename({
-                                              level: 'building',
-                                              oldValue: blokNode.isPlaceholder ? '' : blokNode.name,
-                                              parentBuildingName: binaNode.name,
-                                              nodeKey: blokNode.id,
-                                            })
-                                          }
-                                          className="p-1 text-muted-foreground hover:text-primary rounded"
-                                          title={blokNode.isPlaceholder ? 'Blok Adı Tanımla' : 'Blok Adını Düzenle'}
-                                        >
-                                          <Pencil className="w-3 h-3" />
-                                        </button>
-                                        {!blokNode.isPlaceholder && (
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              removeNode({
-                                                label: `${binaNode.name} > ${blokNode.name}`,
-                                                level: 'building',
-                                                value: blokNode.name,
-                                                parentBuildingName: binaNode.name,
-                                              })
-                                            }
-                                            className="p-1 text-muted-foreground hover:text-destructive rounded"
-                                            title="Bloğu ve Altındaki Kayıtları Sil"
-                                          >
-                                            <Trash2 className="w-3 h-3" />
-                                          </button>
-                                        )}
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-
-                                {/* Blok İçi Hızlı Kat Ekleme */}
-                                {blokOpen && inlineAdd?.nodeKey === blokNode.id && (
-                                  <div className="flex items-center gap-2 pl-10 pr-4 py-2 bg-emerald-500/5 border-b border-border/40">
-                                    <Input
-                                      autoFocus
-                                      value={inlineValue}
-                                      onChange={(e) => setInlineValue(e.target.value)}
-                                      onKeyDown={(e) => e.key === 'Enter' && saveInlineAdd()}
-                                      placeholder="Yeni Kat Adı (ör. 1.Kat, Z.Kat)..."
-                                      list="fac-floors-list"
-                                      className="h-7 text-xs flex-1 bg-background"
-                                    />
-                                    <Button size="sm" className="h-7 px-2.5 text-xs" onClick={saveInlineAdd} disabled={addMutation.isPending}>
-                                      <Check className="w-3.5 h-3.5 mr-1" /> Ekle
-                                    </Button>
-                                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setInlineAdd(null)}>
-                                      İptal
-                                    </Button>
-                                  </div>
-                                )}
-
-                                {/* SEVİYE 3: KATLAR */}
-                                {blokOpen && (
-                                  <div className="pl-8 pr-3 py-2 space-y-2 bg-background">
-                                    {Object.keys(blokNode.floors).length === 0 ? (
-                                      <div className="text-[11px] text-muted-foreground italic py-1 pl-2">
-                                        Henüz kat eklenmemiş. Sağ üstten "+ Kat Ekle" kullanabilirsiniz.
-                                      </div>
-                                    ) : (
-                                      Object.values(blokNode.floors)
-                                        .sort((a: any, b: any) => compareFloors(a, b, floorSortDesc))
-                                        .map((floorNode: any) => {
-                                        const flrOpen = isNodeExpanded(floorNode.id, true);
-                                        const isRenamingFloor =
-                                          renameTarget?.nodeKey === floorNode.id && renameTarget?.level === 'floor';
-                                        const fCode = !floorNode.isPlaceholder ? getFloorCode(floorNode.name) : '';
-                                        const deptCount = Object.keys(floorNode.departments).length;
-
-                                        return (
-                                          <div key={floorNode.id} className="border border-border/50 rounded-md overflow-hidden bg-muted/5">
-                                            <div
-                                              onClick={() => !isRenamingFloor && toggleNode(floorNode.id)}
-                                              className="px-3 py-2 bg-muted/15 hover:bg-muted/30 cursor-pointer flex items-center justify-between gap-2"
+                                          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              variant="ghost"
+                                              className="h-6 px-2 text-[11px] text-emerald-600 hover:bg-emerald-500/10"
+                                              onClick={() =>
+                                                openInlineAdd({
+                                                  level: 'floor',
+                                                  buildingName: binaNode.name,
+                                                  block: blokNode.name,
+                                                  floor: '',
+                                                  department: '',
+                                                  nodeKey: blokNode.id,
+                                                })
+                                              }
                                             >
-                                              {isRenamingFloor ? (
-                                                <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
-                                                  <Input
-                                                    autoFocus
-                                                    value={renameValue}
-                                                    onChange={(e) => setRenameValue(e.target.value)}
-                                                    onKeyDown={(e) => e.key === 'Enter' && saveRename()}
-                                                    className="h-7 text-xs flex-1"
-                                                  />
-                                                  <Button size="sm" className="h-7 px-2 text-xs" onClick={saveRename} disabled={renameMutation.isPending}>
-                                                    <Check className="w-3.5 h-3.5" />
-                                                  </Button>
-                                                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setRenameTarget(null)}>
-                                                    <X className="w-3.5 h-3.5" />
-                                                  </Button>
-                                                </div>
-                                              ) : (
-                                                <>
-                                                  <div className="flex items-center gap-2 min-w-0">
-                                                    {flrOpen ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
-                                                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                                                    <span className="text-xs font-semibold text-foreground truncate">{floorNode.name}</span>
-                                                    {fCode && (
-                                                      <Badge variant="outline" className="text-[9px] font-mono py-0 px-1 text-primary border-primary/30 font-bold">
-                                                        {fCode}
-                                                      </Badge>
-                                                    )}
-                                                    {deptCount > 0 && (
-                                                      <span className="text-[10px] text-muted-foreground">({deptCount} Birim)</span>
-                                                    )}
-                                                  </div>
+                                              <Plus className="w-3 h-3 mr-1" /> Kat Ekle
+                                            </Button>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                openMergeModal({
+                                                  level: 'building',
+                                                  sourceValue: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                  parentBuildingName: binaNode.name,
+                                                })
+                                              }
+                                              className="p-1 text-muted-foreground hover:text-amber-600 rounded transition-colors"
+                                              title="Bloğu Başka Bir Blok ile Birleştir"
+                                            >
+                                              <GitMerge className="w-3 h-3" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                startRename({
+                                                  level: 'building',
+                                                  oldValue: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                  parentBuildingName: binaNode.name,
+                                                  nodeKey: blokNode.id,
+                                                })
+                                              }
+                                              className="p-1 text-muted-foreground hover:text-primary rounded"
+                                              title={blokNode.isPlaceholder ? 'Blok Adı Tanımla' : 'Blok Adını Düzenle'}
+                                            >
+                                              <Pencil className="w-3 h-3" />
+                                            </button>
+                                            {!blokNode.isPlaceholder && (
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  removeNode({
+                                                    label: `${binaNode.name} > ${blokNode.name}`,
+                                                    level: 'building',
+                                                    value: blokNode.name,
+                                                    parentBuildingName: binaNode.name,
+                                                  })
+                                                }
+                                                className="p-1 text-muted-foreground hover:text-destructive rounded"
+                                                title="Bloğu ve Altındaki Kayıtları Sil"
+                                              >
+                                                <Trash2 className="w-3 h-3" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
 
-                                                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                                    <Button
-                                                      type="button"
-                                                      size="sm"
-                                                      variant="ghost"
-                                                      className="h-6 px-2 text-[11px] text-amber-600 hover:bg-amber-500/10"
-                                                      onClick={() =>
-                                                        openInlineAdd({
-                                                          level: 'department',
-                                                          buildingName: binaNode.name,
-                                                          block: blokNode.name,
-                                                          floor: floorNode.name,
-                                                          department: '',
-                                                          nodeKey: floorNode.id,
-                                                        })
-                                                      }
-                                                    >
-                                                      <Plus className="w-3 h-3 mr-1" /> Birim Ekle
-                                                    </Button>
-                                                    {!floorNode.isPlaceholder && (
+                                    {/* Blok İçi Hızlı Kat Ekleme */}
+                                    {blokOpen && inlineAdd?.nodeKey === blokNode.id && (
+                                      <div className="flex items-center gap-2 pl-10 pr-4 py-2 bg-emerald-500/5 border-b border-border/40">
+                                        <Input
+                                          autoFocus
+                                          value={inlineValue}
+                                          onChange={(e) => setInlineValue(e.target.value)}
+                                          onKeyDown={(e) => e.key === 'Enter' && saveInlineAdd()}
+                                          placeholder="Yeni Kat Adı (ör. 1.Kat, Z.Kat)..."
+                                          list="fac-floors-list"
+                                          className="h-7 text-xs flex-1 bg-background"
+                                        />
+                                        <Button size="sm" className="h-7 px-2.5 text-xs" onClick={saveInlineAdd} disabled={addMutation.isPending}>
+                                          <Check className="w-3.5 h-3.5 mr-1" /> Ekle
+                                        </Button>
+                                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setInlineAdd(null)}>
+                                          İptal
+                                        </Button>
+                                      </div>
+                                    )}
+
+                                    {/* SEVİYE 3: KATLAR */}
+                                    {blokOpen && (
+                                      <div className="pl-8 pr-3 py-2 space-y-2 bg-background">
+                                        {Object.keys(blokNode.floors).length === 0 ? (
+                                          <div className="text-[11px] text-muted-foreground italic py-1 pl-2">
+                                            Henüz kat eklenmemiş. Sağ üstten "+ Kat Ekle" kullanabilirsiniz.
+                                          </div>
+                                        ) : (
+                                          Object.values(blokNode.floors)
+                                            .sort((a: any, b: any) => compareFloors(a, b, floorSortDesc))
+                                            .map((floorNode: any) => {
+                                              const flrOpen = isNodeExpanded(floorNode.id, true);
+                                              const isRenamingFloor =
+                                                renameTarget?.nodeKey === floorNode.id && renameTarget?.level === 'floor';
+                                              const fCode = !floorNode.isPlaceholder ? getFloorCode(floorNode.name) : '';
+                                              const deptCount = Object.keys(floorNode.departments).length;
+
+                                              return (
+                                                <div key={floorNode.id} className="border border-border/50 rounded-md overflow-hidden bg-muted/5">
+                                                  <div
+                                                    onClick={() => !isRenamingFloor && toggleNode(floorNode.id)}
+                                                    className="px-3 py-2 bg-muted/15 hover:bg-muted/30 cursor-pointer flex items-center justify-between gap-2"
+                                                  >
+                                                    {isRenamingFloor ? (
+                                                      <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
+                                                        <Input
+                                                          autoFocus
+                                                          value={renameValue}
+                                                          onChange={(e) => setRenameValue(e.target.value)}
+                                                          onKeyDown={(e) => e.key === 'Enter' && saveRename()}
+                                                          className="h-7 text-xs flex-1"
+                                                        />
+                                                        <Button size="sm" className="h-7 px-2 text-xs" onClick={saveRename} disabled={renameMutation.isPending}>
+                                                          <Check className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setRenameTarget(null)}>
+                                                          <X className="w-3.5 h-3.5" />
+                                                        </Button>
+                                                      </div>
+                                                    ) : (
                                                       <>
-                                                        <button
-                                                          type="button"
-                                                          onClick={() =>
-                                                            openMergeModal({
-                                                              level: 'floor',
-                                                              sourceValue: floorNode.name,
-                                                              parentBuildingName: binaNode.name,
-                                                              parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
-                                                            })
-                                                          }
-                                                          className="p-1 text-muted-foreground hover:text-amber-600 rounded transition-colors"
-                                                          title="Bu Katı Başka Bir Kat ile Birleştir (Örn: 13. -> 13. Kat)"
-                                                        >
-                                                          <GitMerge className="w-3 h-3" />
-                                                        </button>
-                                                        <button
-                                                          type="button"
-                                                          onClick={() =>
-                                                            startRename({
-                                                              level: 'floor',
-                                                              oldValue: floorNode.name,
-                                                              parentBuildingName: binaNode.name,
-                                                              parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
-                                                              nodeKey: floorNode.id,
-                                                            })
-                                                          }
-                                                          className="p-1 text-muted-foreground hover:text-primary rounded"
-                                                          title="Kat Adını Düzenle"
-                                                        >
-                                                          <Pencil className="w-3 h-3" />
-                                                        </button>
-                                                        <button
-                                                          type="button"
-                                                          onClick={() =>
-                                                            removeNode({
-                                                              label: `${floorNode.name}`,
-                                                              level: 'floor',
-                                                              value: floorNode.name,
-                                                              parentBuildingName: binaNode.name,
-                                                              parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
-                                                            })
-                                                          }
-                                                          className="p-1 text-muted-foreground hover:text-destructive rounded"
-                                                          title="Bu Katı Sil"
-                                                        >
-                                                          <Trash2 className="w-3 h-3" />
-                                                        </button>
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                          {flrOpen ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                                                          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                                          <span className="text-xs font-semibold text-foreground truncate">{floorNode.name}</span>
+                                                          {fCode && (
+                                                            <Badge variant="outline" className="text-[9px] font-mono py-0 px-1 text-primary border-primary/30 font-bold">
+                                                              {fCode}
+                                                            </Badge>
+                                                          )}
+                                                          {deptCount > 0 && (
+                                                            <span className="text-[10px] text-muted-foreground">({deptCount} Birim)</span>
+                                                          )}
+                                                        </div>
+
+                                                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                          <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-6 px-2 text-[11px] text-amber-600 hover:bg-amber-500/10"
+                                                            onClick={() =>
+                                                              openInlineAdd({
+                                                                level: 'department',
+                                                                buildingName: binaNode.name,
+                                                                block: blokNode.name,
+                                                                floor: floorNode.name,
+                                                                department: '',
+                                                                nodeKey: floorNode.id,
+                                                              })
+                                                            }
+                                                          >
+                                                            <Plus className="w-3 h-3 mr-1" /> Birim Ekle
+                                                          </Button>
+                                                          {!floorNode.isPlaceholder && (
+                                                            <>
+                                                              <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                  openMergeModal({
+                                                                    level: 'floor',
+                                                                    sourceValue: floorNode.name,
+                                                                    parentBuildingName: binaNode.name,
+                                                                    parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                  })
+                                                                }
+                                                                className="p-1 text-muted-foreground hover:text-amber-600 rounded transition-colors"
+                                                                title="Bu Katı Başka Bir Kat ile Birleştir (Örn: 13. -> 13. Kat)"
+                                                              >
+                                                                <GitMerge className="w-3 h-3" />
+                                                              </button>
+                                                              <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                  startRename({
+                                                                    level: 'floor',
+                                                                    oldValue: floorNode.name,
+                                                                    parentBuildingName: binaNode.name,
+                                                                    parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                    nodeKey: floorNode.id,
+                                                                  })
+                                                                }
+                                                                className="p-1 text-muted-foreground hover:text-primary rounded"
+                                                                title="Kat Adını Düzenle"
+                                                              >
+                                                                <Pencil className="w-3 h-3" />
+                                                              </button>
+                                                              <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                  removeNode({
+                                                                    label: `${floorNode.name}`,
+                                                                    level: 'floor',
+                                                                    value: floorNode.name,
+                                                                    parentBuildingName: binaNode.name,
+                                                                    parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                  })
+                                                                }
+                                                                className="p-1 text-muted-foreground hover:text-destructive rounded"
+                                                                title="Bu Katı Sil"
+                                                              >
+                                                                <Trash2 className="w-3 h-3" />
+                                                              </button>
+                                                            </>
+                                                          )}
+                                                        </div>
                                                       </>
                                                     )}
                                                   </div>
-                                                </>
-                                              )}
-                                            </div>
 
-                                            {/* Kat İçi Hızlı Birim Ekleme */}
-                                            {flrOpen && inlineAdd?.nodeKey === floorNode.id && (
-                                              <div className="flex items-center gap-2 pl-8 pr-3 py-2 bg-amber-500/5 border-t border-border/40">
-                                                <Input
-                                                  autoFocus
-                                                  value={inlineValue}
-                                                  onChange={(e) => setInlineValue(e.target.value)}
-                                                  onKeyDown={(e) => e.key === 'Enter' && saveInlineAdd()}
-                                                  placeholder="Yeni Birim Adı (ör. Acil Servis, Radyoloji)..."
-                                                  list="fac-depts-list"
-                                                  className="h-7 text-xs flex-1 bg-background"
-                                                />
-                                                <Button size="sm" className="h-7 px-2.5 text-xs" onClick={saveInlineAdd} disabled={addMutation.isPending}>
-                                                  <Check className="w-3.5 h-3.5 mr-1" /> Ekle
-                                                </Button>
-                                                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setInlineAdd(null)}>
-                                                  İptal
-                                                </Button>
-                                              </div>
-                                            )}
+                                                  {/* Kat İçi Hızlı Birim Ekleme */}
+                                                  {flrOpen && inlineAdd?.nodeKey === floorNode.id && (
+                                                    <div className="flex items-center gap-2 pl-8 pr-3 py-2 bg-amber-500/5 border-t border-border/40">
+                                                      <Input
+                                                        autoFocus
+                                                        value={inlineValue}
+                                                        onChange={(e) => setInlineValue(e.target.value)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && saveInlineAdd()}
+                                                        placeholder="Yeni Birim Adı (ör. Acil Servis, Radyoloji)..."
+                                                        list="fac-depts-list"
+                                                        className="h-7 text-xs flex-1 bg-background"
+                                                      />
+                                                      <Button size="sm" className="h-7 px-2.5 text-xs" onClick={saveInlineAdd} disabled={addMutation.isPending}>
+                                                        <Check className="w-3.5 h-3.5 mr-1" /> Ekle
+                                                      </Button>
+                                                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setInlineAdd(null)}>
+                                                        İptal
+                                                      </Button>
+                                                    </div>
+                                                  )}
 
-                                            {/* SEVİYE 4: BİRİMLER */}
-                                            {flrOpen && deptCount > 0 && (
-                                              <div className="pl-6 pr-2.5 py-2 space-y-1.5 border-t border-border/40 bg-background/60">
-                                                {Object.values(floorNode.departments).sort(compareDepartments).map((deptNode: any) => {
-                                                  const deptOpen = isNodeExpanded(deptNode.id, true);
-                                                  const isRenamingDept =
-                                                    renameTarget?.nodeKey === deptNode.id && renameTarget?.level === 'department';
+                                                  {/* SEVİYE 4: BİRİMLER */}
+                                                  {flrOpen && deptCount > 0 && (
+                                                    <div className="pl-6 pr-2.5 py-2 space-y-1.5 border-t border-border/40 bg-background/60">
+                                                      {Object.values(floorNode.departments).sort(compareDepartments).map((deptNode: any) => {
+                                                        const deptOpen = isNodeExpanded(deptNode.id, true);
+                                                        const isRenamingDept =
+                                                          renameTarget?.nodeKey === deptNode.id && renameTarget?.level === 'department';
 
-                                                  return (
-                                                    <div key={deptNode.id} className="border border-border/40 rounded bg-card">
-                                                      <div
-                                                        onClick={() => !isRenamingDept && toggleNode(deptNode.id)}
-                                                        className="px-2.5 py-1.5 hover:bg-muted/20 cursor-pointer flex items-center justify-between gap-2"
-                                                      >
-                                                        {isRenamingDept ? (
-                                                          <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
-                                                            <Input
-                                                              autoFocus
-                                                              value={renameValue}
-                                                              onChange={(e) => setRenameValue(e.target.value)}
-                                                              onKeyDown={(e) => e.key === 'Enter' && saveRename()}
-                                                              className="h-6 text-xs flex-1"
-                                                            />
-                                                            <Button size="sm" className="h-6 px-2 text-xs" onClick={saveRename} disabled={renameMutation.isPending}>
-                                                              <Check className="w-3 h-3" />
-                                                            </Button>
-                                                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setRenameTarget(null)}>
-                                                              <X className="w-3 h-3" />
-                                                            </Button>
-                                                          </div>
-                                                        ) : (
-                                                          <>
-                                                            <div className="flex items-center gap-1.5 min-w-0">
-                                                              {deptNode.rooms.length > 0 ? (
-                                                                deptOpen ? <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                                                        return (
+                                                          <div key={deptNode.id} className="border border-border/40 rounded bg-card">
+                                                            <div
+                                                              onClick={() => !isRenamingDept && toggleNode(deptNode.id)}
+                                                              className="px-2.5 py-1.5 hover:bg-muted/20 cursor-pointer flex items-center justify-between gap-2"
+                                                            >
+                                                              {isRenamingDept ? (
+                                                                <div className="flex items-center gap-2 flex-1" onClick={(e) => e.stopPropagation()}>
+                                                                  <Input
+                                                                    autoFocus
+                                                                    value={renameValue}
+                                                                    onChange={(e) => setRenameValue(e.target.value)}
+                                                                    onKeyDown={(e) => e.key === 'Enter' && saveRename()}
+                                                                    className="h-6 text-xs flex-1"
+                                                                  />
+                                                                  <Button size="sm" className="h-6 px-2 text-xs" onClick={saveRename} disabled={renameMutation.isPending}>
+                                                                    <Check className="w-3 h-3" />
+                                                                  </Button>
+                                                                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setRenameTarget(null)}>
+                                                                    <X className="w-3 h-3" />
+                                                                  </Button>
+                                                                </div>
                                                               ) : (
-                                                                <span className="w-3 shrink-0" />
-                                                              )}
-                                                              <Briefcase className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                                              <span className={`text-xs font-medium truncate ${deptNode.isPlaceholder ? 'text-muted-foreground italic' : 'text-foreground'}`}>
-                                                                {deptNode.name}
-                                                              </span>
-                                                              {deptNode.rooms.length > 0 && (
-                                                                <span className="text-[10px] text-muted-foreground">({deptNode.rooms.length} Mahal)</span>
-                                                              )}
-                                                            </div>
-
-                                                            <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                                              <Button
-                                                                type="button"
-                                                                size="sm"
-                                                                variant="ghost"
-                                                                className="h-6 px-2 text-[10px] text-sky-600 hover:bg-sky-500/10"
-                                                                onClick={() =>
-                                                                  openInlineAdd({
-                                                                    level: 'description',
-                                                                    buildingName: binaNode.name,
-                                                                    block: blokNode.name,
-                                                                    floor: floorNode.name,
-                                                                    department: deptNode.isPlaceholder ? '' : deptNode.name,
-                                                                    nodeKey: deptNode.id,
-                                                                  })
-                                                                }
-                                                              >
-                                                                <Plus className="w-3 h-3 mr-0.5" /> Mahal Ekle
-                                                              </Button>
-                                                              {!deptNode.isPlaceholder && (
                                                                 <>
-                                                                  <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                      openMergeModal({
-                                                                        level: 'department',
-                                                                        sourceValue: deptNode.name,
-                                                                        parentBuildingName: binaNode.name,
-                                                                        parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
-                                                                        parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
-                                                                      })
-                                                                    }
-                                                                    className="p-1 text-muted-foreground hover:text-amber-600 rounded transition-colors"
-                                                                    title="Birimi Başka Bir Birim ile Birleştir"
-                                                                  >
-                                                                    <GitMerge className="w-3 h-3" />
-                                                                  </button>
-                                                                  <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                      startRename({
-                                                                        level: 'department',
-                                                                        oldValue: deptNode.name,
-                                                                        parentBuildingName: binaNode.name,
-                                                                        parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
-                                                                        parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
-                                                                        nodeKey: deptNode.id,
-                                                                      })
-                                                                    }
-                                                                    className="p-1 text-muted-foreground hover:text-primary rounded"
-                                                                    title="Birim Adını Düzenle"
-                                                                  >
-                                                                    <Pencil className="w-3 h-3" />
-                                                                  </button>
-                                                                  <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                      removeNode({
-                                                                        label: deptNode.name,
-                                                                        level: 'department',
-                                                                        value: deptNode.name,
-                                                                        parentBuildingName: binaNode.name,
-                                                                        parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
-                                                                        parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
-                                                                      })
-                                                                    }
-                                                                    className="p-1 text-muted-foreground hover:text-destructive rounded"
-                                                                    title="Birimi ve Altındaki Mahalleri Sil"
-                                                                  >
-                                                                    <Trash2 className="w-3 h-3" />
-                                                                  </button>
+                                                                  <div className="flex items-center gap-1.5 min-w-0">
+                                                                    {deptNode.rooms.length > 0 ? (
+                                                                      deptOpen ? <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                                                                    ) : (
+                                                                      <span className="w-3 shrink-0" />
+                                                                    )}
+                                                                    <Briefcase className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                                                    <span className={`text-xs font-medium truncate ${deptNode.isPlaceholder ? 'text-muted-foreground italic' : 'text-foreground'}`}>
+                                                                      {deptNode.name}
+                                                                    </span>
+                                                                    {deptNode.rooms.length > 0 && (
+                                                                      <span className="text-[10px] text-muted-foreground">({deptNode.rooms.length} Mahal)</span>
+                                                                    )}
+                                                                  </div>
+
+                                                                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                                    <Button
+                                                                      type="button"
+                                                                      size="sm"
+                                                                      variant="ghost"
+                                                                      className="h-6 px-2 text-[10px] text-sky-600 hover:bg-sky-500/10"
+                                                                      onClick={() =>
+                                                                        openInlineAdd({
+                                                                          level: 'description',
+                                                                          buildingName: binaNode.name,
+                                                                          block: blokNode.name,
+                                                                          floor: floorNode.name,
+                                                                          department: deptNode.isPlaceholder ? '' : deptNode.name,
+                                                                          nodeKey: deptNode.id,
+                                                                        })
+                                                                      }
+                                                                    >
+                                                                      <Plus className="w-3 h-3 mr-0.5" /> Mahal Ekle
+                                                                    </Button>
+                                                                    {!deptNode.isPlaceholder && (
+                                                                      <>
+                                                                        <button
+                                                                          type="button"
+                                                                          onClick={() =>
+                                                                            openMergeModal({
+                                                                              level: 'department',
+                                                                              sourceValue: deptNode.name,
+                                                                              parentBuildingName: binaNode.name,
+                                                                              parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                              parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
+                                                                            })
+                                                                          }
+                                                                          className="p-1 text-muted-foreground hover:text-amber-600 rounded transition-colors"
+                                                                          title="Birimi Başka Bir Birim ile Birleştir"
+                                                                        >
+                                                                          <GitMerge className="w-3 h-3" />
+                                                                        </button>
+                                                                        <button
+                                                                          type="button"
+                                                                          onClick={() =>
+                                                                            startRename({
+                                                                              level: 'department',
+                                                                              oldValue: deptNode.name,
+                                                                              parentBuildingName: binaNode.name,
+                                                                              parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                              parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
+                                                                              nodeKey: deptNode.id,
+                                                                            })
+                                                                          }
+                                                                          className="p-1 text-muted-foreground hover:text-primary rounded"
+                                                                          title="Birim Adını Düzenle"
+                                                                        >
+                                                                          <Pencil className="w-3 h-3" />
+                                                                        </button>
+                                                                        <button
+                                                                          type="button"
+                                                                          onClick={() =>
+                                                                            removeNode({
+                                                                              label: deptNode.name,
+                                                                              level: 'department',
+                                                                              value: deptNode.name,
+                                                                              parentBuildingName: binaNode.name,
+                                                                              parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                              parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
+                                                                            })
+                                                                          }
+                                                                          className="p-1 text-muted-foreground hover:text-destructive rounded"
+                                                                          title="Birimi ve Altındaki Mahalleri Sil"
+                                                                        >
+                                                                          <Trash2 className="w-3 h-3" />
+                                                                        </button>
+                                                                      </>
+                                                                    )}
+                                                                  </div>
                                                                 </>
                                                               )}
                                                             </div>
-                                                          </>
-                                                        )}
-                                                      </div>
 
-                                                      {/* Birim İçi Hızlı Mahal Ekleme */}
-                                                      {deptOpen && inlineAdd?.nodeKey === deptNode.id && (
-                                                        <div className="flex items-center gap-2 pl-7 pr-2.5 py-1.5 bg-sky-500/5 border-t border-border/30">
-                                                          <Input
-                                                            autoFocus
-                                                            value={inlineValue}
-                                                            onChange={(e) => setInlineValue(e.target.value)}
-                                                            onKeyDown={(e) => e.key === 'Enter' && saveInlineAdd()}
-                                                            placeholder="Yeni Mahal Adı (ör. 101 Nolu Oda, Triaj)..."
-                                                            list="fac-rooms-list"
-                                                            className="h-6 text-xs flex-1 bg-background"
-                                                          />
-                                                          <Button size="sm" className="h-6 px-2 text-[11px]" onClick={saveInlineAdd} disabled={addMutation.isPending}>
-                                                            <Check className="w-3 h-3 mr-1" /> Ekle
-                                                          </Button>
-                                                          <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => setInlineAdd(null)}>
-                                                            İptal
-                                                          </Button>
-                                                        </div>
-                                                      )}
-
-                                                      {/* SEVİYE 5: MAHALLER */}
-                                                      {deptOpen && deptNode.rooms.length > 0 && (
-                                                        <div className="pl-7 pr-2.5 py-1.5 flex flex-wrap gap-1.5 border-t border-border/30 bg-muted/10">
-                                                          {[...deptNode.rooms].sort(compareRooms).map((room: any) => {
-                                                            const isRenamingRoom =
-                                                              renameTarget?.nodeKey === room.id && renameTarget?.level === 'description';
-
-                                                            return isRenamingRoom ? (
-                                                              <div key={room.id} className="flex items-center gap-1 bg-background border rounded px-1.5 py-0.5">
+                                                            {/* Birim İçi Hızlı Mahal Ekleme */}
+                                                            {deptOpen && inlineAdd?.nodeKey === deptNode.id && (
+                                                              <div className="flex items-center gap-2 pl-7 pr-2.5 py-1.5 bg-sky-500/5 border-t border-border/30">
                                                                 <Input
                                                                   autoFocus
-                                                                  value={renameValue}
-                                                                  onChange={(e) => setRenameValue(e.target.value)}
-                                                                  onKeyDown={(e) => e.key === 'Enter' && saveRename()}
-                                                                  className="h-6 text-xs w-36"
+                                                                  value={inlineValue}
+                                                                  onChange={(e) => setInlineValue(e.target.value)}
+                                                                  onKeyDown={(e) => e.key === 'Enter' && saveInlineAdd()}
+                                                                  placeholder="Yeni Mahal Adı (ör. 101 Nolu Oda, Triaj)..."
+                                                                  list="fac-rooms-list"
+                                                                  className="h-6 text-xs flex-1 bg-background"
                                                                 />
-                                                                <button type="button" onClick={saveRename} className="text-emerald-600 p-0.5">
-                                                                  <Check className="w-3 h-3" />
-                                                                </button>
-                                                                <button type="button" onClick={() => setRenameTarget(null)} className="text-muted-foreground p-0.5">
-                                                                  <X className="w-3 h-3" />
-                                                                </button>
+                                                                <Button size="sm" className="h-6 px-2 text-[11px]" onClick={saveInlineAdd} disabled={addMutation.isPending}>
+                                                                  <Check className="w-3 h-3 mr-1" /> Ekle
+                                                                </Button>
+                                                                <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => setInlineAdd(null)}>
+                                                                  İptal
+                                                                </Button>
                                                               </div>
-                                                            ) : (
-                                                              <div
-                                                                key={room.id}
-                                                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-background border border-border/60 text-[11px] text-foreground shadow-2xs"
-                                                              >
-                                                                <DoorOpen className="w-3 h-3 text-sky-600 shrink-0" />
-                                                                <span>{room.name}</span>
-                                                                <button
-                                                                  type="button"
-                                                                  onClick={() =>
-                                                                    openMergeModal({
-                                                                      level: 'description',
-                                                                      sourceValue: room.name,
-                                                                      sourceId: room.id,
-                                                                      parentBuildingName: binaNode.name,
-                                                                      parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
-                                                                      parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
-                                                                      parentDepartment: deptNode.isPlaceholder ? '' : deptNode.name,
-                                                                    })
-                                                                  }
-                                                                  className="text-muted-foreground hover:text-amber-600 p-0.5"
-                                                                  title="Mahali Başka Bir Mahal ile Birleştir"
-                                                                >
-                                                                  <GitMerge className="w-2.5 h-2.5" />
-                                                                </button>
-                                                                <button
-                                                                  type="button"
-                                                                  onClick={() =>
-                                                                    startRename({
-                                                                      level: 'description',
-                                                                      oldValue: room.name,
-                                                                      parentBuildingName: binaNode.name,
-                                                                      parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
-                                                                      parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
-                                                                      parentDepartment: deptNode.isPlaceholder ? '' : deptNode.name,
-                                                                      nodeKey: room.id,
-                                                                    })
-                                                                  }
-                                                                  className="text-muted-foreground hover:text-primary"
-                                                                  title="Mahal Adını Düzenle"
-                                                                >
-                                                                  <Pencil className="w-2.5 h-2.5" />
-                                                                </button>
-                                                                <button
-                                                                  type="button"
-                                                                  onClick={() =>
-                                                                    removeNode({
-                                                                      label: room.name,
-                                                                      level: 'description',
-                                                                      value: room.name,
-                                                                      id: room.id,
-                                                                    })
-                                                                  }
-                                                                  className="text-muted-foreground hover:text-destructive"
-                                                                  title="Mahali Sil"
-                                                                >
-                                                                  <Trash2 className="w-2.5 h-2.5" />
-                                                                </button>
+                                                            )}
+
+                                                            {/* SEVİYE 5: MAHALLER */}
+                                                            {deptOpen && deptNode.rooms.length > 0 && (
+                                                              <div className="pl-7 pr-2.5 py-1.5 flex flex-wrap gap-1.5 border-t border-border/30 bg-muted/10">
+                                                                {[...deptNode.rooms].sort(compareRooms).map((room: any) => {
+                                                                  const isRenamingRoom =
+                                                                    renameTarget?.nodeKey === room.id && renameTarget?.level === 'description';
+
+                                                                  return isRenamingRoom ? (
+                                                                    <div key={room.id} className="flex items-center gap-1 bg-background border rounded px-1.5 py-0.5">
+                                                                      <Input
+                                                                        autoFocus
+                                                                        value={renameValue}
+                                                                        onChange={(e) => setRenameValue(e.target.value)}
+                                                                        onKeyDown={(e) => e.key === 'Enter' && saveRename()}
+                                                                        className="h-6 text-xs w-36"
+                                                                      />
+                                                                      <button type="button" onClick={saveRename} className="text-emerald-600 p-0.5">
+                                                                        <Check className="w-3 h-3" />
+                                                                      </button>
+                                                                      <button type="button" onClick={() => setRenameTarget(null)} className="text-muted-foreground p-0.5">
+                                                                        <X className="w-3 h-3" />
+                                                                      </button>
+                                                                    </div>
+                                                                  ) : (
+                                                                    <div
+                                                                      key={room.id}
+                                                                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-background border border-border/60 text-[11px] text-foreground shadow-2xs"
+                                                                    >
+                                                                      <DoorOpen className="w-3 h-3 text-sky-600 shrink-0" />
+                                                                      <span>{room.name}</span>
+                                                                      <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                          openMergeModal({
+                                                                            level: 'description',
+                                                                            sourceValue: room.name,
+                                                                            sourceId: room.id,
+                                                                            parentBuildingName: binaNode.name,
+                                                                            parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                            parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
+                                                                            parentDepartment: deptNode.isPlaceholder ? '' : deptNode.name,
+                                                                          })
+                                                                        }
+                                                                        className="text-muted-foreground hover:text-amber-600 p-0.5"
+                                                                        title="Mahali Başka Bir Mahal ile Birleştir"
+                                                                      >
+                                                                        <GitMerge className="w-2.5 h-2.5" />
+                                                                      </button>
+                                                                      <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                          startRename({
+                                                                            level: 'description',
+                                                                            oldValue: room.name,
+                                                                            parentBuildingName: binaNode.name,
+                                                                            parentBuilding: blokNode.isPlaceholder ? '' : blokNode.name,
+                                                                            parentFloor: floorNode.isPlaceholder ? '' : floorNode.name,
+                                                                            parentDepartment: deptNode.isPlaceholder ? '' : deptNode.name,
+                                                                            nodeKey: room.id,
+                                                                          })
+                                                                        }
+                                                                        className="text-muted-foreground hover:text-primary"
+                                                                        title="Mahal Adını Düzenle"
+                                                                      >
+                                                                        <Pencil className="w-2.5 h-2.5" />
+                                                                      </button>
+                                                                      <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                          removeNode({
+                                                                            label: room.name,
+                                                                            level: 'description',
+                                                                            value: room.name,
+                                                                            id: room.id,
+                                                                          })
+                                                                        }
+                                                                        className="text-muted-foreground hover:text-destructive"
+                                                                        title="Mahali Sil"
+                                                                      >
+                                                                        <Trash2 className="w-2.5 h-2.5" />
+                                                                      </button>
+                                                                    </div>
+                                                                  );
+                                                                })}
                                                               </div>
-                                                            );
-                                                          })}
-                                                        </div>
-                                                      )}
+                                                            )}
+                                                          </div>
+                                                        );
+                                                      })}
                                                     </div>
-                                                  );
-                                                })}
-                                              </div>
-                                            )}
-                                          </div>
-                                        );
-                                      })
+                                                  )}
+                                                </div>
+                                              );
+                                            })
+                                        )}
+                                      </div>
                                     )}
                                   </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                                );
+                              })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>

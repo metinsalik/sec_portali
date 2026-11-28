@@ -24,6 +24,8 @@ import IsgKurulDecisions from './pages/isg-kurul/IsgKurulDecisions';
 import IsgKurulMeetingDetails from './pages/isg-kurul/IsgKurulMeetingDetails';
 import IsgKurulDecisionDetails from './pages/isg-kurul/IsgKurulDecisionDetails';
 import ProfilePage from './pages/ProfilePage';
+import MyFacilityPage from './pages/MyFacilityPage';
+import MyFacilityLocationsPage from './pages/MyFacilityLocationsPage';
 import RenovationReportPage from './pages/build_management/RenovationReportPage';
 import FacilityActionsPage from './pages/build_management/FacilityActionsPage';
 import NotificationPage from './pages/notifications/NotificationPage';
@@ -528,6 +530,22 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <AppLayout><ProfilePage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile/facility"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><MyFacilityPage /></AppLayout>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile/locations"
+                    element={
+                      <ProtectedRoute>
+                        <AppLayout><MyFacilityLocationsPage /></AppLayout>
                       </ProtectedRoute>
                     }
                   />
@@ -1452,7 +1470,7 @@ function App() {
                     <Route path="facilities/new" element={<FacilityWizardPage />} />
                     <Route path="facilities/:id/edit" element={<FacilityWizardPage />} />
 
-                    <Route path="locations" element={<ProtectedRoute requireAdmin><FacilityLocationsPage /></ProtectedRoute>} />
+                    <Route path="locations" element={<FacilityLocationsPage />} />
                     <Route path="users" element={<ProtectedRoute requireAdmin><UsersPage /></ProtectedRoute>} />
                     <Route path="users/new" element={<ProtectedRoute requireAdmin><UserEditPage /></ProtectedRoute>} />
                     <Route path="users/:username/edit" element={<ProtectedRoute requireAdmin><UserEditPage /></ProtectedRoute>} />
@@ -1488,6 +1506,7 @@ function App() {
                   <Route path="/checklists/submissions/new" element={<ProtectedRoute allowedRoles={['admin', 'management', 'specialist']}><AppLayout><SubmissionFormPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/submissions/:id" element={<ProtectedRoute allowedRoles={['admin', 'management', 'specialist']}><AppLayout><SubmissionFormPage /></AppLayout></ProtectedRoute>} />
                   <Route path="/checklists/reports" element={<ProtectedRoute allowedRoles={['admin', 'management']}><AppLayout><ReportsPage /></AppLayout></ProtectedRoute>} />
+                  <Route path="/checklists/settings" element={<ProtectedRoute allowedRoles={['admin', 'management']}><AppLayout><ChecklistSettingsPage /></AppLayout></ProtectedRoute>} />
                   {/* ── YANGIN GÜVENLİĞİ KONTROL SİSTEMİ ──────────── */}
                   <Route path="/fire-safety-control" element={<ProtectedRoute><AppLayout><FireSafetyDashboard /></AppLayout></ProtectedRoute>} />
                   <Route path="/fire-safety-control/executive-summary" element={<ProtectedRoute><AppLayout><FireSafetyExecutiveSummary /></AppLayout></ProtectedRoute>} />

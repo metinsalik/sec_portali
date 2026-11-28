@@ -4,21 +4,30 @@ import { AuthRequest } from '../../middleware/auth';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import sharp from 'sharp';
 
 const router = Router();
 const prisma = new PrismaClient();
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    const dir = path.join(process.cwd(), 'uploads', 'checklists');
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (_req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
+function toFacilityFolderSlug(raw?: string): string {
+  if (!raw) return 'genel';
+  const trMap: Record<string, string> = {
+    ç: 'c', Ç: 'c', ğ: 'g', Ğ: 'g', ı: 'i', I: 'i', İ: 'i',
+    ö: 'o', Ö: 'o', ş: 's', Ş: 's', ü: 'u', Ü: 'u',
+  };
+  const slug = String(raw)
+    .replace(/[çÇğĞıIİöÖşŞüÜ]/g, (c) => trMap[c] || c)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 60);
+  return slug || 'genel';
+}
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 35 * 1024 * 1024 },
 });
-const upload = multer({ storage });
 
 // Get submissions for a facility
 router.get('/', async (req: AuthRequest, res: Response) => {
@@ -269,9 +278,42 @@ router.post('/upload', upload.single('file'), async (req: AuthRequest, res: Resp
     if (!req.file) {
       return res.status(400).json({ error: 'Dosya bulunamadı' });
     }
-    const fileUrl = `/uploads/checklists/${req.file.filename}`;
+
+    let facilityLabel = String(req.query.facilityName || '').trim();
+    const facilityId = String(req.query.facilityId || '').trim();
+    if (!facilityLabel && facilityId) {
+      const fac = await prisma.facility.findUnique({
+        where: { id: facilityId },
+        select: { name: true },
+      });
+      facilityLabel = fac?.name || facilityId;
+    }
+
+    const slug = toFacilityFolderSlug(facilityLabel || facilityId);
+    const targetDir = path.join(process.cwd(), 'uploads', 'checklists', slug);
+    fs.mkdirSync(targetDir, { recursive: true });
+
+    const uniqueId = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+    const isImage = req.file.mimetype.startsWith('image/');
+
+    let filename: string;
+    if (isImage) {
+      filename = `chk-${uniqueId}.webp`;
+      await sharp(req.file.buffer)
+        .rotate()
+        .resize({ width: 1920, withoutEnlargement: true })
+        .webp({ quality: 82 })
+        .toFile(path.join(targetDir, filename));
+    } else {
+      const ext = path.extname(req.file.originalname) || '';
+      filename = `chk-${uniqueId}${ext}`;
+      fs.writeFileSync(path.join(targetDir, filename), req.file.buffer);
+    }
+
+    const fileUrl = `/uploads/checklists/${slug}/${filename}`;
     res.json({ url: fileUrl });
   } catch (error: any) {
+    console.error('Checklist upload error:', error);
     res.status(500).json({ error: error.message || 'Dosya yüklenemedi' });
   }
 });

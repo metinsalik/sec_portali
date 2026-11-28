@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {
-  Shield, LayoutDashboard, Building2, Users, Briefcase, UserCheck,
+  Shield, LayoutDashboard, Building2, MapPin, Users, Briefcase, UserCheck,
   ClipboardList, FileText, Settings, Bell, ChevronDown, LogOut,
   User, BarChart3, ChevronRight, LayoutGrid, Database, Users2, Mail,
   BellRing, Layers, ShieldAlert, AlertTriangle, FolderTree, Droplets, LifeBuoy, PackageOpen, Flame, PenTool, Menu, X, ShoppingCart, PieChart, Calendar, AlertCircle, MessageSquare, BookOpen, DoorClosed,
@@ -61,9 +61,9 @@ const operationsNavItems = (hasAdminAccess: boolean) => [
 
 const settingsNavItems = (hasAdminAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
-  { label: 'Tesis Yönetimi', icon: Building2, to: '/settings/facilities' },
+  { label: 'Tesis ve Bilgileri', icon: Building2, to: '/settings/facilities' },
+  { label: 'Lokasyon ve Bilgileri', icon: MapPin, to: '/settings/locations' },
   ...(hasAdminAccess ? [
-    { label: 'Tesis Lokasyonları', icon: Building2, to: '/settings/locations' },
     { label: 'Kullanıcı Yönetimi', icon: Users2, to: '/settings/users' },
     { label: 'Tanım Yönetimi', icon: BookOpen, to: '/settings/definitions' },
     { label: 'SİSTEM', type: 'group' },
@@ -235,7 +235,8 @@ const renovationReportNavItems = (hasManagerAccess: boolean) => [
 
 const checklistNavItems = (hasAdminAccess: boolean, hasSpecialistAccess: boolean) => [
   { label: 'GENEL', type: 'group' },
-  { label: 'Dashboard', icon: LayoutDashboard, to: '/checklists', end: true },
+  { label: 'Konsolide Sonuçlar', icon: BarChart3, to: '/checklists?tab=consolidated' },
+  { label: 'Analitik Dashboard', icon: LayoutDashboard, to: '/checklists?tab=analytics' },
 
   { label: 'SAHA DENETİMLERİ', type: 'group' },
   { label: 'Denetimlerim', icon: ClipboardList, to: '/checklists/submissions' },
@@ -290,12 +291,12 @@ const transferNavItems = (hasAdminAccess: boolean) => [
   ] : []),
 ];
 
-const profileNavItems = (hasAdminAccess: boolean) => [
-  { label: 'UYGULAMALAR', type: 'group' },
-  ...(hasAdminAccess ? [{ label: 'Operasyon Yönetim Sistemi', icon: LayoutDashboard, to: '/operations-management' }] : []),
-  ...(hasAdminAccess ? [{ label: 'Aylık Veri Sistemi', icon: FileText, to: '/operations' }] : []),
+const profileNavItems = () => [
+  { label: 'TESİS & LOKASYON', type: 'group' },
+  { label: 'Tesis ve Bilgileri', icon: Building2, to: '/profile/facility' },
+  { label: 'Lokasyon ve Bilgileri', icon: MapPin, to: '/profile/locations' },
   { label: 'HESABIM', type: 'group' },
-  { label: 'Profil Bilgileri', icon: User, to: '/profile' },
+  { label: 'Profil Bilgileri', icon: User, to: '/profile', end: true },
 ];
 
 export default function AppLayout({ children }: AppLayoutProps) {
@@ -408,7 +409,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     navItems = transferNavItems(!!hasAdminAccess);
     moduleName = 'Kurumsal Dosya Transferi';
   } else if (path.startsWith('/profile') || path.startsWith('/notifications')) {
-    navItems = profileNavItems(!!hasAdminAccess);
+    navItems = profileNavItems();
     moduleName = path.startsWith('/profile') ? 'Kullanıcı Profili' : 'Bildirim Merkezi';
   }
 
@@ -703,7 +704,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <DropdownMenuItem onClick={() => navigate('/profile')}>
                 <User className="w-4 h-4 mr-2" /> Profil
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/settings/facilities')}>
+              <DropdownMenuItem onClick={() => navigate(hasAdminAccess ? '/settings/facilities' : '/profile/facility')}>
                 {hasAdminAccess ? (
                   <><Settings className="w-4 h-4 mr-2" /> Sistem Ayarları</>
                 ) : (
