@@ -3584,4 +3584,298 @@ router.delete('/records/:recordId/verifications/:verificationId', async (req: Au
   }
 });
 
+function resolvePublicBaseUrl(req: AuthRequest, bodyOrigin?: string): string {
+  const candidates = [
+    bodyOrigin,
+    typeof req.headers.origin === 'string' ? req.headers.origin : undefined,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate && /^https?:\/\/[^/\s]+/i.test(candidate.trim())) {
+      return candidate.trim().replace(/\/$/, '');
+    }
+  }
+
+  const forwardedHost =
+    (typeof req.headers['x-forwarded-host'] === 'string' && req.headers['x-forwarded-host'].split(',')[0].trim()) ||
+    req.get('host');
+  const forwardedProto =
+    (typeof req.headers['x-forwarded-proto'] === 'string' && req.headers['x-forwarded-proto'].split(',')[0].trim()) ||
+    req.protocol ||
+    'http';
+
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`.replace(/\/$/, '');
+  }
+
+  return (process.env.FRONTEND_URL || 'http://localhost').replace(/\/$/, '');
+}
+
+async function buildFindingPhotosEmailSection(findingPhotos: any): Promise<{
+  photosSection: string;
+  attachments: { filename: string; content: Buffer; contentType: string; cid: string }[];
+}> {
+  if (!Array.isArray(findingPhotos) || findingPhotos.length === 0) {
+    return { photosSection: '', attachments: [] };
+  }
+
+  const attachments: { filename: string; content: Buffer; contentType: string; cid: string }[] = [];
+  const cells: string[] = [];
+
+  for (let i = 0; i < Math.min(findingPhotos.length, 6); i++) {
+    const item = findingPhotos[i];
+    const relUrl = typeof item?.url === 'string' ? item.url : '';
+    if (!relUrl.startsWith('/uploads/')) continue;
+
+    const absPath = path.resolve(process.cwd(), relUrl.replace(/^\/+/, ''));
+    const uploadsRoot = path.resolve(process.cwd(), 'uploads');
+    if (!absPath.startsWith(uploadsRoot) || !fs.existsSync(absPath)) continue;
+
+    try {
+      const jpgBuffer = await sharp(absPath)
+        .rotate()
+        .resize({ width: 720, withoutEnlargement: true })
+        .jpeg({ quality: 82 })
+        .toBuffer();
+
+      const cid = `finding-photo-${i}@isg-portal`;
+      const baseName = path.basename(absPath, path.extname(absPath));
+      attachments.push({
+        filename: `${baseName}.jpg`,
+        content: jpgBuffer,
+        contentType: 'image/jpeg',
+        cid,
+      });
+      cells.push(
+        `<td width="50%" valign="top" style="padding:6px;">
+          <div style="border:1px solid #e2e8f0;background-color:#f8fafc;padding:6px;text-align:center;">
+            <img src="cid:${cid}" alt="Bulgu Fotoğrafı ${i + 1}" width="260" style="display:block;width:100%;max-width:260px;height:auto;margin:0 auto;border:0;" />
+          </div>
+        </td>`
+      );
+    } catch (imgErr) {
+      console.warn('Finding photo embed skipped:', absPath, imgErr);
+    }
+  }
+
+  if (cells.length === 0) {
+    return { photosSection: '', attachments: [] };
+  }
+
+  const rows: string[] = [];
+  for (let i = 0; i < cells.length; i += 2) {
+    const second = cells[i + 1] || '<td width="50%" style="padding:6px;">&nbsp;</td>';
+    rows.push(`<tr>${cells[i]}${second}</tr>`);
+  }
+
+  const photosSection = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:16px 0 8px 0;">
+    <tr>
+      <td colspan="2" style="padding:0 0 8px 0;font-size:13px;font-weight:700;color:#0f172a;">
+        Bulgu Fotoğrafları (${attachments.length})
+      </td>
+    </tr>
+    ${rows.join('')}
+  </table>`;
+
+  return { photosSection, attachments };
+}
+
+async function resolveImprovementNotificationContext(
+  recordId: string,
+  req: AuthRequest,
+  explicitUsernames?: string[],
+  bodyOrigin?: string
+) {
+  const record = await prisma.improvementRecord.findUnique({
+    where: { id: recordId },
+    include: { facility: { select: { id: true, name: true } } },
+  });
+
+  if (!record) return null;
+
+  const deptName = (record.assignedTo || '').trim();
+  let targetUsernames: string[] = Array.isArray(explicitUsernames) ? explicitUsernames : [];
+
+  if (targetUsernames.length === 0 && deptName) {
+    const mappingSetting = await prisma.improvementSetting.findUnique({
+      where: { key: 'department_email_owners' },
+    });
+    const mappings = (mappingSetting?.value as Record<string, string[]>) || {};
+    if (Array.isArray(mappings[deptName]) && mappings[deptName].length > 0) {
+      targetUsernames = mappings[deptName];
+    }
+  }
+
+  const users = await prisma.user.findMany({
+    where: {
+      isActive: true,
+      email: { not: null },
+      ...(targetUsernames.length > 0
+        ? { username: { in: targetUsernames } }
+        : deptName
+        ? { department: { equals: deptName, mode: 'insensitive' } }
+        : { username: '__NONE__' }),
+    },
+    select: { username: true, fullName: true, email: true },
+  });
+
+  const validRecipients = users.filter((u) => u.email && u.email.includes('@'));
+  const template = await prisma.notificationTemplate.findUnique({
+    where: { code: 'IMPROVEMENT_ACTION_ASSIGNED' },
+  });
+
+  const baseUrl = resolvePublicBaseUrl(req, bodyOrigin);
+  const actionUrl = `${baseUrl}/operations-management/improvements/records/${record.id}`;
+  const dueDateStr = record.dueDate
+    ? new Date(record.dueDate).toLocaleDateString('tr-TR')
+    : 'Belirtilmemiş';
+
+  const { photosSection, attachments } = await buildFindingPhotosEmailSection(record.findingPhotos);
+
+  const defaultSubject = '[{{facilityName}}] İyileştirme Aksiyonu Atandı ({{departmentName}})';
+  const defaultBody = `<p>Sayın <strong>{{userName}}</strong>,</p><p><strong>{{departmentName}}</strong> sorumluluğunda yeni bir aksiyon paylaşılmıştır: {{finding}}</p>{{photosSection}}<p><a href="{{actionUrl}}">Aksiyonu Görüntüle ve İşlem Gir</a></p>`;
+
+  return {
+    record,
+    deptName,
+    validRecipients,
+    templateSubject: template?.subject || defaultSubject,
+    templateBody: template?.body || defaultBody,
+    actionUrl,
+    dueDateStr,
+    photosSection,
+    attachments,
+  };
+}
+
+// 15. İYİLEŞTİRME SORUMLUSUNA ÖZEL LİNK İLE HTML E-POSTA BİLDİRİMİ GÖNDER
+router.post('/records/:id/notify-owner', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { usernames: explicitUsernames, origin: bodyOrigin } = (req.body || {}) as {
+      usernames?: string[];
+      origin?: string;
+    };
+
+    const ctx = await resolveImprovementNotificationContext(id, req, explicitUsernames, bodyOrigin);
+    if (!ctx) {
+      return res.status(404).json({ success: false, message: 'İyileştirme kaydı bulunamadı.' });
+    }
+
+    const { record, deptName, validRecipients, templateSubject, templateBody, actionUrl, dueDateStr, photosSection } = ctx;
+
+    if (validRecipients.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: deptName
+          ? `"${deptName}" departmanı için e-posta adresi tanımlı sorumlu bulunamadı. Lütfen Ayarlar > E-posta Şablonları > Departman Sorumlusu sekmesinden sorumlu tanımlayın.`
+          : 'Bu kayda henüz sorumlu departman atanmamış.',
+      });
+    }
+
+    const { sendMail, renderEmailTemplate } = require('../../services/mail');
+
+    const sentRecipients: { fullName: string; email: string }[] = [];
+    for (const recipient of validRecipients) {
+      const vars = {
+        userName: recipient.fullName || recipient.username,
+        facilityName: record.facility?.name || record.facilityId,
+        departmentName: deptName || 'İlgili Birim',
+        finding: record.finding || '',
+        riskScore: record.riskScore || 'Belirtilmemiş',
+        dueDate: dueDateStr,
+        photosSection,
+        actionUrl,
+      };
+      const subject = renderEmailTemplate(templateSubject, vars);
+      let html = renderEmailTemplate(templateBody, vars);
+      if (photosSection && !templateBody.includes('{{photosSection}}')) {
+        html += photosSection;
+      }
+
+      await sendMail(recipient.email!, subject, html);
+      await prisma.notification.create({
+        data: {
+          title: `İyileştirme Aksiyonu: ${record.facility?.name || ''}`,
+          message: `${deptName || 'Departman'} için aksiyon bildirimi gönderildi: ${(record.finding || '').slice(0, 120)}`,
+          type: 'INFO',
+          module: 'IMPROVEMENTS',
+          username: recipient.username,
+          link: `/operations-management/improvements/records/${record.id}`,
+        },
+      });
+      sentRecipients.push({ fullName: recipient.fullName, email: recipient.email! });
+    }
+
+    res.json({
+      success: true,
+      message: `${sentRecipients.length} sorumluya e-posta ve bildirim gönderildi.`,
+      recipients: sentRecipients,
+    });
+  } catch (error: any) {
+    console.error('POST /records/:id/notify-owner error:', error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'E-posta bildirimi gönderilemedi.',
+    });
+  }
+});
+
+// 16. OUTLOOK 365 İÇİN .EML TASLAĞI İNDİR (SMTP GEREKTİRMEZ)
+router.post('/records/:id/eml-draft', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { usernames: explicitUsernames, origin: bodyOrigin } = (req.body || {}) as {
+      usernames?: string[];
+      origin?: string;
+    };
+
+    const ctx = await resolveImprovementNotificationContext(id, req, explicitUsernames, bodyOrigin);
+    if (!ctx) {
+      return res.status(404).json({ success: false, message: 'İyileştirme kaydı bulunamadı.' });
+    }
+
+    const { record, deptName, validRecipients, templateSubject, templateBody, actionUrl, dueDateStr, photosSection, attachments } = ctx;
+    const { buildEmlDraft, renderEmailTemplate } = require('../../services/mail');
+
+    const recipientNames = validRecipients.map((r) => r.fullName || r.username).join(', ');
+    const recipientEmails = validRecipients.map((r) => r.email!).filter(Boolean);
+
+    const vars = {
+      userName: recipientNames || 'İlgili Yetkili',
+      facilityName: record.facility?.name || record.facilityId,
+      departmentName: deptName || 'İlgili Birim',
+      finding: record.finding || '',
+      riskScore: record.riskScore || 'Belirtilmemiş',
+      dueDate: dueDateStr,
+      photosSection,
+      actionUrl,
+    };
+
+    const subject = renderEmailTemplate(templateSubject, vars);
+    let html = renderEmailTemplate(templateBody, vars);
+    if (photosSection && !templateBody.includes('{{photosSection}}')) {
+      html += photosSection;
+    }
+
+    const emlBuffer = await buildEmlDraft({
+      to: recipientEmails.length > 0 ? recipientEmails : undefined,
+      subject,
+      html,
+      attachments,
+    });
+
+    const fileSlug = `iyilestirme-${record.rowNo || record.id.slice(0, 8)}`;
+    res.setHeader('Content-Type', 'message/rfc822; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileSlug}.eml"`);
+    res.send(emlBuffer);
+  } catch (error: any) {
+    console.error('POST /records/:id/eml-draft error:', error);
+    res.status(500).json({
+      success: false,
+      message: error?.message || 'Outlook taslağı (.eml) oluşturulamadı.',
+    });
+  }
+});
+
 export default router;

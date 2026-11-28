@@ -39,6 +39,16 @@ const SmtpSettingsPage = () => {
     },
   });
 
+  const { data: systemUsers = [] } = useQuery<any[]>({
+    queryKey: ['smtp-system-users'],
+    queryFn: async () => {
+      const res = await api.get('/settings/users');
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data.filter((u) => u.isActive && u.email) : [];
+    },
+  });
+
   const [formData, setFormData] = useState<SmtpSettings>({
     host: '',
     port: 587,
@@ -79,22 +89,89 @@ const SmtpSettingsPage = () => {
     updateMutation.mutate(formData);
   };
 
+  const [testSubject, setTestSubject] = useState('');
+  const [testMessage, setTestMessage] = useState('');
+  const [isDownloadingEml, setIsDownloadingEml] = useState(false);
+
+  const buildCustomTestHtml = () => {
+    if (!testMessage.trim()) return undefined;
+    const escaped = testMessage
+      .trim()
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br/>');
+    return `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:10px;background:#ffffff;"><h2 style="margin:0 0 12px;color:#0f172a;font-size:18px;">${testSubject.trim() || 'İSG Portalı E-posta Bildirimi'}</h2><p style="color:#334155;font-size:14px;line-height:1.6;">${escaped}</p><hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;"/><p style="color:#94a3b8;font-size:12px;">Bu e-posta İSG Portalı üzerinden hazırlanmıştır.</p></div>`;
+  };
+
+  const handleDownloadEml = async () => {
+    setIsDownloadingEml(true);
+    try {
+      const res = await api.post('/settings/eml-draft', {
+        to: testEmail || undefined,
+        subject: testSubject.trim() || 'İSG Portalı — Outlook Taslağı',
+        html: buildCustomTestHtml(),
+        filename: 'isg-hizli-mail',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'EML taslağı oluşturulamadı');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'isg-hizli-mail.eml';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Outlook taslağı (.eml) indirildi. Çift tıklayıp Outlook 365 üzerinden gönderebilirsiniz.');
+    } catch (error: any) {
+      toast.error(error.message || 'EML taslağı indirilemedi.');
+    } finally {
+      setIsDownloadingEml(false);
+    }
+  };
+
+  const handleOutlookPreset = () => {
+    setFormData(prev => ({
+      ...prev,
+      host: 'smtp.office365.com',
+      port: 587,
+      secure: false,
+    }));
+    toast.info('Outlook / Office 365 SMTP ayarları (smtp.office365.com:587) dolduruldu. E-posta ve şifrenizi girip kaydedin.');
+  };
+
   const handleTestMail = async () => {
     if (!testEmail) {
-      toast.error('Lütfen bir test e-posta adresi girin.');
+      toast.error('Lütfen bir alıcı e-posta adresi girin veya sistemden kullanıcı seçin.');
       return;
     }
 
     setIsTesting(true);
     try {
-      const res = await api.post('/settings/smtp/test', { to: testEmail });
+      const payload: { to: string; subject?: string; html?: string } = { to: testEmail };
+      if (testSubject.trim()) payload.subject = testSubject.trim();
+      if (testMessage.trim()) {
+        const escaped = testMessage
+          .trim()
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\n/g, '<br/>');
+        payload.html = `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:10px;background:#ffffff;"><h2 style="margin:0 0 12px;color:#0f172a;font-size:18px;">${payload.subject || 'İSG Portalı E-posta Bildirimi'}</h2><p style="color:#334155;font-size:14px;line-height:1.6;">${escaped}</p><hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;"/><p style="color:#94a3b8;font-size:12px;">Bu e-posta İSG Portalı SMTP ayarları üzerinden gönderilmiştir.</p></div>`;
+      }
+
+      const res = await api.post('/settings/smtp/test', payload);
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Test maili gönderilemedi');
       }
-      toast.success('Test e-postası başarıyla gönderildi. Lütfen gelen kutunuzu kontrol edin.');
+      toast.success('E-posta başarıyla gönderildi. Lütfen gelen kutusunu kontrol edin.');
     } catch (error: any) {
-      toast.error(error.message || 'Test e-postası gönderilemedi.');
+      toast.error(error.message || 'E-posta gönderilemedi.');
     } finally {
       setIsTesting(false);
     }
@@ -129,13 +206,27 @@ const SmtpSettingsPage = () => {
         <div className="lg:col-span-2">
           <Card className="shadow-xs border-border/60 rounded-lg">
             <CardHeader className="pb-3 border-b border-border/40">
-              <div className="flex items-center gap-2 text-foreground font-semibold">
-                <Server className="w-4 h-4 text-primary" />
-                <CardTitle className="text-sm font-semibold">Sunucu Yapılandırması</CardTitle>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2 text-foreground font-semibold">
+                    <Server className="w-4 h-4 text-primary" />
+                    <CardTitle className="text-sm font-semibold">Sunucu Yapılandırması</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs mt-1">
+                    Kurumsal e-posta sunucusu (SMTP / Outlook) bağlantı parametrelerini girin.
+                  </CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOutlookPreset}
+                  className="h-8 text-xs gap-1.5 rounded-md"
+                >
+                  <Mail className="w-3.5 h-3.5 text-primary" />
+                  Outlook / Office 365 Doldur
+                </Button>
               </div>
-              <CardDescription className="text-xs">
-                Kurumsal e-posta sunucusu (SMTP) bağlantı parametrelerini girin.
-              </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
               <form id="smtp-form" onSubmit={handleSave} className="space-y-4">
@@ -257,13 +348,33 @@ const SmtpSettingsPage = () => {
             <CardHeader className="pb-3 border-b border-border/40">
               <div className="flex items-center gap-2 text-foreground font-semibold">
                 <Send className="w-4 h-4 text-primary" />
-                <CardTitle className="text-sm font-semibold">Bağlantı Testi</CardTitle>
+                <CardTitle className="text-sm font-semibold">Bağlantı Testi & Hızlı Mail</CardTitle>
               </div>
               <CardDescription className="text-xs">
-                Yapılandırmanın çalıştığını test etmek için bir e-posta gönderin.
+                Sistemdeki bir kişiyi seçin veya e-posta adresi yazarak test/bildirim maili gönderin.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 pt-4">
+              {systemUsers.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="system-user-select" className="text-xs font-medium">Sistemdeki Kişiden Seç</Label>
+                  <select
+                    id="system-user-select"
+                    value={systemUsers.some(u => u.email === testEmail) ? testEmail : ''}
+                    onChange={e => {
+                      if (e.target.value) setTestEmail(e.target.value);
+                    }}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    <option value="">-- Kişi seçiniz ({systemUsers.length}) --</option>
+                    {systemUsers.map(u => (
+                      <option key={u.username} value={u.email || ''}>
+                        {u.fullName} {u.department ? `(${u.department})` : ''} — {u.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="test-email" className="text-xs font-medium">Alıcı E-posta</Label>
                 <Input 
@@ -275,15 +386,48 @@ const SmtpSettingsPage = () => {
                   className="h-9 text-xs rounded-md"
                 />
               </div>
-              <Button 
-                variant="outline" 
-                className="w-full gap-2 h-9 text-xs rounded-md"
-                onClick={handleTestMail}
-                disabled={isTesting || !formData.host}
-              >
-                {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
-                Test Maili Gönder
-              </Button>
+              <div className="space-y-1.5">
+                <Label htmlFor="test-subject" className="text-xs font-medium">Konu (İsteğe bağlı)</Label>
+                <Input
+                  id="test-subject"
+                  placeholder="Örn: İSG Portalı SMTP Testi"
+                  value={testSubject}
+                  onChange={e => setTestSubject(e.target.value)}
+                  className="h-9 text-xs rounded-md"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="test-message" className="text-xs font-medium">Mesaj (İsteğe bağlı)</Label>
+                <textarea
+                  id="test-message"
+                  rows={3}
+                  placeholder="Boş bırakılırsa standart test e-postası gönderilir..."
+                  value={testMessage}
+                  onChange={e => setTestMessage(e.target.value)}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-xs shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full gap-2 h-9 text-xs rounded-md"
+                  onClick={handleTestMail}
+                  disabled={isTesting || !formData.host}
+                >
+                  {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+                  SMTP ile Gönder
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full gap-2 h-9 text-xs rounded-md"
+                  onClick={handleDownloadEml}
+                  disabled={isDownloadingEml}
+                >
+                  {isDownloadingEml ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  Outlook 365 Taslağı İndir (.eml)
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

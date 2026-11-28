@@ -1036,16 +1036,22 @@ router.post('/smtp', adminMiddleware, async (req: AuthRequest, res: Response) =>
 });
 
 router.post('/smtp/test', adminMiddleware, async (req: AuthRequest, res: Response) => {
-  const { to } = req.body;
+  const { to, subject, html } = req.body;
   if (!to) return res.status(400).json({ error: 'Alıcı e-posta adresi zorunludur.' });
 
   try {
     const { sendMail } = require('../services/mail');
-    await sendMail(
-      to,
-      'SEC Portalı - SMTP Test Mesajı',
-      'SEC Portalı SMTP ayarları başarıyla doğrulandı.'
-    );
+    const mailSubject = subject || 'SEC Portalı - SMTP Test Mesajı';
+    const mailHtml =
+      html ||
+      `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:10px;background:#ffffff;color:#0f172a;">
+        <h2 style="margin:0 0 12px;font-size:18px;color:#0f172a;">SEC Portalı SMTP Bağlantı Testi</h2>
+        <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#334155;">
+          Bu e-posta, SEC Portalı SMTP sunucu ayarlarınızın (Outlook / Kurumsal E-posta) başarıyla çalıştığını doğrulamak için gönderilmiştir.
+        </p>
+        <p style="margin:0;font-size:12px;color:#64748b;">Gönderim Zamanı: ${new Date().toLocaleString('tr-TR')}</p>
+      </div>`;
+    await sendMail(to, mailSubject, mailHtml);
     res.json({ message: 'Test e-postası başarıyla gönderildi.' });
   } catch (error: any) {
     console.error(error);
@@ -1057,8 +1063,80 @@ router.post('/smtp/test', adminMiddleware, async (req: AuthRequest, res: Respons
 // BİLDİRİM AYARLARI & ŞABLONLARI - Sadece Admin
 // ──────────────────────────────────────────────────────────────────────────────
 
+const DEFAULT_IMPROVEMENT_HTML = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1f5f9" style="background-color:#f1f5f9;font-family:Segoe UI,Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
+      <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:100%;max-width:640px;background-color:#ffffff;border:1px solid #cbd5e1;border-collapse:collapse;">
+        <tr>
+          <td bgcolor="#0f172a" style="background-color:#0f172a;padding:22px 26px;color:#ffffff;">
+            <p style="margin:0 0 4px 0;font-size:11px;letter-spacing:0.8px;text-transform:uppercase;color:#94a3b8;font-weight:600;">MLP Care HSE Portalı • {{facilityName}}</p>
+            <h2 style="margin:0;font-size:20px;line-height:1.3;font-weight:700;color:#ffffff;">İyileştirme &amp; Aksiyon Bildirimi</h2>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 26px;color:#1e293b;font-size:14px;line-height:1.6;">
+            <p style="margin:0 0 12px 0;">Sayın <strong>{{userName}}</strong>,</p>
+            <p style="margin:0 0 18px 0;color:#334155;">
+              <strong>{{departmentName}}</strong> sorumluluğunda yeni bir iyileştirme / aksiyon kaydı paylaşılmıştır. Detayları aşağıda inceleyip doğrudan aksiyon girişi yapabilirsiniz.
+            </p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 20px 0;font-size:13px;">
+              <tr>
+                <td width="150" bgcolor="#f8fafc" style="padding:10px 12px;background-color:#f8fafc;border:1px solid #e2e8f0;font-weight:700;color:#334155;vertical-align:top;">Tesis</td>
+                <td style="padding:10px 12px;border:1px solid #e2e8f0;color:#0f172a;">{{facilityName}}</td>
+              </tr>
+              <tr>
+                <td bgcolor="#f8fafc" style="padding:10px 12px;background-color:#f8fafc;border:1px solid #e2e8f0;font-weight:700;color:#334155;vertical-align:top;">Sorumlu Birim</td>
+                <td style="padding:10px 12px;border:1px solid #e2e8f0;color:#0f172a;">{{departmentName}}</td>
+              </tr>
+              <tr>
+                <td bgcolor="#f8fafc" style="padding:10px 12px;background-color:#f8fafc;border:1px solid #e2e8f0;font-weight:700;color:#334155;vertical-align:top;">Risk Seviyesi</td>
+                <td style="padding:10px 12px;border:1px solid #e2e8f0;font-weight:700;color:#b91c1c;">{{riskScore}}</td>
+              </tr>
+              <tr>
+                <td bgcolor="#f8fafc" style="padding:10px 12px;background-color:#f8fafc;border:1px solid #e2e8f0;font-weight:700;color:#334155;vertical-align:top;">Termin Tarihi</td>
+                <td style="padding:10px 12px;border:1px solid #e2e8f0;color:#0f172a;">{{dueDate}}</td>
+              </tr>
+              <tr>
+                <td bgcolor="#f8fafc" style="padding:10px 12px;background-color:#f8fafc;border:1px solid #e2e8f0;font-weight:700;color:#334155;vertical-align:top;">Tespit / Bulgu</td>
+                <td style="padding:10px 12px;border:1px solid #e2e8f0;color:#1e293b;line-height:1.55;">{{finding}}</td>
+              </tr>
+            </table>
+            {{photosSection}}
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:24px auto 12px auto;">
+              <tr>
+                <td align="center" bgcolor="#2563eb" style="background-color:#2563eb;border-radius:6px;padding:12px 26px;">
+                  <a href="{{actionUrl}}" target="_blank" style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;display:inline-block;">
+                    Aksiyonu Görüntüle ve İşlem Gir &rarr;
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:14px 0 0 0;font-size:11px;color:#64748b;text-align:center;word-break:break-all;">
+              Buton çalışmazsa bu bağlantıyı tarayıcınıza yapıştırın:<br/>
+              <a href="{{actionUrl}}" style="color:#2563eb;text-decoration:underline;">{{actionUrl}}</a>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:14px 26px;border-top:1px solid #e2e8f0;font-size:11px;color:#64748b;text-align:center;">
+            Bu bildirim MLP Care HSE Portalı İyileştirme &amp; Aksiyon modülü tarafından oluşturulmuştur.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
+
 async function seedNotificationConfigs() {
   const configs = [
+    {
+      code: 'IMPROVEMENT_ACTION_ASSIGNED',
+      module: 'IMPROVEMENTS',
+      name: 'İyileştirme & Aksiyon Departman Bildirimi',
+      description: 'İyileştirme ve aksiyon kaydına ilgili departman atandığında veya bildirim tetiklendiğinde sorumluya özel link ile HTML e-posta gider.',
+      defaultSubject: '[{{facilityName}}] İyileştirme Aksiyonu Atandı ({{departmentName}})',
+      defaultBody: DEFAULT_IMPROVEMENT_HTML,
+    },
     { code: 'NEW_ACCIDENT', module: 'OPERATIONS', name: 'Yeni Kaza Bildirimi', description: 'Yeni bir iş kazası kaydedildiğinde bildirim gider.' },
     { code: 'ASSIGNMENT_REMINDER', module: 'OPERATIONS', name: 'Atama Hatırlatıcı', description: 'Süresi dolmak üzere olan atamalar için bildirim gider.' },
     { code: 'RECONCILIATION_APPROVED', module: 'PANEL', name: 'Mutabakat Onayı', description: 'Bir mutabakat onaylandığında bildirim gider.' },
@@ -1087,10 +1165,21 @@ async function seedNotificationConfigs() {
         code: config.code,
         name: config.name,
         module: config.module,
-        subject: `${config.name} - SEC Portalı`,
-        body: `Sayın Yetkili,\n\n${config.description}\n\nDetaylar için lütfen sisteme giriş yapınız.\n\nİyi çalışmalar.`
+        subject: (config as any).defaultSubject || `${config.name} - SEC Portalı`,
+        body: (config as any).defaultBody || `Sayın Yetkili,\n\n${config.description}\n\nDetaylar için lütfen sisteme giriş yapınız.\n\nİyi çalışmalar.`
       }
     });
+
+    // Eski inline-butonlu varsayılan IMPROVEMENT_ACTION_ASSIGNED şablonunu Outlook Classic uyumlu yeni şablona yükselt
+    if (config.code === 'IMPROVEMENT_ACTION_ASSIGNED') {
+      const existingTpl = await prisma.notificationTemplate.findUnique({ where: { code: config.code } });
+      if (existingTpl && existingTpl.body.includes('display:inline-block;background:#2563eb')) {
+        await prisma.notificationTemplate.update({
+          where: { code: config.code },
+          data: { body: DEFAULT_IMPROVEMENT_HTML },
+        });
+      }
+    }
   }
 }
 
@@ -1162,6 +1251,7 @@ router.put('/notification-configs/:code', adminMiddleware, async (req: AuthReque
 
 router.get('/notification-templates', adminMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    await seedNotificationConfigs();
     const templates = await prisma.notificationTemplate.findMany({
       orderBy: [{ module: 'asc' }, { code: 'asc' }]
     });
@@ -1182,6 +1272,58 @@ router.put('/notification-templates/:code', adminMiddleware, async (req: AuthReq
     res.json(template);
   } catch (error) {
     res.status(500).json({ error: 'Bildirim şablonu güncellenemedi.' });
+  }
+});
+
+// Departman -> E-posta Sorumlusu Eşleştirme (İyileştirme & Aksiyon Bildirimleri için)
+router.get('/department-owners', adminMiddleware, async (_req: AuthRequest, res: Response) => {
+  try {
+    const [setting, departments, users] = await Promise.all([
+      prisma.improvementSetting.findUnique({ where: { key: 'department_email_owners' } }),
+      prisma.department.findMany({ orderBy: { name: 'asc' } }),
+      prisma.user.findMany({
+        where: { isActive: true },
+        select: { username: true, fullName: true, email: true, department: true, title: true },
+        orderBy: { fullName: 'asc' },
+      }),
+    ]);
+
+    res.json({
+      mappings: (setting?.value as Record<string, string[]>) || {},
+      departments,
+      users,
+    });
+  } catch (error) {
+    console.error('GET /department-owners error:', error);
+    res.status(500).json({ error: 'Departman sorumluları getirilemedi.' });
+  }
+});
+
+router.put('/department-owners', adminMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { mappings } = req.body as { mappings?: Record<string, string[]> };
+    if (!mappings || typeof mappings !== 'object') {
+      return res.status(400).json({ error: 'Geçersiz eşleştirme verisi.' });
+    }
+
+    const saved = await prisma.improvementSetting.upsert({
+      where: { key: 'department_email_owners' },
+      update: {
+        value: mappings,
+        description: 'İyileştirme ve aksiyon kayıtlarında departman bazlı e-posta sorumluları',
+      },
+      create: {
+        id: 'department_email_owners',
+        key: 'department_email_owners',
+        value: mappings,
+        description: 'İyileştirme ve aksiyon kayıtlarında departman bazlı e-posta sorumluları',
+      },
+    });
+
+    res.json({ mappings: saved.value });
+  } catch (error) {
+    console.error('PUT /department-owners error:', error);
+    res.status(500).json({ error: 'Departman sorumluları kaydedilemedi.' });
   }
 });
 
@@ -1397,6 +1539,44 @@ router.delete('/report-templates/:id', adminMiddleware, async (req: AuthRequest,
     res.json({ message: 'Şablon başarıyla silindi.' });
   } catch (error) {
     res.status(500).json({ error: 'Şablon silinemedi.' });
+  }
+});
+
+router.post('/eml-draft', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { to, cc, subject, html, filename } = (req.body || {}) as {
+      to?: string;
+      cc?: string;
+      subject?: string;
+      html?: string;
+      filename?: string;
+    };
+
+    const finalSubject = (subject || '').trim() || 'İSG Portalı — E-posta Taslağı';
+    const finalHtml =
+      (html || '').trim() ||
+      `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:10px;background:#ffffff;">
+        <h2 style="margin:0 0 12px;color:#0f172a;font-size:18px;">${finalSubject}</h2>
+        <p style="color:#334155;font-size:14px;line-height:1.6;">Bu taslak İSG Portalı üzerinden Outlook 365 ile gönderilmek üzere hazırlanmıştır.</p>
+      </div>`;
+
+    const emlBuffer = await buildEmlDraft({
+      to: to || undefined,
+      cc: cc || undefined,
+      subject: finalSubject,
+      html: finalHtml,
+    });
+
+    const safeName = (filename || 'isg-taslak')
+      .replace(/[^a-zA-Z0-9-_]/g, '_')
+      .slice(0, 60);
+
+    res.setHeader('Content-Type', 'message/rfc822; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}.eml"`);
+    res.send(emlBuffer);
+  } catch (error: any) {
+    console.error('POST /settings/eml-draft error:', error);
+    res.status(500).json({ error: error?.message || 'EML taslağı oluşturulamadı.' });
   }
 });
 

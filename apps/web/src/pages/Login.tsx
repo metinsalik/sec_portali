@@ -1,18 +1,61 @@
-import React, { useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Shield, User, Info, ArrowRight, SunMoon, ShieldCheck, Activity } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { useTheme } from "@/components/ThemeProvider"
 
+function sanitizeRedirectPath(candidate: string | null | undefined): string | null {
+  if (!candidate) return null;
+  const trimmed = candidate.trim();
+  if (!trimmed.startsWith('/') || trimmed.startsWith('//') || trimmed.startsWith('/login')) {
+    return null;
+  }
+  return trimmed;
+}
+
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { user, isLoading, login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme, setTheme } = useTheme();
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const redirectTarget = useMemo(() => {
+    const stateFrom = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from;
+    const fromStatePath = stateFrom?.pathname
+      ? `${stateFrom.pathname}${stateFrom.search || ''}${stateFrom.hash || ''}`
+      : null;
+
+    const queryRedirect = new URLSearchParams(location.search).get('redirect');
+    let storedRedirect: string | null = null;
+    try {
+      storedRedirect = sessionStorage.getItem('post_login_redirect');
+    } catch {
+      storedRedirect = null;
+    }
+
+    return (
+      sanitizeRedirectPath(fromStatePath) ||
+      sanitizeRedirectPath(queryRedirect) ||
+      sanitizeRedirectPath(storedRedirect) ||
+      "/portal"
+    );
+  }, [location.state, location.search]);
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      try {
+        sessionStorage.removeItem('post_login_redirect');
+      } catch {
+        // ignore
+      }
+      navigate(redirectTarget, { replace: true });
+    }
+  }, [user, isLoading, navigate, redirectTarget]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,7 +69,12 @@ export default function LoginPage() {
 
     try {
       await login(username);
-      navigate("/portal");
+      try {
+        sessionStorage.removeItem('post_login_redirect');
+      } catch {
+        // ignore
+      }
+      navigate(redirectTarget, { replace: true });
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Giriş başarısız.";
       setError(errorMessage);

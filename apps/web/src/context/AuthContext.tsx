@@ -2,14 +2,73 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { api } from '../lib/api';
 import { toast } from 'sonner';
 
+interface AccessibleModule {
+  code: string;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+  source?: string;
+}
+
+interface ProfessionalAssignmentDoc {
+  id: string;
+  name: string;
+  date: string;
+  filePath: string;
+}
+
+interface ProfessionalAssignmentInfo {
+  id: number;
+  facilityId: string;
+  facilityName: string;
+  dangerClass?: string | null;
+  employeeCount?: number | null;
+  type: string;
+  durationMinutes: number;
+  isFullTime: boolean;
+  startDate: string;
+  endDate?: string | null;
+  status: string;
+  documents: ProfessionalAssignmentDoc[];
+}
+
+interface ProfessionalProfile {
+  id: number;
+  fullName: string;
+  employmentType: string;
+  osgbName?: string | null;
+  titleClass: string;
+  certificateNo?: string | null;
+  certificateDate?: string | null;
+  certificateStatus?: {
+    isExpired: boolean;
+    isWarning: boolean;
+    isCritical: boolean;
+    daysLeft: number | null;
+  } | null;
+  totalAssignedMinutes: number;
+  assignments: ProfessionalAssignmentInfo[];
+}
+
 interface User {
   username: string;
   fullName: string;
+  email?: string | null;
+  phone?: string | null;
+  title?: string | null;
+  department?: string | null;
+  employmentType?: string | null;
+  osgbName?: string | null;
+  telegramChatId?: string | null;
+  hasTelegram?: boolean;
   roles: string[];
   facilities: string[];
   modules: string[];
+  accessibleModules?: AccessibleModule[];
+  professionalProfile?: ProfessionalProfile | null;
   isAdmin: boolean;
   isManagement: boolean;
+  createdAt?: string;
 }
 
 interface AuthContextType {
@@ -17,6 +76,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (username: string) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,6 +125,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
+    try {
+      sessionStorage.removeItem('post_login_redirect');
+    } catch {
+      // ignore
+    }
     setUser(null);
     toast.info('Çıkış yapıldı');
   }, []);
@@ -109,7 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshUser: fetchMe }}>
       {children}
     </AuthContext.Provider>
   );

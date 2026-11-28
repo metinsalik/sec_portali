@@ -33,9 +33,12 @@ WORKDIR /app/backend
 RUN sed -i 's/\r$//' entrypoint.sh
 RUN chmod +x entrypoint.sh
 
-# Generate prisma client & build
-RUN node --no-maglev /app/node_modules/prisma/build/index.js generate --generator client
-RUN node --no-maglev --max-old-space-size=4096 /app/backend/node_modules/.bin/tsc --noCheck
+# Generate prisma client & build (isolated esbuild in /tmp/esbuild avoids workspace hoisting & V8/tsc crashes)
+RUN node --no-maglev --no-wasm-tier-up /app/node_modules/prisma/build/index.js generate --generator client
+RUN mkdir -p /tmp/esbuild \
+  && node --no-maglev /usr/local/lib/node_modules/npm/bin/npm-cli.js install --prefix /tmp/esbuild --no-save --no-package-lock --no-audit --no-fund esbuild \
+  && find src -name '*.ts' ! -path 'src/routes/settings_backup.ts' -print0 | xargs -0 /tmp/esbuild/node_modules/esbuild/bin/esbuild --outdir=dist --outbase=src --format=cjs --platform=node --target=node22 \
+  && rm -rf /tmp/esbuild
 
 EXPOSE 3005
 

@@ -7,7 +7,7 @@ import {
   Building2, TrendingUp, DollarSign, History,
   ChevronRight, ChevronDown, ChevronUp, ChevronsDown, ChevronsUp, RefreshCw, ZoomIn, Layers, FileCheck, Eye, Sparkles,
   Scale, ShoppingCart, HardHat, Package, MoreHorizontal, ArrowRight, Check, Trash2,
-  ShieldCheck, Lock, XCircle, ClipboardCheck
+  ShieldCheck, Lock, XCircle, ClipboardCheck, Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -105,6 +105,69 @@ export const ImprovementDetailPage: React.FC = () => {
       setLoading(false);
     }
   }, [id]);
+
+  // Departman Sorumlusuna E-posta Bildirimi & Outlook .eml Taslağı State ve Fonksiyonları
+  const [notifyingOwner, setNotifyingOwner] = useState<boolean>(false);
+  const [downloadingEml, setDownloadingEml] = useState<boolean>(false);
+
+  const handleDownloadEml = async () => {
+    if (!record || downloadingEml) return;
+    setDownloadingEml(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/operations/improvements/records/${record.id}/eml-draft`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ origin: window.location.origin })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Outlook taslağı (.eml) oluşturulamadı.');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `iyilestirme-${record.rowNo || record.id.slice(0, 8)}.eml`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Outlook taslağı (.eml) indirildi. Açıp doğrudan gönderebilirsiniz.');
+    } catch (err: any) {
+      toast.error(err.message || 'Outlook taslağı indirilirken hata oluştu.');
+    } finally {
+      setDownloadingEml(false);
+    }
+  };
+
+  const handleNotifyOwner = async () => {
+    if (!record || notifyingOwner) return;
+    setNotifyingOwner(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/operations/improvements/records/${record.id}/notify-owner`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ origin: window.location.origin })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Bildirim e-postası gönderilemedi.');
+      }
+      toast.success(data.message || 'Departman sorumlusuna bildirim e-postası gönderildi.');
+    } catch (err: any) {
+      toast.error(err.message || 'E-posta gönderilirken hata oluştu.');
+    } finally {
+      setNotifyingOwner(false);
+    }
+  };
 
   // Hızlı Durum Değiştirme State ve Fonksiyonu
   const [updatingStatus, setUpdatingStatus] = useState<boolean>(false);
@@ -541,6 +604,42 @@ export const ImprovementDetailPage: React.FC = () => {
               Doğrulama Gir
             </Button>
           )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNotifyOwner}
+            disabled={notifyingOwner || !record.assignedTo}
+            title={
+              record.assignedTo
+                ? `${record.assignedTo} departmanı sorumlusuna SMTP ile e-posta gönder`
+                : 'Önce kayda bir sorumlu departman atayın'
+            }
+            className="gap-1.5 text-xs font-semibold hover:border-primary text-foreground"
+          >
+            {notifyingOwner ? (
+              <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+            ) : (
+              <Mail className="w-4 h-4 text-primary" />
+            )}
+            Sorumluya Mail Gönder
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadEml}
+            disabled={downloadingEml}
+            title="HTML şablonu, aksiyon linki ve sorumlu alıcılarla hazır Outlook 365 taslağı (.eml) indir"
+            className="gap-1.5 text-xs font-semibold hover:border-primary text-foreground"
+          >
+            {downloadingEml ? (
+              <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+            ) : (
+              <Download className="w-4 h-4 text-primary" />
+            )}
+            Outlook Taslağı (.eml)
+          </Button>
 
           <Button
             variant="outline"
